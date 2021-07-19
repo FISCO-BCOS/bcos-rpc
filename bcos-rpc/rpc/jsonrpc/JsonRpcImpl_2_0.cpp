@@ -256,9 +256,7 @@ Json::Value JsonRpcImpl_2_0::toJsonResponse(const JsonResponse& _jsonResponse)
 
     if (_jsonResponse.error.code == 0)
     {  // success
-        Json::Value jResult(Json::arrayValue);
-        jResult.append(_jsonResponse.result);
-        jResp["result"] = jResult;
+        jResp["result"] = _jsonResponse.result;
     }
     else
     {  // error
@@ -854,6 +852,6 @@ void JsonRpcImpl_2_0::getNodeInfo(RespFunc _respFunc)
 {
     Json::Value jResp;
     // TODO:
-    jResp["version"] = "{\"version\":\"FISCO-BCOS 3.0\"}";
+    jResp["Version"] = "3.0.0";
     _respFunc(nullptr, jResp);
 }
