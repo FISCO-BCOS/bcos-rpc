@@ -98,6 +98,12 @@ public:
         m_blockSyncInterface = _blockSyncInterface;
     }
 
+    void setTransactionFactory(bcos::protocol::TransactionFactory::Ptr _transactionFactory) 
+    { 
+        m_transactionFactory = _transactionFactory; 
+    }
+    bcos::protocol::TransactionFactory::Ptr transactionFactory() const { return m_transactionFactory; }
+
 public:
     void checkParams();
 
