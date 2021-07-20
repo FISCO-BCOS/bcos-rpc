@@ -26,6 +26,9 @@
 #include <bcos-framework/libutilities/Log.h>
 #include <bcos-rpc/rpc/jsonrpc/Common.h>
 #include <bcos-rpc/rpc/jsonrpc/JsonRpcImpl_2_0.h>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -33,6 +36,8 @@
 
 using namespace bcos;
 using namespace bcos::rpc;
+using namespace boost::iterators;
+using namespace boost::archive::iterators;
 
 void JsonRpcImpl_2_0::initMethod()
 {
@@ -84,12 +89,18 @@ void JsonRpcImpl_2_0::initMethod()
 std::string JsonRpcImpl_2_0::encodeData(bcos::bytesConstRef _data)
 {
     return base64Encode(_data);
-    // *bcos::toHexString(*_codeData)
+    /*using namespace boost::archive::iterators;
+    using It = base64_from_binary<transform_width<std::string::const_iterator, 6, 8>>;
+    auto tmp = std::string(It(std::begin(_data)), It(std::end(_data)));
+    return tmp.append((3 - _data.size() % 3) % 3, '=');*/
 }
 
 std::shared_ptr<bcos::bytes> JsonRpcImpl_2_0::decodeData(const std::string& _data)
 {
-    return base64DecodeBytes(_data);
+    using It = transform_width<binary_from_base64<std::string::const_iterator>, 8, 6>;
+    auto s = boost::algorithm::trim_right_copy_if(
+        std::string(It(std::begin(_data)), It(std::end(_data))), [](char c) { return c == '\0'; });
+    return std::make_shared<bcos::bytes>(s.begin(), s.end());
 }
 
 void JsonRpcImpl_2_0::parseRpcRequestJson(
@@ -399,7 +410,7 @@ void JsonRpcImpl_2_0::sendTransaction(
 }
 
 void JsonRpcImpl_2_0::toJsonResp(
-    Json::Value& jResp, bcos::protocol::Transaction::Ptr _transactionPtr)
+    Json::Value& jResp, bcos::protocol::Transaction::ConstPtr _transactionPtr)
 {
     // transaction version
     jResp["version"] = _transactionPtr->version();
@@ -552,15 +563,97 @@ void JsonRpcImpl_2_0::getTransactionReceipt(
         });
 }
 
+void JsonRpcImpl_2_0::toJsonResp(
+    Json::Value& jResp, bcos::protocol::BlockHeader::Ptr _blockHeaderPtr)
+{
+    if (!_blockHeaderPtr)
+    {
+        return;
+    }
+
+    jResp["hash"] = *toHexString(_blockHeaderPtr->hash());
+    jResp["version"] = _blockHeaderPtr->version();
+    jResp["txsRoot"] = *toHexString(_blockHeaderPtr->txsRoot());
+    jResp["receiptsRoot"] = *toHexString(_blockHeaderPtr->receiptsRoot());
+    jResp["stateRoot"] = *toHexString(_blockHeaderPtr->stateRoot());
+    jResp["number"] = _blockHeaderPtr->number();
+    jResp["gasUsed"] = _blockHeaderPtr->gasUsed().str(16);
+    jResp["timestamp"] = _blockHeaderPtr->timestamp();
+    jResp["sealer"] = _blockHeaderPtr->sealer();
+    jResp["extraData"] = *toHexString(_blockHeaderPtr->extraData());
+
+    jResp["consensusWeights"] = Json::Value(Json::arrayValue);
+    for (const auto& wei : _blockHeaderPtr->consensusWeights())
+    {
+        jResp["consensusWeights"].append(wei);
+    }
+
+    jResp["sealerList"] = Json::Value(Json::arrayValue);
+    for (const auto& sealer : _blockHeaderPtr->sealerList())
+    {
+        jResp["sealerList"].append(*toHexString(sealer));
+    }
+
+    Json::Value jParentInfo(Json::arrayValue);
+    for (const auto& p : _blockHeaderPtr->parentInfo())
+    {
+        Json::Value jp;
+        jp["blockNumber"] = p.blockNumber;
+        jp["blockHash"] = *toHexString(p.blockHash);
+        jParentInfo.append(jp);
+    }
+    jResp["parentInfo"] = jParentInfo;
+
+    Json::Value jSignList(Json::arrayValue);
+    for (const auto& sign : _blockHeaderPtr->signatureList())
+    {
+        Json::Value jSign;
+        jSign["index"] = sign.index;
+        jSign["signature"] = *toHexString(sign.signature);
+        jSignList.append(jSign);
+    }
+    jResp["signatureList"] = jSignList;
+}
+
+void JsonRpcImpl_2_0::toJsonResp(
+    Json::Value& jResp, bcos::protocol::Block::Ptr _blockPtr, bool _onlyTxHash)
+{
+    if (!_blockPtr)
+    {
+        return;
+    }
+
+    // header
+    toJsonResp(jResp, _blockPtr->blockHeader());
+    auto txSize = _blockPtr->transactionsSize();
+
+    Json::Value jTxs(Json::arrayValue);
+    for (std::size_t index = 0; index < txSize; ++index)
+    {
+        Json::Value jTx;
+        if (_onlyTxHash)
+        {
+            jTx = *toHexString(_blockPtr->transactionHash(index));
+        }
+        else
+        {
+            toJsonResp(jTx, _blockPtr->transaction(index));
+        }
+        jTxs.append(jTx);
+    }
+
+    jResp["transactions"] = jTxs;
+}
+
 void JsonRpcImpl_2_0::getBlockByHash(
-    const std::string& _blockHash, bool _onlyHeader, RespFunc _respFunc)
+    const std::string& _blockHash, bool _onlyHeader, bool _onlyTxHash, RespFunc _respFunc)
 {
     RPC_IMPL_LOG(INFO) << LOG_DESC("getBlockByHash") << LOG_KV("blockHash", _blockHash)
-                       << LOG_KV("onlyHeader", _onlyHeader);
+                       << LOG_KV("onlyHeader", _onlyHeader) << LOG_KV("onlyTxHash", _onlyTxHash);
 
     auto self = std::weak_ptr<JsonRpcImpl_2_0>(shared_from_this());
     m_ledgerInterface->asyncGetBlockNumberByHash(bcos::crypto::HashType(_blockHash),
-        [_blockHash, _onlyHeader, _respFunc, self](
+        [_blockHash, _onlyHeader, _onlyTxHash, _respFunc, self](
             Error::Ptr _error, protocol::BlockNumber blockNumber) {
             if (!_error || _error->errorCode() == bcos::protocol::CommonError::SUCCESS)
             {
@@ -568,14 +661,14 @@ void JsonRpcImpl_2_0::getBlockByHash(
                 if (rpc)
                 {
                     // call getBlockByNumber
-                    return rpc->getBlockByNumber(blockNumber, _onlyHeader, _respFunc);
+                    return rpc->getBlockByNumber(blockNumber, _onlyHeader, _onlyTxHash, _respFunc);
                 }
             }
             else
             {
                 RPC_IMPL_LOG(ERROR)
                     << LOG_BADGE("getBlockByHash") << LOG_KV("blockHash", _blockHash)
-                    << LOG_KV("onlyHeader", _onlyHeader)
+                    << LOG_KV("onlyHeader", _onlyHeader) << LOG_KV("onlyTxHash", _onlyTxHash)
                     << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
                     << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
                 Json::Value jResp;
@@ -584,27 +677,37 @@ void JsonRpcImpl_2_0::getBlockByHash(
         });
 }
 
-void JsonRpcImpl_2_0::getBlockByNumber(int64_t _blockNumber, bool _onlyHeader, RespFunc _respFunc)
+void JsonRpcImpl_2_0::getBlockByNumber(
+    int64_t _blockNumber, bool _onlyHeader, bool _onlyTxHash, RespFunc _respFunc)
 {
     RPC_IMPL_LOG(INFO) << LOG_DESC("getBlockByNumber") << LOG_KV("_blockNumber", _blockNumber)
-                       << LOG_KV("_onlyHeader", _onlyHeader);
+                       << LOG_KV("_onlyHeader", _onlyHeader) << LOG_KV("onlyTxHash", _onlyTxHash);
 
     m_ledgerInterface->asyncGetBlockDataByNumber(_blockNumber,
         _onlyHeader ? bcos::ledger::HEADER : bcos::ledger::FULL_BLOCK,
-        [_blockNumber, _onlyHeader, _respFunc](Error::Ptr _error, protocol::Block::Ptr _block) {
+        [_blockNumber, _onlyHeader, _onlyTxHash, _respFunc](
+            Error::Ptr _error, protocol::Block::Ptr _block) {
+            Json::Value jResp;
             if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
             {
                 RPC_IMPL_LOG(ERROR)
                     << LOG_BADGE("getBlockByNumber") << LOG_KV("blockNumber", _blockNumber)
-                    << LOG_KV("onlyHeader", _onlyHeader)
+                    << LOG_KV("onlyHeader", _onlyHeader) << LOG_KV("onlyTxHash", _onlyTxHash)
                     << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
                     << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
-                Json::Value jResp;
                 _respFunc(_error, jResp);
             }
-
-            // TODO: impl getBlockByNumber
-            (void)_block;
+            else
+            {
+                if (_onlyHeader)
+                {
+                    toJsonResp(jResp, _block->blockHeader());
+                }
+                else
+                {
+                    toJsonResp(jResp, _block, _onlyTxHash);
+                }
+            }
         });
 }
 

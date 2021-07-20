@@ -53,7 +53,12 @@ public:
     static void parseRpcResponseJson(const std::string& _responseBody, JsonResponse& _jsonResponse);
     static Json::Value toJsonResponse(const JsonResponse& _jsonResponse);
     static std::string toStringResponse(const JsonResponse& _jsonResponse);
-    static void toJsonResp(Json::Value& jResp, bcos::protocol::Transaction::Ptr _transactionPtr);
+    static void toJsonResp(
+        Json::Value& jResp, bcos::protocol::Transaction::ConstPtr _transactionPtr);
+
+    static void toJsonResp(Json::Value& jResp, bcos::protocol::BlockHeader::Ptr _blockHeaderPtr);
+    static void toJsonResp(
+        Json::Value& jResp, bcos::protocol::Block::Ptr _blockPtr, bool _onlyTxHash);
     static void toJsonResp(
         Json::Value& jResp, bcos::protocol::TransactionReceipt::ConstPtr _transactionReceiptPtr);
     static void addProofToResponse(
@@ -74,11 +79,11 @@ public:
     virtual void getTransactionReceipt(
         const std::string& _txHash, bool _requireProof, RespFunc _respFunc) override;
 
-    virtual void getBlockByHash(
-        const std::string& _blockHash, bool _onlyHeader, RespFunc _respFunc) override;
+    virtual void getBlockByHash(const std::string& _blockHash, bool _onlyHeader, bool _onlyTxHash,
+        RespFunc _respFunc) override;
 
     virtual void getBlockByNumber(
-        int64_t _blockNumber, bool _onlyHeader, RespFunc _respFunc) override;
+        int64_t _blockNumber, bool _onlyHeader, bool _onlyTxHash, RespFunc _respFunc) override;
 
     virtual void getBlockHashByNumber(int64_t _blockNumber, RespFunc _respFunc) override;
 
@@ -127,12 +132,14 @@ public:
 
     void getBlockByHashI(const Json::Value& req, RespFunc _respFunc)
     {
-        getBlockByHash(req[0u].asString(), req[1u].asBool(), _respFunc);
+        getBlockByHash(req[0u].asString(), (req.size() > 1 ? req[1u].asBool() : true),
+            (req.size() > 2 ? req[2u].asBool() : true), _respFunc);
     }
 
     void getBlockByNumberI(const Json::Value& req, RespFunc _respFunc)
     {
-        getBlockByNumber(req[0u].asInt64(), req[1u].asBool(), _respFunc);
+        getBlockByNumber(req[0u].asInt64(), (req.size() > 1 ? req[1u].asBool() : true),
+            (req.size() > 2 ? req[2u].asBool() : true), _respFunc);
     }
 
     void getBlockHashByNumberI(const Json::Value& req, RespFunc _respFunc)
