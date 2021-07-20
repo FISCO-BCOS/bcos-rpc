@@ -347,15 +347,15 @@ void JsonRpcImpl_2_0::toJsonResp(
     // transaction version
     jResp["version"] = _transactionPtr->version();
     // transaction hash
-    jResp["hash"] = *toHexString(_transactionPtr->hash());
+    jResp["hash"] = toHexStringWithPrefix(_transactionPtr->hash());
     // transaction nonce
     jResp["nonce"] = _transactionPtr->nonce().str(16);
     // blockLimit
     jResp["blockLimit"] = _transactionPtr->blockLimit();
     // the receiver address
-    jResp["to"] = *toHexString(_transactionPtr->to());
+    jResp["to"] = toHexStringWithPrefix(_transactionPtr->to());
     // the sender address
-    jResp["from"] = *toHexString(_transactionPtr->sender());
+    jResp["from"] = toHexStringWithPrefix(_transactionPtr->sender());
     // the input data
     jResp["input"] = encodeData(_transactionPtr->input());
     // importTime
@@ -365,16 +365,16 @@ void JsonRpcImpl_2_0::toJsonResp(
     // the groupID
     jResp["groupID"] = std::string(_transactionPtr->groupId());
     // the signature
-    jResp["signature"] = *toHexString(_transactionPtr->signatureData());
+    jResp["signature"] = toHexStringWithPrefix(_transactionPtr->signatureData());
 }
 
 void JsonRpcImpl_2_0::toJsonResp(
     Json::Value& jResp, bcos::protocol::TransactionReceipt::ConstPtr _transactionReceiptPtr)
 {
     jResp["version"] = _transactionReceiptPtr->version();
-    jResp["contractAddress"] = *toHexString(_transactionReceiptPtr->contractAddress());
+    jResp["contractAddress"] = toHexStringWithPrefix(_transactionReceiptPtr->contractAddress());
     jResp["gasUsed"] = _transactionReceiptPtr->gasUsed().str(16);
-    jResp["bloom"] = *toHexString(_transactionReceiptPtr->bloom());
+    jResp["bloom"] = toHexStringWithPrefix(_transactionReceiptPtr->bloom());
     jResp["status"] = _transactionReceiptPtr->status();
     jResp["blockNumber"] = _transactionReceiptPtr->blockNumber();
     jResp["output"] = encodeData(_transactionReceiptPtr->output());
@@ -383,7 +383,7 @@ void JsonRpcImpl_2_0::toJsonResp(
     for (const auto& logEntry : _transactionReceiptPtr->logEntries())
     {
         Json::Value jLog;
-        jLog["address"] = *toHexString(logEntry.address());
+        jLog["address"] = toHexStringWithPrefix(logEntry.address());
         jLog["topic"] = Json::Value(Json::arrayValue);
         for (const auto& topic : logEntry.topics())
         {
@@ -404,16 +404,16 @@ void JsonRpcImpl_2_0::toJsonResp(
         return;
     }
 
-    jResp["hash"] = *toHexString(_blockHeaderPtr->hash());
+    jResp["hash"] = toHexStringWithPrefix(_blockHeaderPtr->hash());
     jResp["version"] = _blockHeaderPtr->version();
-    jResp["txsRoot"] = *toHexString(_blockHeaderPtr->txsRoot());
-    jResp["receiptRoot"] = *toHexString(_blockHeaderPtr->receiptsRoot());
-    jResp["stateRoot"] = *toHexString(_blockHeaderPtr->stateRoot());
+    jResp["txsRoot"] = toHexStringWithPrefix(_blockHeaderPtr->txsRoot());
+    jResp["receiptRoot"] = toHexStringWithPrefix(_blockHeaderPtr->receiptsRoot());
+    jResp["stateRoot"] = toHexStringWithPrefix(_blockHeaderPtr->stateRoot());
     jResp["blockNumber"] = _blockHeaderPtr->number();
     jResp["gasUsed"] = _blockHeaderPtr->gasUsed().str(16);
     jResp["timestamp"] = _blockHeaderPtr->timestamp();
     jResp["sealer"] = _blockHeaderPtr->sealer();
-    jResp["extraData"] = *toHexString(_blockHeaderPtr->extraData());
+    jResp["extraData"] = toHexStringWithPrefix(_blockHeaderPtr->extraData());
 
     jResp["consensusWeights"] = Json::Value(Json::arrayValue);
     for (const auto& wei : _blockHeaderPtr->consensusWeights())
@@ -424,7 +424,7 @@ void JsonRpcImpl_2_0::toJsonResp(
     jResp["sealerList"] = Json::Value(Json::arrayValue);
     for (const auto& sealer : _blockHeaderPtr->sealerList())
     {
-        jResp["sealerList"].append(*toHexString(sealer));
+        jResp["sealerList"].append(toHexStringWithPrefix(sealer));
     }
 
     Json::Value jParentInfo(Json::arrayValue);
@@ -432,7 +432,7 @@ void JsonRpcImpl_2_0::toJsonResp(
     {
         Json::Value jp;
         jp["blockNumber"] = p.blockNumber;
-        jp["blockHash"] = *toHexString(p.blockHash);
+        jp["blockHash"] = toHexStringWithPrefix(p.blockHash);
         jParentInfo.append(jp);
     }
     jResp["parentInfo"] = jParentInfo;
@@ -442,7 +442,7 @@ void JsonRpcImpl_2_0::toJsonResp(
     {
         Json::Value jSign;
         jSign["sealerIndex"] = sign.index;
-        jSign["signature"] = *toHexString(sign.signature);
+        jSign["signature"] = toHexStringWithPrefix(sign.signature);
         jSignList.append(jSign);
     }
     jResp["signatureList"] = jSignList;
@@ -466,7 +466,7 @@ void JsonRpcImpl_2_0::toJsonResp(
         Json::Value jTx;
         if (_onlyTxHash)
         {
-            jTx = *toHexString(_blockPtr->transactionHash(index));
+            jTx = toHexStringWithPrefix(_blockPtr->transactionHash(index));
         }
         else
         {
@@ -493,7 +493,7 @@ void JsonRpcImpl_2_0::call(const std::string& _to, const std::string& _data, Res
             {
                 jResp["blockNumber"] = _transactionReceiptPtr->blockNumber();
                 jResp["status"] = _transactionReceiptPtr->status();
-                jResp["output"] = *toHexString(_transactionReceiptPtr->output());
+                jResp["output"] = toHexStringWithPrefix(_transactionReceiptPtr->output());
             }
             else
             {
