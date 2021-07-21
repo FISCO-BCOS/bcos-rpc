@@ -944,9 +944,23 @@ void JsonRpcImpl_2_0::getTotalTransactionCount(RespFunc _respFunc)
 
 void JsonRpcImpl_2_0::getPeers(RespFunc _respFunc)
 {
-    Json::Value jResp;
-    // TODO: gateway should give asyncGetPeers interface
-    _respFunc(nullptr, jResp);
+    RPC_IMPL_LOG(INFO) << LOG_DESC("getPeers");
+    m_gatewayInterface->asyncGetPeers(
+        [_respFunc](Error::Ptr _error, const std::string& _peersInfo) {
+            Json::Value jResp;
+            if (!_error || (_error->errorCode() == bcos::protocol::CommonError::SUCCESS))
+            {
+                jResp = _peersInfo;
+            }
+            else
+            {
+                RPC_IMPL_LOG(ERROR) << LOG_BADGE("getPeers")
+                                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
+                                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+            }
+
+            _respFunc(_error, jResp);
+        });
 }
 
 void JsonRpcImpl_2_0::getNodeInfo(RespFunc _respFunc)

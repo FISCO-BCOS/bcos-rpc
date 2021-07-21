@@ -22,6 +22,7 @@
 #pragma once
 #include <bcos-framework/interfaces/consensus/ConsensusInterface.h>
 #include <bcos-framework/interfaces/executor/ExecutorInterface.h>
+#include <bcos-framework/interfaces/gateway/GatewayInterface.h>
 #include <bcos-framework/interfaces/ledger/LedgerInterface.h>
 #include <bcos-framework/interfaces/sync/BlockSyncInterface.h>
 #include <bcos-framework/interfaces/txpool/TxPoolInterface.h>
@@ -53,7 +54,7 @@ public:
      * @param _nodeInfo: node config
      * @return Rpc::Ptr:
      */
-    Rpc::Ptr buildRpc(const RpcConfig& _rpcConfig, const NodeInfo &_nodeInfo);
+    Rpc::Ptr buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _nodeInfo);
 
     /**
      * @brief: Rpc
@@ -61,7 +62,7 @@ public:
      * @param _nodeInfo: node config
      * @return Rpc::Ptr:
      */
-    Rpc::Ptr buildRpc(const std::string& _configPath, const NodeInfo &_nodeInfo);
+    Rpc::Ptr buildRpc(const std::string& _configPath, const NodeInfo& _nodeInfo);
 
 public:
     bcos::ledger::LedgerInterface::Ptr ledger() const { return m_ledgerInterface; }
@@ -100,11 +101,20 @@ public:
         m_blockSyncInterface = _blockSyncInterface;
     }
 
-    void setTransactionFactory(bcos::protocol::TransactionFactory::Ptr _transactionFactory) 
-    { 
-        m_transactionFactory = _transactionFactory; 
+    bcos::gateway::GatewayInterface::Ptr gatewayInterface() const { return m_gatewayInterface; }
+    void setGatewayInterface(bcos::gateway::GatewayInterface::Ptr _gatewayInterface)
+    {
+        m_gatewayInterface = _gatewayInterface;
     }
-    bcos::protocol::TransactionFactory::Ptr transactionFactory() const { return m_transactionFactory; }
+
+    void setTransactionFactory(bcos::protocol::TransactionFactory::Ptr _transactionFactory)
+    {
+        m_transactionFactory = _transactionFactory;
+    }
+    bcos::protocol::TransactionFactory::Ptr transactionFactory() const
+    {
+        return m_transactionFactory;
+    }
 
 public:
     void checkParams();
@@ -115,6 +125,7 @@ private:
     bcos::txpool::TxPoolInterface::Ptr m_txPoolInterface;
     bcos::consensus::ConsensusInterface::Ptr m_consensusInterface;
     bcos::sync::BlockSyncInterface::Ptr m_blockSyncInterface;
+    bcos::gateway::GatewayInterface::Ptr m_gatewayInterface;
     bcos::protocol::TransactionFactory::Ptr m_transactionFactory;
 };
 }  // namespace rpc

@@ -261,6 +261,12 @@ public:
         m_blockSyncInterface = _blockSyncInterface;
     }
 
+    bcos::gateway::GatewayInterface::Ptr gatewayInterface() const { return m_gatewayInterface; }
+    void setGatewayInterface(bcos::gateway::GatewayInterface::Ptr _gatewayInterface)
+    {
+        m_gatewayInterface = _gatewayInterface;
+    }
+
     bcos::protocol::TransactionFactory::Ptr transactionFactory() const
     {
         return m_transactionFactory;
@@ -283,6 +289,7 @@ private:
     bcos::txpool::TxPoolInterface::Ptr m_txPoolInterface;
     bcos::consensus::ConsensusInterface::Ptr m_consensusInterface;
     bcos::sync::BlockSyncInterface::Ptr m_blockSyncInterface;
+    bcos::gateway::GatewayInterface::Ptr m_gatewayInterface;
     bcos::protocol::TransactionFactory::Ptr m_transactionFactory;
     NodeInfo m_nodeInfo;
 };

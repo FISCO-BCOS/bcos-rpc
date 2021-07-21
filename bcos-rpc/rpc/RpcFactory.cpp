@@ -149,6 +149,7 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _node
     jsonRpcInterface->setConsensusInterface(m_consensusInterface);
     jsonRpcInterface->setBlockSyncInterface(m_blockSyncInterface);
     jsonRpcInterface->setTransactionFactory(m_transactionFactory);
+    jsonRpcInterface->setGatewayInterface(m_gatewayInterface);
 
     auto httpServerFactory = std::make_shared<bcos::http::HttpServerFactory>();
     auto httpServer = httpServerFactory->buildHttpServer(_listenIP, _listenPort, _threadCount);
