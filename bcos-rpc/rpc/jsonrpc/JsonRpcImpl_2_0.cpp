@@ -89,18 +89,11 @@ void JsonRpcImpl_2_0::initMethod()
 std::string JsonRpcImpl_2_0::encodeData(bcos::bytesConstRef _data)
 {
     return base64Encode(_data);
-    /*using namespace boost::archive::iterators;
-    using It = base64_from_binary<transform_width<std::string::const_iterator, 6, 8>>;
-    auto tmp = std::string(It(std::begin(_data)), It(std::end(_data)));
-    return tmp.append((3 - _data.size() % 3) % 3, '=');*/
 }
 
 std::shared_ptr<bcos::bytes> JsonRpcImpl_2_0::decodeData(const std::string& _data)
 {
-    using It = transform_width<binary_from_base64<std::string::const_iterator>, 8, 6>;
-    auto s = boost::algorithm::trim_right_copy_if(
-        std::string(It(std::begin(_data)), It(std::end(_data))), [](char c) { return c == '\0'; });
-    return std::make_shared<bcos::bytes>(s.begin(), s.end());
+    return base64DecodeBytes(_data);
 }
 
 void JsonRpcImpl_2_0::parseRpcRequestJson(

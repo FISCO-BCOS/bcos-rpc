@@ -5,6 +5,6 @@ hunter_config(bcos-crypto
 )
 hunter_config(bcos-framework
 	VERSION 3.0.0-local
-	URL "https://${URL_BASE}/ywy2090/bcos-framework/archive/db8821520473a74754354c73f131a07c2a0b376d.tar.gz"
-	SHA1 7b4eac47757e5bf536b2f90fcd2615bf9c273963
+	URL "https://${URL_BASE}/FISCO-BCOS/bcos-framework/archive/4e662db3733148cffaf096f8507b484cb7aba2df.tar.gz"
+	SHA1 038a0846374fdae748b989b1e17fd3a6d796ee2f
 )
