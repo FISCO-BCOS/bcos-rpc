@@ -50,16 +50,18 @@ public:
     /**
      * @brief: Rpc
      * @param _rpcConfig: rpc config
+     * @param _nodeInfo: node config
      * @return Rpc::Ptr:
      */
-    Rpc::Ptr buildRpc(const RpcConfig& _rpcConfig);
+    Rpc::Ptr buildRpc(const RpcConfig& _rpcConfig, const NodeInfo &_nodeInfo);
 
     /**
      * @brief: Rpc
      * @param _configPath: rpc config path
+     * @param _nodeInfo: node config
      * @return Rpc::Ptr:
      */
-    Rpc::Ptr buildRpc(const std::string& _configPath);
+    Rpc::Ptr buildRpc(const std::string& _configPath, const NodeInfo &_nodeInfo);
 
 public:
     bcos::ledger::LedgerInterface::Ptr ledger() const { return m_ledgerInterface; }

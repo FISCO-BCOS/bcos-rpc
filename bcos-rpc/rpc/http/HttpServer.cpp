@@ -26,6 +26,7 @@ using namespace bcos::http;
 // start http server
 void HttpServer::startListen()
 {
+    // TODO: waiting for impl ssl
     if (m_acceptor && m_acceptor->is_open())
     {
         HTTP_SERVER(INFO) << LOG_BADGE("startListen") << LOG_DESC("http server is running");

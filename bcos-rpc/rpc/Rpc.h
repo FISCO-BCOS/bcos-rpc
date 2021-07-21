@@ -23,6 +23,7 @@
 #include <bcos-framework/interfaces/rpc/RPCInterface.h>
 #include <bcos-rpc/rpc/Common.h>
 #include <bcos-rpc/rpc/http/HttpServer.h>
+#include <bcos-rpc/rpc/jsonrpc/Common.h>
 
 namespace bcos
 {

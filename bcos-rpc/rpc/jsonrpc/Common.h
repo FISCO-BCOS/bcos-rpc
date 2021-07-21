@@ -28,6 +28,18 @@ namespace bcos
 {
 namespace rpc
 {
+struct NodeInfo
+{
+    std::string version;
+    std::string supportedVersion;
+    std::string nodeID;
+    std::string chainID;
+    std::string groupID;
+    std::string agency;
+    std::string buildTime;
+    std::string gitCommitHash;
+};
+
 class JsonRpcException : public std::exception
 {
 public:

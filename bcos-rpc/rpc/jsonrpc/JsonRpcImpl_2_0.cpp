@@ -952,7 +952,15 @@ void JsonRpcImpl_2_0::getPeers(RespFunc _respFunc)
 void JsonRpcImpl_2_0::getNodeInfo(RespFunc _respFunc)
 {
     Json::Value jResp;
-    // TODO:
-    jResp["Version"] = "3.0.0";
+
+    jResp["version"] = m_nodeInfo.version;
+    jResp["nodeID"] = m_nodeInfo.nodeID;
+    jResp["chainID"] = m_nodeInfo.chainID;
+    jResp["groupID"] = m_nodeInfo.groupID;
+    jResp["agency"] = m_nodeInfo.agency;
+    jResp["buildTime"] = m_nodeInfo.buildTime;
+    jResp["gitCommit"] = m_nodeInfo.gitCommitHash;
+    jResp["supportedVersion"] = m_nodeInfo.supportedVersion;
+
     _respFunc(nullptr, jResp);
 }

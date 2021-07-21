@@ -119,11 +119,11 @@ void RpcFactory::checkParams()
  * @param _configPath: rpc config path
  * @return Rpc::Ptr:
  */
-Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath)
+Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath, const NodeInfo& _nodeInfo)
 {
     RpcConfig rpcConfig;
     rpcConfig.initConfig(_configPath);
-    return buildRpc(rpcConfig);
+    return buildRpc(rpcConfig, _nodeInfo);
 }
 
 /**
@@ -131,7 +131,7 @@ Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath)
  * @param _rpcConfig: rpc config
  * @return Rpc::Ptr:
  */
-Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig)
+Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _nodeInfo)
 {
     const std::string _listenIP = _rpcConfig.m_listenIP;
     uint16_t _listenPort = _rpcConfig.m_listenPort;
@@ -142,6 +142,7 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig)
     auto rpc = std::make_shared<Rpc>();
     auto jsonRpcInterface = std::make_shared<bcos::rpc::JsonRpcImpl_2_0>();
 
+    jsonRpcInterface->setNodeInfo(_nodeInfo);
     jsonRpcInterface->setLedger(m_ledgerInterface);
     jsonRpcInterface->setTxPoolInterface(m_txPoolInterface);
     jsonRpcInterface->setExecutorInterface(m_executorInterface);

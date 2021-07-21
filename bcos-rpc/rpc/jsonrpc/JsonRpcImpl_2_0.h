@@ -22,6 +22,7 @@
 #pragma once
 #include <bcos-framework/interfaces/consensus/ConsensusInterface.h>
 #include <bcos-framework/interfaces/executor/ExecutorInterface.h>
+#include <bcos-framework/interfaces/gateway/GatewayInterface.h>
 #include <bcos-framework/interfaces/ledger/LedgerInterface.h>
 #include <bcos-framework/interfaces/sync/BlockSyncInterface.h>
 #include <bcos-framework/interfaces/txpool/TxPoolInterface.h>
@@ -270,6 +271,9 @@ public:
         m_transactionFactory = _transactionFactory;
     }
 
+    void setNodeInfo(const NodeInfo& _nodeInfo) { m_nodeInfo = _nodeInfo; }
+    NodeInfo nodeInfo() const { return m_nodeInfo; }
+
 private:
     std::unordered_map<std::string, std::function<void(Json::Value, RespFunc _respFunc)>>
         m_methodToFunc;
@@ -280,6 +284,7 @@ private:
     bcos::consensus::ConsensusInterface::Ptr m_consensusInterface;
     bcos::sync::BlockSyncInterface::Ptr m_blockSyncInterface;
     bcos::protocol::TransactionFactory::Ptr m_transactionFactory;
+    NodeInfo m_nodeInfo;
 };
 
 }  // namespace rpc
