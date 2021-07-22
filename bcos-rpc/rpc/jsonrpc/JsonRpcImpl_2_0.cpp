@@ -548,6 +548,9 @@ void JsonRpcImpl_2_0::addProofToResponse(
         return;
     }
 
+    RPC_IMPL_LOG(TRACE) << LOG_DESC("addProofToResponse") << LOG_KV("key", _key)
+                        << LOG_KV("key", _key) << LOG_KV("merkleProofPtr", _merkleProofPtr->size());
+
     uint32_t index = 0;
     for (const auto& merkleItem : *_merkleProofPtr)
     {
@@ -589,6 +592,13 @@ void JsonRpcImpl_2_0::getTransaction(
                     toJsonResp(jResp, transactionPtr);
                 }
 
+                RPC_IMPL_LOG(TRACE)
+                    << LOG_DESC("getTransaction") << LOG_KV("txHash", _txHash)
+                    << LOG_KV("requireProof", _requireProof)
+                    << LOG_KV("transactionProofsPtr size",
+                           (_transactionProofsPtr ? (int64_t)_transactionProofsPtr->size() : -1));
+
+
                 if (_requireProof && _transactionProofsPtr && !_transactionProofsPtr->empty())
                 {
                     auto transactionProofPtr = _transactionProofsPtr->begin()->second;
@@ -624,6 +634,12 @@ void JsonRpcImpl_2_0::getTransactionReceipt(
                 if (_transactionReceiptPtr)
                 {
                     toJsonResp(jResp, _transactionReceiptPtr);
+
+                    RPC_IMPL_LOG(TRACE)
+                        << LOG_DESC("getTransactionReceipt") << LOG_KV("txHash", _txHash)
+                        << LOG_KV("requireProof", _requireProof)
+                        << LOG_KV("merkleProofPtr", _merkleProofPtr);
+
                     if (_requireProof && _merkleProofPtr)
                     {
                         addProofToResponse(jResp, "proof", _merkleProofPtr);
@@ -698,7 +714,7 @@ void JsonRpcImpl_2_0::getBlockByNumber(
             {
                 if (_onlyHeader)
                 {
-                    toJsonResp(jResp, _block->blockHeader());
+                    toJsonResp(jResp, _block ? _block->blockHeader() : nullptr);
                 }
                 else
                 {
@@ -928,8 +944,8 @@ void JsonRpcImpl_2_0::getTotalTransactionCount(RespFunc _respFunc)
             if (!_error || (_error->errorCode() == bcos::protocol::CommonError::SUCCESS))
             {
                 jResp["blockNumber"] = _latestBlockNumber;
-                jResp["failedTxSum"] = _failedTxCount;
-                jResp["totalTxSum"] = _totalTxCount;
+                jResp["transactionCount"] = _totalTxCount;
+                jResp["failedTransactionCount"] = _failedTxCount;
             }
             else
             {
