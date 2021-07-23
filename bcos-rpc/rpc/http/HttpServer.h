@@ -101,5 +101,5 @@ public:
         const std::string& _listenIP, uint16_t _listenPort, std::size_t _threadCount);
 };
 
-};  // namespace http
-};  // namespace bcos
+}  // namespace http
+}  // namespace bcos

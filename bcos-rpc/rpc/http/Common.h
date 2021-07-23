@@ -37,4 +37,4 @@ using HttpRequest = boost::beast::http::request<boost::beast::http::string_body>
 using HttpResponse = boost::beast::http::response<boost::beast::http::string_body>;
 using HttpResponsePtr = std::shared_ptr<HttpResponse>;
 }  // namespace http
-};  // namespace bcos
+}  // namespace bcos

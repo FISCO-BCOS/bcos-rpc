@@ -248,5 +248,5 @@ public:
         return session;
     }
 };
-};  // namespace http
-};  // namespace bcos
+}  // namespace http
+}  // namespace bcos

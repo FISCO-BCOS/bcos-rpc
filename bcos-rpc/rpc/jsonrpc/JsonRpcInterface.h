@@ -58,7 +58,8 @@ public:
     virtual void getBlockByHash(
         const std::string& _blockHash, bool _onlyHeader, bool _onlyTxHash, RespFunc _respFunc) = 0;
 
-    virtual void getBlockByNumber(int64_t _blockNumber, bool _onlyHeader, bool _onlyTxHash, RespFunc _respFunc) = 0;
+    virtual void getBlockByNumber(
+        int64_t _blockNumber, bool _onlyHeader, bool _onlyTxHash, RespFunc _respFunc) = 0;
 
     virtual void getBlockHashByNumber(int64_t _blockNumber, RespFunc _respFunc) = 0;
 
