@@ -197,7 +197,7 @@ BOOST_AUTO_TEST_CASE(test_toStringResponse)
         jsonRpcInterface->parseRpcResponseJson(json, respDecode);
         BOOST_CHECK_EQUAL(respDecode.jsonrpc, resp.jsonrpc);
         BOOST_CHECK_EQUAL(respDecode.id, resp.id);
-        BOOST_CHECK_EQUAL(respDecode.result.size(), 1);
+        BOOST_CHECK_EQUAL(respDecode.result.asString(), resp.result.asString());
     }
 }
 

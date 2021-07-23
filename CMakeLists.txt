@@ -31,10 +31,10 @@ FetchContent_Declare(bcos-cmake-scripts
 )
 FetchContent_MakeAvailable(bcos-cmake-scripts)
 
-set(HUNTER_PACKAGE_LOG_BUILD ON CACHE STRING "Hunter output build info to log")
-set(HUNTER_PACKAGE_LOG_INSTALL ON CACHE STRING "Hunter output install info to log")
-set(HUNTER_STATUS_DEBUG OFF CACHE STRING "Hunter debug output")
-set(HUNTER_USE_CACHE_SERVERS NO CACHE STRING "Download cache from cache server" FORCE)
+# set(HUNTER_PACKAGE_LOG_BUILD ON CACHE STRING "Hunter output build info to log")
+# set(HUNTER_PACKAGE_LOG_INSTALL ON CACHE STRING "Hunter output install info to log")
+# set(HUNTER_STATUS_DEBUG OFF CACHE STRING "Hunter debug output")
+# set(HUNTER_USE_CACHE_SERVERS NO CACHE STRING "Download cache from cache server" FORCE)
 # set(HUNTER_STATUS_PRINT OFF CACHE STRING "Hunter status output")
 # set(HUNTER_CONFIGURATION_TYPES Release CACHE STRING "Build type of Hunter packages")
 
