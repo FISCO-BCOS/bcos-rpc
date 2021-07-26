@@ -400,9 +400,9 @@ void JsonRpcImpl_2_0::toJsonResp(
     jResp["hash"] = toHexStringWithPrefix(_blockHeaderPtr->hash());
     jResp["version"] = _blockHeaderPtr->version();
     jResp["txsRoot"] = toHexStringWithPrefix(_blockHeaderPtr->txsRoot());
-    jResp["receiptRoot"] = toHexStringWithPrefix(_blockHeaderPtr->receiptsRoot());
+    jResp["receiptsRoot"] = toHexStringWithPrefix(_blockHeaderPtr->receiptsRoot());
     jResp["stateRoot"] = toHexStringWithPrefix(_blockHeaderPtr->stateRoot());
-    jResp["blockNumber"] = _blockHeaderPtr->number();
+    jResp["number"] = _blockHeaderPtr->number();
     jResp["gasUsed"] = _blockHeaderPtr->gasUsed().str(16);
     jResp["timestamp"] = _blockHeaderPtr->timestamp();
     jResp["sealer"] = _blockHeaderPtr->sealer();
