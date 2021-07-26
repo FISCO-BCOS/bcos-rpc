@@ -367,7 +367,6 @@ void JsonRpcImpl_2_0::toJsonResp(
     jResp["version"] = _transactionReceiptPtr->version();
     jResp["contractAddress"] = toHexStringWithPrefix(_transactionReceiptPtr->contractAddress());
     jResp["gasUsed"] = _transactionReceiptPtr->gasUsed().str(16);
-    jResp["bloom"] = toHexStringWithPrefix(_transactionReceiptPtr->bloom());
     jResp["status"] = _transactionReceiptPtr->status();
     jResp["blockNumber"] = _transactionReceiptPtr->blockNumber();
     jResp["output"] = encodeData(_transactionReceiptPtr->output());
