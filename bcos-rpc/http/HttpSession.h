@@ -18,8 +18,8 @@
  * @date 2021-07-08
  */
 #pragma once
-#include <bcos-rpc/rpc/http/Common.h>
-#include <bcos-rpc/rpc/http/HttpQueue.h>
+#include <bcos-rpc/http/Common.h>
+#include <bcos-rpc/http/HttpQueue.h>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/websocket.hpp>

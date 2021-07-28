@@ -18,7 +18,7 @@
  * @date 2021-07-08
  */
 #pragma once
-#include <bcos-rpc/rpc/http/Common.h>
+#include <bcos-rpc/http/Common.h>
 
 namespace bcos
 {

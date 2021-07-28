@@ -7,7 +7,7 @@
 // Official repository: https://github.com/boostorg/beast
 //
 
-#include <bcos-rpc/rpc/http/HttpServer.h>
+#include <bcos-rpc/http/HttpServer.h>
 #include <bcos-rpc/rpc/jsonrpc/JsonRpcImpl_2_0.h>
 #include <iostream>
 #include <thread>

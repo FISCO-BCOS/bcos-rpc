@@ -75,6 +75,7 @@ set(HTTP_TARGET "http")
 
 add_subdirectory(bcos-rpc/rpc)
 add_subdirectory(bcos-rpc/amop)
+add_subdirectory(bcos-rpc/http)
 
 if (TESTS)
     include(InstallBcosCryptoDependencies)

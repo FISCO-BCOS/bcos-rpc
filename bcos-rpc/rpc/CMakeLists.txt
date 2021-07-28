@@ -4,7 +4,6 @@ file(GLOB SRC_LIST "*.cpp")
 file(GLOB HEADERS "*.h")
 
 add_subdirectory(jsonrpc)
-add_subdirectory(http)
 
 add_library(${RPC_TARGET} ${SRC_LIST} ${HEADERS})
 target_link_libraries(${RPC_TARGET} PUBLIC jsoncpp_lib_static bcos-framework::utilities)

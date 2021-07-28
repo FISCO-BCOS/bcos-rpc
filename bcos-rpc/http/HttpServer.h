@@ -19,7 +19,7 @@
  */
 #pragma once
 
-#include <bcos-rpc/rpc/http/HttpSession.h>
+#include <bcos-rpc/http/HttpSession.h>
 #include <exception>
 #include <thread>
 

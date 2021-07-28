@@ -18,7 +18,7 @@
  * @date 2021-07-08
  */
 
-#include <bcos-rpc/rpc/http/HttpServer.h>
+#include <bcos-rpc/http/HttpServer.h>
 
 using namespace bcos;
 using namespace bcos::http;

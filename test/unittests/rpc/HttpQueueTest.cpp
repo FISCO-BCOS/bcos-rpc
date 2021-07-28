@@ -20,7 +20,7 @@
  */
 
 #include <bcos-framework/testutils/TestPromptFixture.h>
-#include <bcos-rpc/rpc/http/HttpQueue.h>
+#include <bcos-rpc/http/HttpQueue.h>
 #include <boost/test/unit_test.hpp>
 
 using namespace bcos;
