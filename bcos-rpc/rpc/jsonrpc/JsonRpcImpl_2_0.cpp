@@ -983,6 +983,8 @@ void JsonRpcImpl_2_0::getNodeInfo(RespFunc _respFunc)
     Json::Value jResp;
 
     jResp["version"] = m_nodeInfo.version;
+    jResp["wasm"] = m_nodeInfo.isWasm;
+    jResp["smCrypto"] = m_nodeInfo.isSM;
     jResp["nodeID"] = m_nodeInfo.nodeID;
     jResp["chainID"] = m_nodeInfo.chainID;
     jResp["groupID"] = m_nodeInfo.groupID;

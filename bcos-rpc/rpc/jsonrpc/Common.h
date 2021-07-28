@@ -38,6 +38,8 @@ struct NodeInfo
     std::string agency;
     std::string buildTime;
     std::string gitCommitHash;
+    bool isWasm;
+    bool isSM;
 };
 
 class JsonRpcException : public std::exception
