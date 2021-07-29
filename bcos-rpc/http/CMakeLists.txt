@@ -1,5 +1,7 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSTATICLIB")
 
+add_subdirectory(ws)
+
 file(GLOB SRC_LIST "*.cpp")
 file(GLOB HEADERS "*.h")
 

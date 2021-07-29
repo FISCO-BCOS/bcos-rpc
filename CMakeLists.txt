@@ -72,6 +72,7 @@ set(RPC_TARGET "rpc")
 set(AMOP_TARGET "amop")
 set(JSONRPC_TARGET "jsonrpc")
 set(HTTP_TARGET "http")
+set(WS_SERVICE_TARGET "wsservice")
 
 add_subdirectory(bcos-rpc/rpc)
 add_subdirectory(bcos-rpc/amop)
@@ -121,6 +122,14 @@ install(
     INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
+install(
+    TARGETS ${WS_SERVICE_TARGET}
+    EXPORT "${TARGETS_EXPORT_NAME}"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
 
 # for doxygen
 include(BuildDocs)

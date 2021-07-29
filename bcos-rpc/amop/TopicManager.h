@@ -33,19 +33,19 @@ public:
     using Ptr = std::shared_ptr<TopicManager>;
 
 private:
-    // m_clientToTopicItems lock
+    // m_client2TopicItems lock
     mutable std::shared_mutex x_clientTopics;
     // topicSeq
     std::atomic<uint32_t> m_topicSeq{1};
     // clientID => TopicItems
-    std::unordered_map<std::string, TopicItems> m_clientToTopicItems;
+    std::unordered_map<std::string, TopicItems> m_client2TopicItems;
 
-    // m_nodeIDToTopicSeq lock
+    // m_nodeID2TopicSeq lock
     mutable std::shared_mutex x_topics;
     // nodeID => topicSeq
-    std::unordered_map<bcos::crypto::NodeIDPtr, uint32_t> m_nodeIDToTopicSeq;
+    std::unordered_map<bcos::crypto::NodeIDPtr, uint32_t> m_nodeID2TopicSeq;
     // nodeID => topicItems
-    std::unordered_map<bcos::crypto::NodeIDPtr, TopicItems> m_nodeIDToTopicItems;
+    std::unordered_map<bcos::crypto::NodeIDPtr, TopicItems> m_nodeID2TopicItems;
 
 public:
     uint32_t topicSeq() const { return m_topicSeq; }
@@ -57,25 +57,39 @@ public:
 
 public:
     /**
+     * @brief: parse client sub topics json
+     * @param _topicItems: return value, topics
+     * @param _json: json
+     * @return void
+     */
+    bool parseSubTopicsJson(const std::string& _json, TopicItems& _topicItems);
+    /**
+     * @brief: client subscribe topic
+     * @param _clientID: client identify, to be defined
+     * @param _topicJson: topics subscribe by client
+     * @return void
+     */
+    void subTopic(const std::string& _client, const std::string& _topicJson);
+    /**
      * @brief: client subscribe topic
      * @param _clientID: client identify, to be defined
      * @param _topicItems: topics subscribe by client
      * @return void
      */
-    void clientSubTopic(const std::string& _clientID, const TopicItems& _topicItems);
+    void subTopic(const std::string& _client, const TopicItems& _topicItems);
     /**
      * @brief: query topics sub by client
      * @param _clientID: client identify, to be defined
      * @param _topicItems: topics subscribe by client
      * @return bool
      */
-    bool queryTopicItemsByClient(const std::string& _clientID, TopicItems& _topicItems);
+    bool queryTopicItemsByClient(const std::string& _client, TopicItems& _topicItems);
     /**
      * @brief: remove all topics subscribed by client
      * @param _clientID: client identify, to be defined
      * @return void
      */
-    void removeTopicsByClient(const std::string& _clientID);
+    void removeTopicsByClient(const std::string& _client);
     /**
      * @brief: query topics subscribed by all connected clients
      * @return json string result, include topicSeq and topicItems fields
@@ -102,7 +116,7 @@ public:
      * @param _nodeIDs: the online nodeIDs
      * @return void
      */
-    void updateOnlineNodeIDs(const bcos::crypto::NodeIDs& _nodeIDs);
+    void notifyNodeIDs(const bcos::crypto::NodeIDs& _nodeIDs);
     /**
      * @brief: update the topicSeq and topicItems of the nodeID's
      * @param _nodeID: nodeID

@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(test_parseTopicItemsJson)
     }
 }
 
-BOOST_AUTO_TEST_CASE(test_clientSubTopics)
+BOOST_AUTO_TEST_CASE(test_subTopics)
 {
     auto topicManager = std::make_shared<TopicManager>();
 
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(test_clientSubTopics)
         }
         auto seq = topicManager->topicSeq();
         // sub topics
-        topicManager->clientSubTopic(clientID, topicItems);
+        topicManager->subTopic(clientID, topicItems);
         topicItems.clear();
         auto r = topicManager->queryTopicItemsByClient(clientID, topicItems);
         BOOST_CHECK(r);

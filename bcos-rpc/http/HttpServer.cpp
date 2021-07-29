@@ -135,6 +135,7 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
 
         auto session = m_sessionFactory->createSession(std::move(socket));
         session->setRequestHandler(m_requestHandler);
+        session->setWsUpgradeHandler(m_wsUpgradeHandler);
         session->run();
     }
 

@@ -23,6 +23,7 @@
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/beast/websocket.hpp>
+#include <utility>
 
 namespace bcos
 {
@@ -89,8 +90,19 @@ public:
 
         if (boost::beast::websocket::is_upgrade(m_parser->get()))
         {
-            // TODO: See if it is a WebSocket Upgrade
             HTTP_SESSION(INFO) << LOG_BADGE("onRead") << LOG_DESC("websocket upgrade");
+            if (m_wsUpgradeHandler)
+            {
+                m_wsUpgradeHandler(std::move(m_stream.socket()), m_parser->release());
+            }
+            else
+            {
+                HTTP_SESSION(WARNING)
+                    << LOG_BADGE("onRead")
+                    << LOG_DESC("the session will be closed for unsupported websocket upgrade");
+                doClose();
+            }
+            return;
         }
 
         auto self = std::weak_ptr<HttpSession>(shared_from_this());
@@ -98,7 +110,6 @@ public:
             auto session = self.lock();
             if (!session)
             {
-                HTTP_SESSION(WARNING) << LOG_DESC("session is not exist");
                 return;
             }
 
@@ -199,15 +210,23 @@ public:
     boost::beast::tcp_stream& stream() { return m_stream; }
     RequestHandler requestHandler() const { return m_requestHandler; }
     void setRequestHandler(RequestHandler requestHandler) { m_requestHandler = requestHandler; }
+
+    WebsocketUpgradeHandler wsUpgradeHandler() const { return m_wsUpgradeHandler; }
+    void setWsUpgradeHandler(WebsocketUpgradeHandler _wsUpgradeHandler)
+    {
+        m_wsUpgradeHandler = _wsUpgradeHandler;
+    }
     std::shared_ptr<Queue> queue() { return m_queue; }
     void setQueue(std::shared_ptr<Queue> _queue) { m_queue = _queue; }
 
 private:
     boost::beast::tcp_stream m_stream;
     boost::beast::flat_buffer m_buffer;
-    RequestHandler m_requestHandler;
+
     std::shared_ptr<Queue> m_queue;
 
+    RequestHandler m_requestHandler;
+    WebsocketUpgradeHandler m_wsUpgradeHandler;
     // the parser is stored in an optional container so we can
     // construct it from scratch it at the beginning of each new message.
     boost::optional<boost::beast::http::request_parser<boost::beast::http::string_body>> m_parser;

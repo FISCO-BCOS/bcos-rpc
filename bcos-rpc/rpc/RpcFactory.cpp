@@ -19,13 +19,22 @@
  * @date 2021-07-15
  */
 
+#include "bcos-rpc/amop/TopicManager.h"
+#include "bcos-rpc/http/ws/Common.h"
+#include "libutilities/Log.h"
+#include "libutilities/ThreadPool.h"
 #include <bcos-framework/libutilities/Exceptions.h>
 #include <bcos-framework/libutilities/FileUtility.h>
 #include <bcos-rpc/http/HttpServer.h>
+#include <bcos-rpc/http/ws/WsMessage.h>
+#include <bcos-rpc/http/ws/WsSession.h>
 #include <bcos-rpc/rpc/RpcFactory.h>
 #include <bcos-rpc/rpc/jsonrpc/JsonRpcImpl_2_0.h>
+#include <boost/core/ignore_unused.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <memory>
+#include <utility>
 
 using namespace bcos;
 using namespace bcos::rpc;
@@ -137,11 +146,13 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _node
     uint16_t _listenPort = _rpcConfig.m_listenPort;
     std::size_t _threadCount = _rpcConfig.m_threadCount;
 
+// TODO:
+#if 0
     checkParams();
+#endif
 
-    auto rpc = std::make_shared<Rpc>();
+    // JsonRpcImpl_2_0
     auto jsonRpcInterface = std::make_shared<bcos::rpc::JsonRpcImpl_2_0>();
-
     jsonRpcInterface->setNodeInfo(_nodeInfo);
     jsonRpcInterface->setLedger(m_ledgerInterface);
     jsonRpcInterface->setTxPoolInterface(m_txPoolInterface);
@@ -151,13 +162,67 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _node
     jsonRpcInterface->setTransactionFactory(m_transactionFactory);
     jsonRpcInterface->setGatewayInterface(m_gatewayInterface);
 
+    // HttpServer
     auto httpServerFactory = std::make_shared<bcos::http::HttpServerFactory>();
     auto httpServer = httpServerFactory->buildHttpServer(_listenIP, _listenPort, _threadCount);
     httpServer->setRequestHandler(std::bind(&bcos::rpc::JsonRpcImpl_2_0::onRPCRequest,
         jsonRpcInterface, std::placeholders::_1, std::placeholders::_2));
 
+    auto topicManager = std::make_shared<amop::TopicManager>();
+    auto wsMessageFactory = std::make_shared<ws::WsMessageFactory>();
+    auto threadPool = std::make_shared<bcos::ThreadPool>("ws-service", _threadCount);
+    // WsService
+    auto wsService = std::make_shared<ws::WsService>();
+    auto weakWsService = std::weak_ptr<ws::WsService>(wsService);
+    wsService->setJsonRpcInterface(jsonRpcInterface);
+    wsService->setTopicManager(topicManager);
+    wsService->setIoc(httpServer->ioc());
+    wsService->setMessageFactory(wsMessageFactory);
+    wsService->setThreadPool(threadPool);
+    // TODO: wsService->setAMOPInterface(std::shared_ptr<bcos::amop::AMOPInterface> _AMOPInterface);
+
+    httpServer->setWsUpgradeHandler(
+        [threadPool, wsMessageFactory, weakWsService](
+            boost::asio::ip::tcp::socket&& _socket, HttpRequest&& _httpRequest) {
+            auto session = std::make_shared<ws::WsSession>(std::move(_socket));
+            session->setThreadPool(threadPool);
+            session->setMessageFactory(wsMessageFactory);
+            session->setAcceptHandler(
+                [weakWsService](bcos::Error::Ptr _error, std::shared_ptr<ws::WsSession> _session) {
+                    boost::ignore_unused(_error);
+                    auto service = weakWsService.lock();
+                    if (service)
+                    {
+                        service->addSession(_session);
+                    }
+                });
+            session->setDisconnectHandler(
+                [weakWsService](bcos::Error::Ptr _error, std::shared_ptr<ws::WsSession> _session) {
+                    auto service = weakWsService.lock();
+                    if (service)
+                    {
+                        service->onDisconnect(_error, _session);
+                    }
+                });
+            session->setRecvMessageHandler(
+                [weakWsService](bcos::Error::Ptr _error, std::shared_ptr<ws::WsMessage> _msg,
+                    std::shared_ptr<ws::WsSession> _session) {
+                    auto service = weakWsService.lock();
+                    if (service)
+                    {
+                        service->onRecvClientMessage(_error, _msg, _session);
+                    }
+                });
+
+            // start websocket handshake
+            session->doAccept(std::move(_httpRequest));
+        });
+    wsService->initMethod();
+
+    auto rpc = std::make_shared<Rpc>();
     rpc->setHttpServer(httpServer);
-    RPC_FACTORY(INFO) << LOG_DESC("buildRpc") << LOG_KV("listenIP", _listenIP)
+    rpc->setWsService(wsService);
+    RPC_FACTORY(INFO) << LOG_BADGE("buildRpc") << LOG_KV("listenIP", _listenIP)
                       << LOG_KV("listenPort", _listenPort) << LOG_KV("threadCount", _threadCount);
     return rpc;
 }

@@ -391,12 +391,12 @@ void AMOP::asyncNotifyAmopMessage(
 void AMOP::asyncNotifyAmopNodeIDs(std::shared_ptr<const crypto::NodeIDs> _nodeIDs,
     std::function<void(bcos::Error::Ptr _error)> _callback)
 {
-    m_topicManager->updateOnlineNodeIDs(_nodeIDs ? *_nodeIDs.get() : bcos::crypto::NodeIDs());
+    m_topicManager->notifyNodeIDs(_nodeIDs ? *_nodeIDs.get() : bcos::crypto::NodeIDs());
     if (_callback)
     {
         _callback(nullptr);
     }
-    AMOP_LOG(INFO) << LOG_DESC("onReceiveResponseTopicMessage")
+    AMOP_LOG(INFO) << LOG_DESC("asyncNotifyAmopNodeIDs")
                    << LOG_KV("nodeIDs size", (_nodeIDs ? _nodeIDs->size() : 0));
 }
 
@@ -454,10 +454,10 @@ void AMOP::asyncSendMessage(const std::string& _topic, bcos::bytesConstRef _data
                 return;
             }
 
-            // shuffle
-            std::random_device rd;
-            std::default_random_engine rng(rd());
-            std::shuffle(m_nodeIDs.begin(), m_nodeIDs.end(), rng);
+            auto seed = std::chrono::system_clock::now().time_since_epoch().count();
+            std::default_random_engine e(seed);
+            std::shuffle(m_nodeIDs.begin(), m_nodeIDs.end(), e);
+
             auto nodeID = *m_nodeIDs.begin();
             m_nodeIDs.erase(m_nodeIDs.begin());
 

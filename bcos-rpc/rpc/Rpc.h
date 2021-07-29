@@ -22,6 +22,7 @@
 #pragma once
 #include <bcos-framework/interfaces/rpc/RPCInterface.h>
 #include <bcos-rpc/http/HttpServer.h>
+#include <bcos-rpc/http/ws/WsService.h>
 #include <bcos-rpc/rpc/Common.h>
 #include <bcos-rpc/rpc/jsonrpc/Common.h>
 
@@ -55,8 +56,12 @@ public:
     bcos::http::HttpServer::Ptr httpServer() const { return m_httpServer; }
     void setHttpServer(bcos::http::HttpServer::Ptr _httpServer) { m_httpServer = _httpServer; }
 
+    bcos::ws::WsService::Ptr wsService() const { return m_wsService; }
+    void setWsService(bcos::ws::WsService::Ptr _wsService) { m_wsService = _wsService; }
+
 private:
     bcos::http::HttpServer::Ptr m_httpServer;
+    bcos::ws::WsService::Ptr m_wsService;
 };
 
 }  // namespace rpc

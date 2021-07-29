@@ -71,11 +71,18 @@ public:
     void setThreadCount(uint32_t _threadCount) { m_threadCount = _threadCount; }
     uint32_t getThreadCount() { return m_threadCount; }
 
+    WebsocketUpgradeHandler wsUpgradeHandler() const { return m_wsUpgradeHandler; }
+    void setWsUpgradeHandler(WebsocketUpgradeHandler _wsUpgradeHandler)
+    {
+        m_wsUpgradeHandler = _wsUpgradeHandler;
+    }
+
 private:
     std::string m_listenIP;
     uint16_t m_listenPort;
     uint32_t m_threadCount;
     RequestHandler m_requestHandler;
+    WebsocketUpgradeHandler m_wsUpgradeHandler;
 
     HttpSessionFactory::Ptr m_sessionFactory;
     std::shared_ptr<boost::asio::io_context> m_ioc;

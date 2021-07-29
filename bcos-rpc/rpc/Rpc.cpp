@@ -25,7 +25,11 @@ using namespace bcos::rpc;
 
 void Rpc::start()
 {
+    // start jsonhttp service
     m_httpServer->startListen();
+    // start websocket service
+    m_wsService->start();
+    RPC_LOG(INFO) << LOG_DESC("start");
 }
 
 void Rpc::stop()
@@ -34,6 +38,11 @@ void Rpc::stop()
     {
         m_httpServer->stop();
     }
+    if (m_wsService)
+    {
+        m_wsService->stop();
+    }
+    RPC_LOG(INFO) << LOG_DESC("stop");
 }
 
 /**
@@ -45,6 +54,9 @@ void Rpc::stop()
 void Rpc::asyncNotifyBlockNumber(
     bcos::protocol::BlockNumber _blockNumber, std::function<void(Error::Ptr)> _callback)
 {
-    boost::ignore_unused(_blockNumber, _callback);
-    // TODO: push blockNumber to sdk
+    m_wsService->pushBlockNumber(_blockNumber);
+    if (_callback)
+    {
+        _callback(nullptr);
+    }
 }

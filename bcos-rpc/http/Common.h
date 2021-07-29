@@ -31,10 +31,11 @@ namespace bcos
 {
 namespace http
 {
-using RequestHandler =
-    std::function<void(const std::string& req, std::function<void(const std::string& resp)>)>;
 using HttpRequest = boost::beast::http::request<boost::beast::http::string_body>;
 using HttpResponse = boost::beast::http::response<boost::beast::http::string_body>;
 using HttpResponsePtr = std::shared_ptr<HttpResponse>;
+using RequestHandler =
+    std::function<void(const std::string& req, std::function<void(const std::string& resp)>)>;
+using WebsocketUpgradeHandler = std::function<void(boost::asio::ip::tcp::socket&&, HttpRequest&&)>;
 }  // namespace http
 }  // namespace bcos
