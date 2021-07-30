@@ -34,6 +34,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+using namespace std;
 using namespace bcos;
 using namespace bcos::rpc;
 using namespace boost::iterators;
@@ -346,7 +347,7 @@ void JsonRpcImpl_2_0::toJsonResp(
     // blockLimit
     jResp["blockLimit"] = _transactionPtr->blockLimit();
     // the receiver address
-    jResp["to"] = toHexStringWithPrefix(_transactionPtr->to());
+    jResp["to"] = string(_transactionPtr->to());
     // the sender address
     jResp["from"] = toHexStringWithPrefix(_transactionPtr->sender());
     // the input data
@@ -365,7 +366,7 @@ void JsonRpcImpl_2_0::toJsonResp(
     Json::Value& jResp, bcos::protocol::TransactionReceipt::ConstPtr _transactionReceiptPtr)
 {
     jResp["version"] = _transactionReceiptPtr->version();
-    jResp["contractAddress"] = toHexStringWithPrefix(_transactionReceiptPtr->contractAddress());
+    jResp["contractAddress"] = string(_transactionReceiptPtr->contractAddress());
     jResp["gasUsed"] = _transactionReceiptPtr->gasUsed().str(16);
     jResp["status"] = _transactionReceiptPtr->status();
     jResp["blockNumber"] = _transactionReceiptPtr->blockNumber();
@@ -475,7 +476,7 @@ void JsonRpcImpl_2_0::call(const std::string& _to, const std::string& _data, Res
     RPC_IMPL_LOG(INFO) << LOG_DESC("call") << LOG_KV("to", _to) << LOG_KV("data", _data);
 
     auto transaction = m_transactionFactory->createTransaction(
-        0, *bcos::fromHexString(_to), *decodeData(_data), u256(0), 0, "", "", 0);
+        0, _to, *decodeData(_data), u256(0), 0, "", "", 0);
 
     m_executorInterface->asyncExecuteTransaction(
         transaction, [_to, _respFunc](const Error::Ptr& _error,
