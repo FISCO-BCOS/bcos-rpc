@@ -60,8 +60,8 @@ public:
     static void toJsonResp(Json::Value& jResp, bcos::protocol::BlockHeader::Ptr _blockHeaderPtr);
     static void toJsonResp(
         Json::Value& jResp, bcos::protocol::Block::Ptr _blockPtr, bool _onlyTxHash);
-    static void toJsonResp(
-        Json::Value& jResp, bcos::protocol::TransactionReceipt::ConstPtr _transactionReceiptPtr);
+    static void toJsonResp(Json::Value& jResp, const std::string& _txHash,
+        bcos::protocol::TransactionReceipt::ConstPtr _transactionReceiptPtr);
     static void addProofToResponse(
         Json::Value& jResp, std::string const& _key, ledger::MerkleProofPtr _merkleProofPtr);
 
