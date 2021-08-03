@@ -24,6 +24,7 @@ config_test_cases("" "${SOURCES}" bin/${TEST_BINARY_NAME} "")
 
 if (BUILD_TEST_EXEC)
     add_subdirectory(httpserver)
+    add_subdirectory(wsclient)
 endif()
 
 add_executable(${TEST_BINARY_NAME} ${SOURCES})

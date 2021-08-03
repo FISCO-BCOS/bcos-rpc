@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     {
         std::cerr << "Usage: ./http-server <address> <port>\n"
                   << "Example:\n"
-                  << "    ./http-server 0.0.0.0 8080\n";
+                  << "    ./http-server 0.0.0.0 20200\n";
         return -1;
     }
 
@@ -38,19 +38,9 @@ int main(int argc, char* argv[])
     rpcConfig->m_threadCount = threads;
 
     bcos::rpc::NodeInfo nodeInfo;
-
     auto factory = std::make_shared<bcos::rpc::RpcFactory>();
     auto rpc = factory->buildRpc(*rpcConfig, nodeInfo);
     rpc->start();
-    /*
-        auto jsonRpcInterface = std::make_shared<bcos::rpc::JsonRpcImpl_2_0>();
-        auto httpServerFactory = std::make_shared<bcos::http::HttpServerFactory>();
-        auto httpServer = httpServerFactory->buildHttpServer(address, port, threads);
-        httpServer->setRequestHandler(std::bind(&bcos::rpc::JsonRpcImpl_2_0::onRPCRequest,
-            jsonRpcInterface, std::placeholders::_1, std::placeholders::_2));
-
-        httpServer->startListen();
-        */
 
     while (true)
     {
