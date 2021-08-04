@@ -21,6 +21,7 @@
 #include <bcos-rpc/amop/Common.h>
 #include <bcos-rpc/amop/TopicManager.h>
 #include <json/json.h>
+#include <algorithm>
 
 using namespace bcos;
 using namespace bcos::amop;
@@ -246,7 +247,7 @@ bool TopicManager::parseTopicItemsJson(
 bool TopicManager::checkTopicSeq(bcos::crypto::NodeIDPtr _nodeID, uint32_t _topicSeq)
 {
     std::shared_lock lock(x_topics);
-    auto it = m_nodeID2TopicSeq.find(_nodeID);
+    auto it = m_nodeID2TopicSeq.find(_nodeID->hex());
     if (it != m_nodeID2TopicSeq.end() && it->second == _topicSeq)
     {
         return false;
@@ -268,7 +269,7 @@ void TopicManager::notifyNodeIDs(const bcos::crypto::NodeIDs& _nodeIDs)
         {
             if (std::find_if(_nodeIDs.begin(), _nodeIDs.end(),
                     [&it](bcos::crypto::NodeIDPtr _nodeID) -> bool {
-                        return it->first->hex() == _nodeID->hex();
+                        return it->first == _nodeID->hex();
                     }) == _nodeIDs.end())
             {  // nodeID is offline, remove the nodeID's state
                 it = m_nodeID2TopicSeq.erase(it);
@@ -297,8 +298,8 @@ void TopicManager::updateSeqAndTopicsByNodeID(
 {
     {
         std::unique_lock lock(x_topics);
-        m_nodeID2TopicSeq[_nodeID] = _topicSeq;
-        m_nodeID2TopicItems[_nodeID] = _topicItems;
+        m_nodeID2TopicSeq[_nodeID->hex()] = _topicSeq;
+        m_nodeID2TopicItems[_nodeID->hex()] = _topicItems;
     }
 
     TOPIC_LOG(INFO) << LOG_DESC("updateSeqAndTopicsByNodeID") << LOG_KV("nodeID", _nodeID->hex())
@@ -312,7 +313,8 @@ void TopicManager::updateSeqAndTopicsByNodeID(
  * @param _nodeIDs: nodeIDs
  * @return void
  */
-void TopicManager::queryNodeIDsByTopic(const std::string& _topic, bcos::crypto::NodeIDs& _nodeIDs)
+void TopicManager::queryNodeIDsByTopic(
+    const std::string& _topic, std::vector<std::string>& _nodeIDs)
 {
     std::shared_lock lock(x_topics);
     for (auto it = m_nodeID2TopicItems.begin(); it != m_nodeID2TopicItems.end(); ++it)
@@ -325,4 +327,30 @@ void TopicManager::queryNodeIDsByTopic(const std::string& _topic, bcos::crypto::
         }
     }
     return;
+}
+
+/**
+ * @brief: find clients by topic
+ * @param _topic: topic
+ * @param _nodeIDs: nodeIDs
+ * @return void
+ */
+void TopicManager::queryClientsByTopic(
+    const std::string& _topic, std::vector<std::string>& _clients)
+{
+    {
+        std::shared_lock lock(x_clientTopics);
+        for (const auto& items : m_client2TopicItems)
+        {
+            auto it = std::find_if(items.second.begin(), items.second.end(),
+                [_topic](const TopicItem& _topicItem) { return _topic == _topicItem.topicName(); });
+            if (it != items.second.end())
+            {
+                _clients.push_back(items.first);
+            }
+        }
+    }
+
+    TOPIC_LOG(INFO) << LOG_DESC("queryClientsByTopic") << LOG_KV("topic", _topic)
+                    << LOG_KV("clients size", _clients.size());
 }

@@ -18,6 +18,7 @@
  * @date 2021-07-28
  */
 #pragma once
+#include "libutilities/Common.h"
 #include <bcos-rpc/http/Common.h>
 #include <bcos-rpc/http/ws/Common.h>
 #include <bcos-rpc/http/ws/WsMessage.h>
@@ -64,14 +65,15 @@ public:
     // start websocket accept
     void doAccept(http::HttpRequest _req);
     void onAccept(boost::beast::error_code _ec);
-
+    // async read
     void onRead(boost::beast::error_code _ec, std::size_t);
     void asyncRead();
+    // async write
     void onWrite(boost::beast::error_code _ec, std::size_t);
     void asyncWrite();
 
     /**
-     * @brief: send message with callback
+     * @brief: async send message
      * @param _msg: message
      * @param _options: options
      * @param _respCallback: callback
@@ -84,7 +86,6 @@ public:
     bool isConnected() { return m_wsStream.next_layer().socket().is_open() && !m_isDrop; }
 
     std::string remoteEndPoint() const { return m_remoteEndPoint; }
-
     std::string localEndPoint() const { return m_localEndPoint; }
 
     void setAcceptHandler(WsAcceptHandler _acceptHandler) { m_acceptHandler = _acceptHandler; }

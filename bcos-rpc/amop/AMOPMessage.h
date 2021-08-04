@@ -26,11 +26,11 @@ namespace amop
 {
 enum AMOPMessageType : uint16_t
 {
-    TopicSeq = 1,
-    RequestTopic = 2,
-    ResponseTopic = 3,
-    AMOPRequest = 4,
-    AMOPBroadcast = 5
+    TopicSeq = 0x1,
+    RequestTopic = 0x2,
+    ResponseTopic = 0x3,
+    AMOPRequest = 0x4,
+    AMOPBroadcast = 0x5
 };
 
 class AMOPMessage
@@ -38,10 +38,10 @@ class AMOPMessage
 public:
     using Ptr = std::shared_ptr<AMOPMessage>;
 
-    /// type(2) + topic length(2) + topic + data
-    const static size_t HEADER_LENGTH = 4;
-    /// the max length of topic
-    const static size_t MAX_TOPIC_LENGTH = 65535;
+    /// type(2) + data
+    const static size_t HEADER_LENGTH = 2;
+    /// the max length of topic(65535)
+    const static size_t MAX_TOPIC_LENGTH = 0xffff;
 
 public:
     AMOPMessage() { m_data = bytesConstRef(); }
@@ -50,19 +50,15 @@ public:
     uint16_t type() const { return m_type; }
     void setType(uint16_t _type) { m_type = _type; }
 
-    std::string topic() const { return m_topic; }
-    void setTopic(const std::string& _topic) { m_topic = _topic; }
-
     bytesConstRef data() const { return m_data; }
     void setData(bcos::bytesConstRef _data) { m_data = _data; }
 
 public:
-    void encode(bytes& _buffer);
+    bool encode(bytes& _buffer);
     ssize_t decode(bytesConstRef _buffer);
 
 private:
     uint16_t m_type{0};
-    std::string m_topic;
     bcos::bytesConstRef m_data;
 };
 class MessageFactory

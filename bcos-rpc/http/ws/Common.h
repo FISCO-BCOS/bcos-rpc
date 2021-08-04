@@ -24,6 +24,7 @@
 
 #define WEBSOCKET_VERSION(LEVEL) BCOS_LOG(LEVEL) << "[WS][VERSION]"
 #define WEBSOCKET_SESSION(LEVEL) BCOS_LOG(LEVEL) << "[WS][SESSION]"
+#define WEBSOCKET_MESSAGE(LEVEL) BCOS_LOG(LEVEL) << "[WS][MESSAGE]"
 #define WEBSOCKET_SERVICE(LEVEL) BCOS_LOG(LEVEL) << "[WS][SERVICE]"
 
 namespace bcos
@@ -46,6 +47,11 @@ struct Options
 {
     Options(uint32_t _timeout) : timeout(_timeout) {}
     uint32_t timeout = 0;  ///< The timeout value of async function, in milliseconds.
+};
+
+enum WsStatusCode
+{
+    InvalidRequestParams = 100,
 };
 
 }  // namespace ws

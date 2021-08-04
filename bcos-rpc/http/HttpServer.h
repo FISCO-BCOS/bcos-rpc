@@ -84,7 +84,7 @@ private:
     RequestHandler m_requestHandler;
     WebsocketUpgradeHandler m_wsUpgradeHandler;
 
-    HttpSessionFactory::Ptr m_sessionFactory;
+    std::shared_ptr<HttpSessionFactory> m_sessionFactory;
     std::shared_ptr<boost::asio::io_context> m_ioc;
     std::shared_ptr<boost::asio::ip::tcp::acceptor> m_acceptor;
     std::shared_ptr<std::vector<std::thread>> m_threads;

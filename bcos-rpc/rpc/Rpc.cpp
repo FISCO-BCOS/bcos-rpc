@@ -19,17 +19,20 @@
  * @date 2021-07-15
  */
 
+#include "libutilities/Log.h"
 #include <bcos-rpc/rpc/Rpc.h>
 using namespace bcos;
 using namespace bcos::rpc;
 
 void Rpc::start()
 {
-    // start jsonhttp service
-    m_httpServer->startListen();
+    // start amop
+    m_AMOP->start();
     // start websocket service
     m_wsService->start();
-    RPC_LOG(INFO) << LOG_DESC("start");
+    // start jsonhttp service
+    m_httpServer->startListen();
+    RPC_LOG(INFO) << LOG_BADGE("start");
 }
 
 void Rpc::stop()
@@ -42,7 +45,11 @@ void Rpc::stop()
     {
         m_wsService->stop();
     }
-    RPC_LOG(INFO) << LOG_DESC("stop");
+    if (m_AMOP)
+    {
+        m_AMOP->stop();
+    }
+    RPC_LOG(INFO) << LOG_BADGE("stop");
 }
 
 /**
@@ -54,7 +61,7 @@ void Rpc::stop()
 void Rpc::asyncNotifyBlockNumber(
     bcos::protocol::BlockNumber _blockNumber, std::function<void(Error::Ptr)> _callback)
 {
-    m_wsService->pushBlockNumber(_blockNumber);
+    m_wsService->notifyBlockNumberToClient(_blockNumber);
     if (_callback)
     {
         _callback(nullptr);

@@ -21,6 +21,7 @@
 
 #pragma once
 #include <bcos-framework/interfaces/rpc/RPCInterface.h>
+#include <bcos-rpc/amop/AMOP.h>
 #include <bcos-rpc/http/HttpServer.h>
 #include <bcos-rpc/http/ws/WsService.h>
 #include <bcos-rpc/rpc/Common.h>
@@ -59,9 +60,13 @@ public:
     bcos::ws::WsService::Ptr wsService() const { return m_wsService; }
     void setWsService(bcos::ws::WsService::Ptr _wsService) { m_wsService = _wsService; }
 
+    bcos::amop::AMOP::Ptr AMOP() const { return m_AMOP; }
+    void setAMOP(bcos::amop::AMOP::Ptr _AMOP) { m_AMOP = _AMOP; }
+
 private:
     bcos::http::HttpServer::Ptr m_httpServer;
     bcos::ws::WsService::Ptr m_wsService;
+    bcos::amop::AMOP::Ptr m_AMOP;
 };
 
 }  // namespace rpc

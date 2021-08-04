@@ -20,12 +20,18 @@
 #pragma once
 
 #include <bcos-framework/interfaces/amop/AMOPInterface.h>
+#include <bcos-framework/interfaces/crypto/KeyFactory.h>
 #include <bcos-rpc/amop/AMOPMessage.h>
 #include <bcos-rpc/amop/TopicManager.h>
 #include <boost/asio.hpp>
+#include <memory>
 
 namespace bcos
 {
+namespace ws
+{
+class WsService;
+}
 namespace amop
 {
 class AMOP : public AMOPInterface, public std::enable_shared_from_this<AMOP>
@@ -85,15 +91,7 @@ public:
      * @param _data: message data
      * @return std::shared_ptr<bytes>
      */
-    std::shared_ptr<bytes> buildEncodedMessage(uint32_t _type, bcos::bytesConstRef _data);
-    /**
-     * @brief: create message and encode the message to bytes
-     * @param _type: message type
-     * @param _data: message data
-     * @return std::shared_ptr<bytes>
-     */
-    std::shared_ptr<bytes> buildEncodedMessage(
-        uint32_t _type, const std::string& _topic, bcos::bytesConstRef _data);
+    std::shared_ptr<bytes> buildAndEncodeMessage(uint32_t _type, bcos::bytesConstRef _data);
     /**
      * @brief: periodically send topicSeq to all other nodes
      * @return void
@@ -146,7 +144,7 @@ public:
         bcos::crypto::NodeIDPtr _nodeID, const std::string& _id, AMOPMessage::Ptr _msg);
 
 public:
-    decltype(auto) msgTypeToHandler() { return m_msgTypeToHandler; }
+    decltype(auto) messageHandler() { return m_messageHandler; }
 
     std::shared_ptr<boost::asio::io_service> ioService() const { return m_ioService; }
     void setIoService(const std::shared_ptr<boost::asio::io_service> _ioService)
@@ -174,8 +172,20 @@ public:
         m_frontServiceInterface = _frontServiceInterface;
     }
 
+    std::weak_ptr<bcos::ws::WsService> wsService() { return m_wsService; }
+    void setWsService(std::weak_ptr<bcos::ws::WsService> _wsService) { m_wsService = _wsService; }
+
+    std::shared_ptr<bcos::crypto::KeyFactory> keyFactory() { return m_keyFactory; }
+    void setKeyFactory(std::shared_ptr<bcos::crypto::KeyFactory> _keyFactory)
+    {
+        m_keyFactory = _keyFactory;
+    }
+
 private:
     bool m_run = false;
+    //
+    std::shared_ptr<bcos::crypto::KeyFactory> m_keyFactory;
+    std::weak_ptr<bcos::ws::WsService> m_wsService;
     std::shared_ptr<bcos::front::FrontServiceInterface> m_frontServiceInterface;
     std::shared_ptr<MessageFactory> m_messageFactory;
     std::shared_ptr<TopicManager> m_topicManager;
@@ -185,7 +195,8 @@ private:
 
     std::unordered_map<uint16_t, std::function<void(bcos::crypto::NodeIDPtr _nodeID,
                                      const std::string& _id, AMOPMessage::Ptr _msg)>>
-        m_msgTypeToHandler;
+        m_messageHandler;
 };
+
 }  // namespace amop
 }  // namespace bcos

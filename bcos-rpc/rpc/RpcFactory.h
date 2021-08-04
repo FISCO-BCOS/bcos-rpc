@@ -21,12 +21,16 @@
 
 #pragma once
 #include <bcos-framework/interfaces/consensus/ConsensusInterface.h>
+#include <bcos-framework/interfaces/crypto/KeyFactory.h>
 #include <bcos-framework/interfaces/executor/ExecutorInterface.h>
+#include <bcos-framework/interfaces/front/FrontServiceInterface.h>
 #include <bcos-framework/interfaces/gateway/GatewayInterface.h>
 #include <bcos-framework/interfaces/ledger/LedgerInterface.h>
 #include <bcos-framework/interfaces/sync/BlockSyncInterface.h>
 #include <bcos-framework/interfaces/txpool/TxPoolInterface.h>
+#include <bcos-rpc/amop/AMOP.h>
 #include <bcos-rpc/rpc/Rpc.h>
+#include <bcos-rpc/rpc/jsonrpc/JsonRpcImpl_2_0.h>
 
 namespace bcos
 {
@@ -48,6 +52,8 @@ public:
     using Ptr = std::shared_ptr<RpcFactory>;
 
 public:
+    bcos::amop::AMOP::Ptr buildAMOP();
+    JsonRpcInterface::Ptr buildJsonRpc(const NodeInfo& _nodeInfo);
     /**
      * @brief: Rpc
      * @param _rpcConfig: rpc config
@@ -107,6 +113,15 @@ public:
         m_gatewayInterface = _gatewayInterface;
     }
 
+    bcos::front::FrontServiceInterface::Ptr frontServiceInterface() const
+    {
+        return m_frontServiceInterface;
+    }
+    void setFrontServiceInterface(bcos::front::FrontServiceInterface::Ptr _frontServiceInterface)
+    {
+        m_frontServiceInterface = _frontServiceInterface;
+    }
+
     void setTransactionFactory(bcos::protocol::TransactionFactory::Ptr _transactionFactory)
     {
         m_transactionFactory = _transactionFactory;
@@ -116,15 +131,23 @@ public:
         return m_transactionFactory;
     }
 
+    std::shared_ptr<bcos::crypto::KeyFactory> keyFactory() { return m_keyFactory; }
+    void setKeyFactory(std::shared_ptr<bcos::crypto::KeyFactory> _keyFactory)
+    {
+        m_keyFactory = _keyFactory;
+    }
+
 public:
     void checkParams();
 
 private:
+    std::shared_ptr<bcos::crypto::KeyFactory> m_keyFactory;
     bcos::ledger::LedgerInterface::Ptr m_ledgerInterface;
     std::shared_ptr<bcos::executor::ExecutorInterface> m_executorInterface;
     bcos::txpool::TxPoolInterface::Ptr m_txPoolInterface;
     bcos::consensus::ConsensusInterface::Ptr m_consensusInterface;
     bcos::sync::BlockSyncInterface::Ptr m_blockSyncInterface;
+    bcos::front::FrontServiceInterface::Ptr m_frontServiceInterface;
     bcos::gateway::GatewayInterface::Ptr m_gatewayInterface;
     bcos::protocol::TransactionFactory::Ptr m_transactionFactory;
 };

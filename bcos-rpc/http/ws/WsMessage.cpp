@@ -18,13 +18,20 @@
  * @author: octopus
  * @date 2021-07-28
  */
+#include <bcos-rpc/http/ws/Common.h>
 #include <bcos-rpc/http/ws/WsMessage.h>
 #include <boost/asio/detail/socket_ops.hpp>
 #include <iterator>
+#include <stdexcept>
+#include <string>
 
 using namespace bcos;
 using namespace bcos::ws;
 
+// topic max length
+const size_t AMOPRequest::TOPIC_MAX_LENGTH;
+// amop message min length
+const size_t AMOPRequest::MESSAGE_MIN_LENGTH;
 // seq field length
 const size_t WsMessage::SEQ_LENGTH;
 /// type(2) + error(2) + seq(32) + data(N)
@@ -82,9 +89,42 @@ ssize_t WsMessage::decode(const bcos::byte* _buffer, std::size_t _size)
     // seq field
     m_seq->insert(m_seq->begin(), p, p + SEQ_LENGTH);
     p += SEQ_LENGTH;
-
     // data field
     m_data->insert(m_data->begin(), p, _buffer + _size);
 
     return _size;
+}
+
+bool AMOPRequest::encode(bcos::bytes& _buffer)
+{
+    if (m_topic.size() > TOPIC_MAX_LENGTH)
+    {
+        return false;
+    }
+
+    uint16_t length =
+        boost::asio::detail::socket_ops::host_to_network_short((uint16_t)m_topic.size());
+    _buffer.insert(_buffer.end(), (byte*)&length, (byte*)&length + 2);
+    _buffer.insert(_buffer.end(), m_topic.begin(), m_topic.end());
+    _buffer.insert(_buffer.end(), m_data.begin(), m_data.end());
+    return true;
+}
+
+std::size_t AMOPRequest::decode(bytesConstRef _data)
+{
+    if (_data.size() < MESSAGE_MIN_LENGTH)
+    {
+        return -1;
+    }
+
+    std::size_t offset = 0;
+    uint16_t topicLen =
+        boost::asio::detail::socket_ops::network_to_host_short(*((uint16_t*)_data.data()));
+    offset += 2;
+    // topic
+    m_topic = std::string(_data.data() + offset, _data.data() + offset + topicLen);
+    offset += topicLen;
+    // data
+    m_data = _data.getCroppedData(offset);
+    return _data.size();
 }

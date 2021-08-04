@@ -18,37 +18,35 @@
  * @date 2021-06-21
  */
 
+#include "libutilities/DataConvertUtility.h"
+#include "libutilities/Log.h"
+#include <bcos-framework/libutilities/Error.h>
 #include <bcos-rpc/amop/AMOPMessage.h>
+#include <bcos-rpc/amop/Common.h>
 #include <boost/asio.hpp>
 
 using namespace bcos;
 using namespace bcos::amop;
 
-void AMOPMessage::encode(bcos::bytes& _buffer)
-{
-    if (m_topic.size() > MAX_TOPIC_LENGTH)
-    {
-        throw std::length_error(
-            "the topic length longer than the maximum allowed(65535), topic size:" +
-            std::to_string(m_topic.size()));
-    }
+const size_t AMOPMessage::HEADER_LENGTH;
 
+bool AMOPMessage::encode(bcos::bytes& _buffer)
+{
     uint16_t type = boost::asio::detail::socket_ops::host_to_network_short(m_type);
-    uint16_t length =
-        boost::asio::detail::socket_ops::host_to_network_short((uint16_t)m_topic.size());
     _buffer.insert(_buffer.end(), (byte*)&type, (byte*)&type + 2);
-    _buffer.insert(_buffer.end(), (byte*)&length, (byte*)&length + 2);
-    if (!m_topic.empty())
-    {
-        _buffer.insert(_buffer.end(), m_topic.begin(), m_topic.end());
-    }
     _buffer.insert(_buffer.end(), m_data.begin(), m_data.end());
+    return true;
 }
 
 ssize_t AMOPMessage::decode(bcos::bytesConstRef _buffer)
 {
     if (_buffer.size() < HEADER_LENGTH)
     {
+        AMOP_MSG_LOG(ERROR)
+            << LOG_BADGE("decode")
+            << LOG_DESC("the topic length smaller than the minimum length(2), data size:" +
+                        std::to_string(_buffer.size()))
+            << LOG_KV("data", *toHexString(_buffer));
         return -1;
     }
 
@@ -56,14 +54,6 @@ ssize_t AMOPMessage::decode(bcos::bytesConstRef _buffer)
     m_type = boost::asio::detail::socket_ops::network_to_host_short(
         *((uint16_t*)(_buffer.data() + offset)));
     offset += 2;
-    uint16_t length = boost::asio::detail::socket_ops::network_to_host_short(
-        *((uint16_t*)(_buffer.data() + offset)));
-    offset += 2;
-    if (length > 0)
-    {
-        m_topic = std::string(_buffer.data() + offset, _buffer.data() + offset + length);
-        offset += length;
-    }
     m_data = _buffer.getCroppedData(offset);
 
     return _buffer.size();
