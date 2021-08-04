@@ -18,6 +18,7 @@
  * @author: octopus
  * @date 2021-07-28
  */
+#include <bcos-rpc/http/ws/Common.h>
 #include <bcos-rpc/http/ws/WsMessage.h>
 #include <boost/asio/detail/socket_ops.hpp>
 #include <iterator>
@@ -25,6 +26,8 @@
 using namespace bcos;
 using namespace bcos::ws;
 
+// topic field length
+const size_t WsMessage::TOPIC_MAX_LENGTH;
 // seq field length
 const size_t WsMessage::SEQ_LENGTH;
 /// type(2) + error(2) + seq(32) + data(N)
@@ -82,7 +85,6 @@ ssize_t WsMessage::decode(const bcos::byte* _buffer, std::size_t _size)
     // seq field
     m_seq->insert(m_seq->begin(), p, p + SEQ_LENGTH);
     p += SEQ_LENGTH;
-
     // data field
     m_data->insert(m_data->begin(), p, _buffer + _size);
 

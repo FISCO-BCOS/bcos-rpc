@@ -22,6 +22,7 @@
 #include <bcos-framework/libutilities/DataConvertUtility.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <bcos-framework/libutilities/ThreadPool.h>
+#include <bcos-rpc/amop/AMOP.h>
 #include <bcos-rpc/amop/TopicManager.h>
 #include <bcos-rpc/http/ws/Common.h>
 #include <bcos-rpc/http/ws/WsMessageType.h>
@@ -69,9 +70,8 @@ void WsService::stop()
 
 void WsService::doLoop()
 {
-    auto ioc = boost::asio::make_strand(*m_ioc);
-    m_loopTimer = std::make_shared<boost::asio::deadline_timer>(
-        ioc, boost::posix_time::milliseconds(WS_SERVICE_DO_LOOP_PERIOD));
+    m_loopTimer = std::make_shared<boost::asio::deadline_timer>(boost::asio::make_strand(*m_ioc),
+        boost::posix_time::milliseconds(WS_SERVICE_DO_LOOP_PERIOD));
 
     auto self = std::weak_ptr<WsService>(shared_from_this());
     m_loopTimer->async_wait([self](const boost::system::error_code&) {
@@ -82,6 +82,11 @@ void WsService::doLoop()
         }
 
         auto ss = service->sessions();
+        for (auto const& session : ss)
+        {
+            boost::ignore_unused(session);
+            // NOTE: server should send heartbeat message
+        }
         WEBSOCKET_SERVICE(INFO) << LOG_BADGE("doLoop") << LOG_KV("connected sdk count", ss.size());
         service->doLoop();
     });
@@ -182,8 +187,9 @@ WsSessions WsService::sessions()
             }
             else
             {
-                WEBSOCKET_SERVICE(DEBUG) << LOG_DESC("sessions the session is closed")
-                                         << LOG_KV("endpoint", session.second->remoteEndPoint());
+                WEBSOCKET_SERVICE(DEBUG)
+                    << LOG_BADGE("sessions") << LOG_DESC("the session is disconnected")
+                    << LOG_KV("endpoint", session.second->remoteEndPoint());
             }
         }
     }
@@ -240,9 +246,9 @@ void WsService::onRecvClientMessage(
 
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
 
-    WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("onRecvClientMessage") << LOG_KV("type", _msg->type())
-                             << LOG_KV("seq", seq)
-                             << LOG_KV("endpoint", _session->remoteEndPoint());
+    WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("onRecvClientMessage") << LOG_KV("type", _msg->type())
+                             << LOG_KV("seq", seq) << LOG_KV("endpoint", _session->remoteEndPoint())
+                             << LOG_KV("data size", _msg->data()->size());
 
     auto it = m_msgType2Method.find(_msg->type());
     if (it != m_msgType2Method.end())
@@ -279,9 +285,10 @@ void WsService::onRecvHandshake(
             }
             else
             {
+                // NOTE: give default 0 value or not give blockNumber field
                 _jNodeInfo["blockNumber"] = 0;
                 WEBSOCKET_SERVICE(ERROR)
-                    << LOG_BADGE("onRecvHandshake") << LOG_DESC("failed to get block number")
+                    << LOG_BADGE("onRecvHandshake") << LOG_DESC("get block number failed")
                     << LOG_KV("errorCode", _error ? _error->errorCode() : -1)
                     << LOG_KV("errorMessage", _error ? _error->errorMessage() : std::string(""));
             }
@@ -337,8 +344,36 @@ void WsService::onRecvSubTopics(
 void WsService::onRecvAMOPRequest(
     std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session)
 {
-    boost::ignore_unused(_msg, _session);
-    // TODO:
+    std::string topic;
+    std::shared_ptr<bcos::bytes> buffer;
+    // TODO: get topic and buffer params
+    m_AMOP->asyncSendMessage(topic, bcos::bytesConstRef(buffer->data(), buffer->size()),
+        [_msg, _session](bcos::Error::Ptr _error, bcos::bytesConstRef _data) {
+            auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+            if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
+            {
+                _msg->setStauts(_error->errorCode());
+                _msg->data()->clear();
+
+                WEBSOCKET_SERVICE(ERROR)
+                    << LOG_BADGE("onRecvAMOPRequest")
+                    << LOG_DESC("AMOP async send message callback") << LOG_KV("seq", seq)
+                    << LOG_KV("errorCode", _error->errorCode())
+                    << LOG_KV("errorMessage", _error->errorMessage());
+            }
+            else
+            {
+                _msg->setStauts(0);
+                _msg->setData(std::make_shared<bcos::bytes>(_data.begin(), _data.end()));
+
+                WEBSOCKET_SERVICE(INFO)
+                    << LOG_BADGE("onRecvAMOPRequest")
+                    << LOG_DESC("AMOP async send message callback") << LOG_KV("seq", seq);
+            }
+
+            // send response back to sdk
+            _session->asyncSendMessage(_msg);
+        });
 }
 
 /**
@@ -348,12 +383,17 @@ void WsService::onRecvAMOPBroadcast(
     std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session)
 {
     boost::ignore_unused(_msg, _session);
-    // TODO:
+    std::string topic;
+    std::shared_ptr<bcos::bytes> buffer;
+
+    m_AMOP->asyncSendBroadbastMessage(topic, bcos::bytesConstRef(buffer->data(), buffer->size()));
 }
 
 void WsService::onRecvAMOPMessage(Error::Ptr _error, std::shared_ptr<amop::AMOPMessage> _msg)
 {
     boost::ignore_unused(_error, _msg);
+    std::string topic;
+    std::shared_ptr<bcos::bytes> buffer;
     // TODO:
 }
 
@@ -363,7 +403,7 @@ void WsService::onRecvAMOPMessage(Error::Ptr _error, std::shared_ptr<amop::AMOPM
  * @param _blockNumber:
  * @return void:
  */
-void WsService::pushBlockNumber(
+void WsService::notifyBlockNumberToClient(
     std::shared_ptr<WsSession> _session, bcos::protocol::BlockNumber _blockNumber)
 {
     std::string resp = "{\"blockNumber\": " + std::to_string(_blockNumber) + "}";
@@ -371,7 +411,7 @@ void WsService::pushBlockNumber(
         WsMessageType::BLOCK_NOTIFY, std::make_shared<bcos::bytes>(resp.begin(), resp.end()));
     _session->asyncSendMessage(message);
 
-    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("pushBlockNumber")
+    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("notifyBlockNumberToClient")
                             << LOG_KV("endpoint", _session->remoteEndPoint())
                             << LOG_KV("blockNumber", _blockNumber);
 }
@@ -381,14 +421,18 @@ void WsService::pushBlockNumber(
  * @param _blockNumber:
  * @return void:
  */
-void WsService::pushBlockNumber(bcos::protocol::BlockNumber _blockNumber)
+void WsService::notifyBlockNumberToClient(bcos::protocol::BlockNumber _blockNumber)
 {
     auto allSessions = sessions();
     for (const auto& session : allSessions)
     {
-        pushBlockNumber(session, _blockNumber);
+        if (session->isConnected())
+        {
+            notifyBlockNumberToClient(session, _blockNumber);
+        }
     }
 
-    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("pushBlockNumber") << LOG_KV("blockNumber", _blockNumber)
+    WEBSOCKET_SERVICE(INFO) << LOG_BADGE("notifyBlockNumberToClient")
+                            << LOG_KV("blockNumber", _blockNumber)
                             << LOG_KV("sessions size", allSessions.size());
 }

@@ -96,22 +96,16 @@ BOOST_AUTO_TEST_CASE(test_initAMOPMessage)
 BOOST_AUTO_TEST_CASE(test_AMOPMessageTopicOverflow)
 {
     auto messageFactory = std::make_shared<MessageFactory>();
-    try
-    {
-        uint16_t type = 1234;
-        std::string topic(65536, '1');
-        std::string data(10000, '1');
-        auto message = messageFactory->buildMessage();
-        message->setType(type);
-        message->setData(bytesConstRef((byte*)data.data(), data.size()));
-        message->setTopic(topic);
-        auto buffer = std::make_shared<bytes>();
-        message->encode(*buffer.get());
-        BOOST_CHECK(false);
-    }
-    catch (const std::exception& e)
-    {
-        BOOST_CHECK(true);
-    }
+
+    uint16_t type = 1234;
+    std::string topic(65536, '1');
+    std::string data(10000, '1');
+    auto message = messageFactory->buildMessage();
+    message->setType(type);
+    message->setData(bytesConstRef((byte*)data.data(), data.size()));
+    message->setTopic(topic);
+    auto buffer = std::make_shared<bytes>();
+    auto r = message->encode(*buffer.get());
+    BOOST_CHECK(!r);
 }
 BOOST_AUTO_TEST_SUITE_END()

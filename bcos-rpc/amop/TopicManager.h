@@ -37,7 +37,7 @@ private:
     mutable std::shared_mutex x_clientTopics;
     // topicSeq
     std::atomic<uint32_t> m_topicSeq{1};
-    // clientID => TopicItems
+    // client => TopicItems
     std::unordered_map<std::string, TopicItems> m_client2TopicItems;
 
     // m_nodeID2TopicSeq lock

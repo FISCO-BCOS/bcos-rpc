@@ -19,6 +19,7 @@
  * @date 2021-07-15
  */
 
+#include "libutilities/Log.h"
 #include <bcos-rpc/rpc/Rpc.h>
 using namespace bcos;
 using namespace bcos::rpc;
@@ -29,7 +30,7 @@ void Rpc::start()
     m_httpServer->startListen();
     // start websocket service
     m_wsService->start();
-    RPC_LOG(INFO) << LOG_DESC("start");
+    RPC_LOG(INFO) << LOG_BADGE("start");
 }
 
 void Rpc::stop()
@@ -42,7 +43,7 @@ void Rpc::stop()
     {
         m_wsService->stop();
     }
-    RPC_LOG(INFO) << LOG_DESC("stop");
+    RPC_LOG(INFO) << LOG_BADGE("stop");
 }
 
 /**
@@ -54,7 +55,7 @@ void Rpc::stop()
 void Rpc::asyncNotifyBlockNumber(
     bcos::protocol::BlockNumber _blockNumber, std::function<void(Error::Ptr)> _callback)
 {
-    m_wsService->pushBlockNumber(_blockNumber);
+    m_wsService->notifyBlockNumberToClient(_blockNumber);
     if (_callback)
     {
         _callback(nullptr);

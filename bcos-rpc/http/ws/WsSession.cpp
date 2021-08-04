@@ -44,7 +44,6 @@ void WsSession::drop()
         auto session = self.lock();
         if (session)
         {
-            // TODO: session is stopped
             session->disconnectHandler()(nullptr, session);
         }
     });
@@ -63,18 +62,19 @@ void WsSession::disconnect()
     }
 
     WEBSOCKET_SESSION(INFO) << LOG_BADGE("disconnect") << LOG_DESC("disconnect the session")
-                            << LOG_KV("session", this);
+                            << LOG_KV("remoteEndPoint", m_remoteEndPoint)
+                            << LOG_KV("localEndPoint", m_localEndPoint) << LOG_KV("session", this);
 }
 
 void WsSession::doAccept(http::HttpRequest _req)
 {
-    // TODO: how to set the timeout , now 30s
-    m_wsStream.set_option(
-        boost::beast::websocket::stream_base::timeout::suggested(boost::beast::role_type::server));
+    // how to set the timeout , now 30s
+    // m_wsStream.set_option(
+    //     boost::beast::websocket::stream_base::timeout::suggested(boost::beast::role_type::server));
     m_wsStream.set_option(boost::beast::websocket::stream_base::decorator(
         [](boost::beast::websocket::response_type& res) {
             res.set(boost::beast::http::field::server,
-                std::string(BOOST_BEAST_VERSION_STRING) + " boost-beast-server");
+                std::string(BOOST_BEAST_VERSION_STRING) + " FISCO BCOS Websocket Server");
         }));
 
     m_wsStream.control_callback([](auto&& _kind, auto&& _payload) {

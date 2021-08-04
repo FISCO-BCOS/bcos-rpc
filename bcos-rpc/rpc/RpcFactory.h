@@ -27,6 +27,7 @@
 #include <bcos-framework/interfaces/sync/BlockSyncInterface.h>
 #include <bcos-framework/interfaces/txpool/TxPoolInterface.h>
 #include <bcos-rpc/rpc/Rpc.h>
+#include <bcos-rpc/rpc/jsonrpc/JsonRpcImpl_2_0.h>
 
 namespace bcos
 {
@@ -48,6 +49,7 @@ public:
     using Ptr = std::shared_ptr<RpcFactory>;
 
 public:
+    JsonRpcInterface::Ptr buildJsonRpc(const NodeInfo& _nodeInfo);
     /**
      * @brief: Rpc
      * @param _rpcConfig: rpc config

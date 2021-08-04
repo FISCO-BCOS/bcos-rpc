@@ -33,6 +33,7 @@ namespace http
 {
 using HttpRequest = boost::beast::http::request<boost::beast::http::string_body>;
 using HttpResponse = boost::beast::http::response<boost::beast::http::string_body>;
+using HttpRequestPtr = std::shared_ptr<HttpRequest>;
 using HttpResponsePtr = std::shared_ptr<HttpResponse>;
 using RequestHandler =
     std::function<void(const std::string& req, std::function<void(const std::string& resp)>)>;

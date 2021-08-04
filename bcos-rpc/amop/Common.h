@@ -25,6 +25,7 @@
 #include <vector>
 
 #define TOPIC_LOG(LEVEL) BCOS_LOG(LEVEL) << "[AMOP][TOPIC]"
+#define AMOP_MSG_LOG(LEVEL) BCOS_LOG(LEVEL) << "[AMOP][MSG]"
 #define AMOP_LOG(LEVEL) BCOS_LOG(LEVEL) << "[AMOP][AMOP]"
 namespace bcos
 {

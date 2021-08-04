@@ -38,6 +38,7 @@ namespace amop
 class TopicManager;
 class AMOPMessage;
 class AMOPInterface;
+class AMOP;
 }  // namespace amop
 namespace ws
 {
@@ -47,6 +48,7 @@ class WsMessageFactory;
 
 using WsSessions = std::vector<std::shared_ptr<WsSession>>;
 using WsMsgHandler = std::function<void(std::shared_ptr<WsMessage>, std::shared_ptr<WsSession>)>;
+
 class WsService : public std::enable_shared_from_this<WsService>
 {
 public:
@@ -129,14 +131,14 @@ public:
      * @param _blockNumber:
      * @return void:
      */
-    void pushBlockNumber(
+    void notifyBlockNumberToClient(
         std::shared_ptr<WsSession> _session, bcos::protocol::BlockNumber _blockNumber);
     /**
      * @brief: push blocknumber to all active sessions
      * @param _blockNumber:
      * @return void:
      */
-    void pushBlockNumber(bcos::protocol::BlockNumber _blockNumber);
+    void notifyBlockNumberToClient(bcos::protocol::BlockNumber _blockNumber);
 
 public:
     std::shared_ptr<WsMessageFactory> messageFactory() { return m_messageFactory; }
@@ -163,11 +165,8 @@ public:
         m_topicManager = _topicManager;
     }
 
-    std::shared_ptr<bcos::amop::AMOPInterface> AMOPInterface() const { return m_AMOPInterface; }
-    void setAMOPInterface(std::shared_ptr<bcos::amop::AMOPInterface> _AMOPInterface)
-    {
-        m_AMOPInterface = _AMOPInterface;
-    }
+    std::shared_ptr<bcos::amop::AMOP> AMOP() const { return m_AMOP; }
+    void setAMOP(std::shared_ptr<bcos::amop::AMOP> _AMOP) { m_AMOP = _AMOP; }
 
     std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
     void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
@@ -181,7 +180,7 @@ private:
     // JsonRpcInterface
     std::shared_ptr<bcos::rpc::JsonRpcInterface> m_jsonRpcInterface;
     // AMOPInterface
-    std::shared_ptr<bcos::amop::AMOPInterface> m_AMOPInterface;
+    std::shared_ptr<bcos::amop::AMOP> m_AMOP;
     // TopicManager
     std::shared_ptr<amop::TopicManager> m_topicManager;
     // mutex for m_sessions

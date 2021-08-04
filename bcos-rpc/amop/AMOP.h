@@ -23,6 +23,7 @@
 #include <bcos-rpc/amop/AMOPMessage.h>
 #include <bcos-rpc/amop/TopicManager.h>
 #include <boost/asio.hpp>
+#include <memory>
 
 namespace bcos
 {
@@ -85,14 +86,7 @@ public:
      * @param _data: message data
      * @return std::shared_ptr<bytes>
      */
-    std::shared_ptr<bytes> buildEncodedMessage(uint32_t _type, bcos::bytesConstRef _data);
-    /**
-     * @brief: create message and encode the message to bytes
-     * @param _type: message type
-     * @param _data: message data
-     * @return std::shared_ptr<bytes>
-     */
-    std::shared_ptr<bytes> buildEncodedMessage(
+    std::shared_ptr<bytes> buildAndEncodeMessage(
         uint32_t _type, const std::string& _topic, bcos::bytesConstRef _data);
     /**
      * @brief: periodically send topicSeq to all other nodes
@@ -146,7 +140,7 @@ public:
         bcos::crypto::NodeIDPtr _nodeID, const std::string& _id, AMOPMessage::Ptr _msg);
 
 public:
-    decltype(auto) msgTypeToHandler() { return m_msgTypeToHandler; }
+    decltype(auto) messageHandler() { return m_messageHandler; }
 
     std::shared_ptr<boost::asio::io_service> ioService() const { return m_ioService; }
     void setIoService(const std::shared_ptr<boost::asio::io_service> _ioService)
@@ -185,7 +179,33 @@ private:
 
     std::unordered_map<uint16_t, std::function<void(bcos::crypto::NodeIDPtr _nodeID,
                                      const std::string& _id, AMOPMessage::Ptr _msg)>>
-        m_msgTypeToHandler;
+        m_messageHandler;
 };
+
+class AMOPFactory
+{
+public:
+    using Ptr = std::shared_ptr<AMOPFactory>;
+
+public:
+    /**
+     * @brief: build AMOP
+     * @param _frontServiceInterface: front service interface
+     * @return AMOP::Ptr
+     */
+    AMOP::Ptr buildAMOP(bcos::front::FrontServiceInterface::Ptr _frontServiceInterface,
+        TopicManager::Ptr _topicManager)
+    {
+        auto amop = std::make_shared<AMOP>();
+        auto messageFactory = std::make_shared<MessageFactory>();
+        auto ioService = std::make_shared<boost::asio::io_service>();
+        amop->setFrontServiceInterface(_frontServiceInterface);
+        amop->setMessageFactory(messageFactory);
+        amop->setTopicManager(_topicManager);
+        amop->setIoService(ioService);
+        return amop;
+    }
+};
+
 }  // namespace amop
 }  // namespace bcos

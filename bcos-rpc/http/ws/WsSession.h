@@ -64,9 +64,10 @@ public:
     // start websocket accept
     void doAccept(http::HttpRequest _req);
     void onAccept(boost::beast::error_code _ec);
-
+    // async read
     void onRead(boost::beast::error_code _ec, std::size_t);
     void asyncRead();
+    // async write
     void onWrite(boost::beast::error_code _ec, std::size_t);
     void asyncWrite();
 
@@ -84,7 +85,6 @@ public:
     bool isConnected() { return m_wsStream.next_layer().socket().is_open() && !m_isDrop; }
 
     std::string remoteEndPoint() const { return m_remoteEndPoint; }
-
     std::string localEndPoint() const { return m_localEndPoint; }
 
     void setAcceptHandler(WsAcceptHandler _acceptHandler) { m_acceptHandler = _acceptHandler; }

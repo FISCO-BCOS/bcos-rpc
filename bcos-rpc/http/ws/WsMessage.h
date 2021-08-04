@@ -20,6 +20,7 @@
 #pragma once
 
 #include <bcos-framework/libutilities/Common.h>
+#include <bcos-rpc/http/ws/WsMessageType.h>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -37,6 +38,8 @@ public:
     using Ptr = std::shared_ptr<WsMessage>;
     // seq field length
     const static size_t SEQ_LENGTH = 32;
+    // topic field length
+    const static size_t TOPIC_MAX_LENGTH = 65535;
     /// type(2) + error(2) + seq(32) + data(N)
     const static size_t MESSAGE_MIN_LENGTH = 36;
 
@@ -47,19 +50,21 @@ public:
         m_data = std::make_shared<bcos::bytes>();
     }
 
-public:
-    uint16_t type() { return m_type; }
-    void setType(uint16_t _type) { m_type = _type; }
-    uint16_t status() { return m_status; }
-    void setStauts(uint16_t _status) { m_status = _status; }
-    std::shared_ptr<bcos::bytes> seq() { return m_seq; }
-    void setSeq(std::shared_ptr<bcos::bytes> _seq) { m_seq = _seq; }
-    std::shared_ptr<bcos::bytes> data() { return m_data; }
-    void setData(std::shared_ptr<bcos::bytes> _data) { m_data = _data; }
+    virtual ~WsMessage() {}
 
 public:
-    bool encode(bcos::bytes& _buffer);
-    ssize_t decode(const bcos::byte* _buffer, std::size_t _size);
+    virtual uint16_t type() { return m_type; }
+    virtual void setType(uint16_t _type) { m_type = _type; }
+    virtual uint16_t status() { return m_status; }
+    virtual void setStauts(uint16_t _status) { m_status = _status; }
+    virtual std::shared_ptr<bcos::bytes> seq() { return m_seq; }
+    virtual void setSeq(std::shared_ptr<bcos::bytes> _seq) { m_seq = _seq; }
+    virtual std::shared_ptr<bcos::bytes> data() { return m_data; }
+    virtual void setData(std::shared_ptr<bcos::bytes> _data) { m_data = _data; }
+
+public:
+    virtual bool encode(bcos::bytes& _buffer);
+    virtual ssize_t decode(const bcos::byte* _buffer, std::size_t _size);
 
 private:
     uint16_t m_type{0};
@@ -76,11 +81,10 @@ public:
 public:
     std::string newSeq()
     {
-        std::string seq = boost::uuids::to_string(boost::uuids::random_generator_mt19937()());
+        std::string seq = boost::uuids::to_string(boost::uuids::random_generator()());
         seq.erase(std::remove(seq.begin(), seq.end(), '-'), seq.end());
         return seq;
     }
-
     std::shared_ptr<WsMessage> buildMessage()
     {
         auto msg = std::make_shared<WsMessage>();
@@ -99,6 +103,5 @@ public:
         return msg;
     }
 };
-
 }  // namespace ws
 }  // namespace bcos
