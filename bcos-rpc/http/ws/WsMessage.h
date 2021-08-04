@@ -24,6 +24,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <iterator>
 #include <memory>
 #include <utility>
 
@@ -38,8 +39,6 @@ public:
     using Ptr = std::shared_ptr<WsMessage>;
     // seq field length
     const static size_t SEQ_LENGTH = 32;
-    // topic field length
-    const static size_t TOPIC_MAX_LENGTH = 65535;
     /// type(2) + error(2) + seq(32) + data(N)
     const static size_t MESSAGE_MIN_LENGTH = 36;
 
@@ -73,6 +72,29 @@ private:
     std::shared_ptr<bcos::bytes> m_data;
 };
 
+class AMOPRequest
+{
+public:
+    // topic field length
+    const static size_t TOPIC_MAX_LENGTH = 65535;
+    const static size_t MESSAGE_MIN_LENGTH = 2;
+    AMOPRequest() { m_data = bytesConstRef(); }
+    using Ptr = std::shared_ptr<AMOPRequest>;
+
+public:
+    std::string topic() const { return m_topic; }
+    void setTopic(const std::string& _topic) { m_topic = _topic; }
+    void setData(bytesConstRef _data) { m_data = _data; }
+    bytesConstRef data() const { return m_data; }
+
+public:
+    bool encode(bcos::bytes& _buffer);
+    std::size_t decode(bytesConstRef _data);
+
+private:
+    std::string m_topic;
+    bytesConstRef m_data;
+};
 class WsMessageFactory
 {
 public:
@@ -100,6 +122,19 @@ public:
         msg->setType(_type);
         msg->setData(_data);
         msg->setSeq(std::make_shared<bcos::bytes>(seq.begin(), seq.end()));
+        return msg;
+    }
+};
+
+class AMOPRequestFactory
+{
+public:
+    using Ptr = std::shared_ptr<AMOPRequestFactory>;
+
+public:
+    std::shared_ptr<AMOPRequest> buildRequest()
+    {
+        auto msg = std::make_shared<AMOPRequest>();
         return msg;
     }
 };

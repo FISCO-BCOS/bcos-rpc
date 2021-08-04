@@ -38,8 +38,8 @@ class AMOPMessage
 public:
     using Ptr = std::shared_ptr<AMOPMessage>;
 
-    /// type(2) + topic length(2) + topic + data
-    const static size_t HEADER_LENGTH = 4;
+    /// type(2) + data
+    const static size_t HEADER_LENGTH = 2;
     /// the max length of topic(65535)
     const static size_t MAX_TOPIC_LENGTH = 0xffff;
 
@@ -50,9 +50,6 @@ public:
     uint16_t type() const { return m_type; }
     void setType(uint16_t _type) { m_type = _type; }
 
-    std::string topic() const { return m_topic; }
-    void setTopic(const std::string& _topic) { m_topic = _topic; }
-
     bytesConstRef data() const { return m_data; }
     void setData(bcos::bytesConstRef _data) { m_data = _data; }
 
@@ -62,7 +59,6 @@ public:
 
 private:
     uint16_t m_type{0};
-    std::string m_topic;
     bcos::bytesConstRef m_data;
 };
 class MessageFactory

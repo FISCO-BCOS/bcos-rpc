@@ -18,9 +18,12 @@
  * @date 2021-06-18
  */
 #pragma once
+
 #include <bcos-framework/interfaces/crypto/KeyInterface.h>
 #include <bcos-framework/libutilities/Common.h>
+
 #include <bcos-rpc/amop/Common.h>
+#include <algorithm>
 #include <shared_mutex>
 
 namespace bcos
@@ -43,9 +46,9 @@ private:
     // m_nodeID2TopicSeq lock
     mutable std::shared_mutex x_topics;
     // nodeID => topicSeq
-    std::unordered_map<bcos::crypto::NodeIDPtr, uint32_t> m_nodeID2TopicSeq;
+    std::unordered_map<std::string, uint32_t> m_nodeID2TopicSeq;
     // nodeID => topicItems
-    std::unordered_map<bcos::crypto::NodeIDPtr, TopicItems> m_nodeID2TopicItems;
+    std::unordered_map<std::string, TopicItems> m_nodeID2TopicItems;
 
 public:
     uint32_t topicSeq() const { return m_topicSeq; }
@@ -132,7 +135,14 @@ public:
      * @param _nodeIDs: nodeIDs
      * @return void
      */
-    void queryNodeIDsByTopic(const std::string& _topic, bcos::crypto::NodeIDs& _nodeIDs);
+    void queryNodeIDsByTopic(const std::string& _topic, std::vector<std::string>& _nodeIDs);
+    /**
+     * @brief: find clients by topic
+     * @param _topic: topic
+     * @param _nodeIDs: nodeIDs
+     * @return void
+     */
+    void queryClientsByTopic(const std::string& _topic, std::vector<std::string>& _clients);
 };
 }  // namespace amop
 }  // namespace bcos

@@ -26,10 +26,12 @@ using namespace bcos::rpc;
 
 void Rpc::start()
 {
-    // start jsonhttp service
-    m_httpServer->startListen();
+    // start amop
+    m_AMOP->start();
     // start websocket service
     m_wsService->start();
+    // start jsonhttp service
+    m_httpServer->startListen();
     RPC_LOG(INFO) << LOG_BADGE("start");
 }
 
@@ -42,6 +44,10 @@ void Rpc::stop()
     if (m_wsService)
     {
         m_wsService->stop();
+    }
+    if (m_AMOP)
+    {
+        m_AMOP->stop();
     }
     RPC_LOG(INFO) << LOG_BADGE("stop");
 }

@@ -20,6 +20,7 @@
 #pragma once
 
 #include <bcos-framework/interfaces/amop/AMOPInterface.h>
+#include <bcos-framework/interfaces/crypto/KeyFactory.h>
 #include <bcos-rpc/amop/AMOPMessage.h>
 #include <bcos-rpc/amop/TopicManager.h>
 #include <boost/asio.hpp>
@@ -27,6 +28,10 @@
 
 namespace bcos
 {
+namespace ws
+{
+class WsService;
+}
 namespace amop
 {
 class AMOP : public AMOPInterface, public std::enable_shared_from_this<AMOP>
@@ -86,8 +91,7 @@ public:
      * @param _data: message data
      * @return std::shared_ptr<bytes>
      */
-    std::shared_ptr<bytes> buildAndEncodeMessage(
-        uint32_t _type, const std::string& _topic, bcos::bytesConstRef _data);
+    std::shared_ptr<bytes> buildAndEncodeMessage(uint32_t _type, bcos::bytesConstRef _data);
     /**
      * @brief: periodically send topicSeq to all other nodes
      * @return void
@@ -168,8 +172,20 @@ public:
         m_frontServiceInterface = _frontServiceInterface;
     }
 
+    std::weak_ptr<bcos::ws::WsService> wsService() { return m_wsService; }
+    void setWsService(std::weak_ptr<bcos::ws::WsService> _wsService) { m_wsService = _wsService; }
+
+    std::shared_ptr<bcos::crypto::KeyFactory> keyFactory() { return m_keyFactory; }
+    void setKeyFactory(std::shared_ptr<bcos::crypto::KeyFactory> _keyFactory)
+    {
+        m_keyFactory = _keyFactory;
+    }
+
 private:
     bool m_run = false;
+    //
+    std::shared_ptr<bcos::crypto::KeyFactory> m_keyFactory;
+    std::weak_ptr<bcos::ws::WsService> m_wsService;
     std::shared_ptr<bcos::front::FrontServiceInterface> m_frontServiceInterface;
     std::shared_ptr<MessageFactory> m_messageFactory;
     std::shared_ptr<TopicManager> m_topicManager;
@@ -180,31 +196,6 @@ private:
     std::unordered_map<uint16_t, std::function<void(bcos::crypto::NodeIDPtr _nodeID,
                                      const std::string& _id, AMOPMessage::Ptr _msg)>>
         m_messageHandler;
-};
-
-class AMOPFactory
-{
-public:
-    using Ptr = std::shared_ptr<AMOPFactory>;
-
-public:
-    /**
-     * @brief: build AMOP
-     * @param _frontServiceInterface: front service interface
-     * @return AMOP::Ptr
-     */
-    AMOP::Ptr buildAMOP(bcos::front::FrontServiceInterface::Ptr _frontServiceInterface,
-        TopicManager::Ptr _topicManager)
-    {
-        auto amop = std::make_shared<AMOP>();
-        auto messageFactory = std::make_shared<MessageFactory>();
-        auto ioService = std::make_shared<boost::asio::io_service>();
-        amop->setFrontServiceInterface(_frontServiceInterface);
-        amop->setMessageFactory(messageFactory);
-        amop->setTopicManager(_topicManager);
-        amop->setIoService(ioService);
-        return amop;
-    }
 };
 
 }  // namespace amop

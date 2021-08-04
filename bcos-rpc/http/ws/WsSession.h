@@ -18,6 +18,7 @@
  * @date 2021-07-28
  */
 #pragma once
+#include "libutilities/Common.h"
 #include <bcos-rpc/http/Common.h>
 #include <bcos-rpc/http/ws/Common.h>
 #include <bcos-rpc/http/ws/WsMessage.h>
@@ -72,7 +73,7 @@ public:
     void asyncWrite();
 
     /**
-     * @brief: send message with callback
+     * @brief: async send message
      * @param _msg: message
      * @param _options: options
      * @param _respCallback: callback

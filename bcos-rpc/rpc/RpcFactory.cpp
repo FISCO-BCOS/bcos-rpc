@@ -85,6 +85,13 @@ void RpcConfig::initConfig(const std::string& _configPath)
 
 void RpcFactory::checkParams()
 {
+    if (!m_frontServiceInterface)
+    {
+        BOOST_THROW_EXCEPTION(
+            InvalidParameter() << errinfo_comment(
+                "RpcFactory::checkParams frontServiceInterface is uninitialized"));
+    }
+
     if (!m_ledgerInterface)
     {
         BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
@@ -121,6 +128,18 @@ void RpcFactory::checkParams()
                                   "RpcFactory::checkParams transactionFactory is uninitialized"));
     }
     return;
+}
+
+bcos::amop::AMOP::Ptr RpcFactory::buildAMOP()
+{
+    auto amop = std::make_shared<bcos::amop::AMOP>();
+    auto messageFactory = std::make_shared<bcos::amop::MessageFactory>();
+    // auto ioService = std::make_shared<boost::asio::io_service>();
+    // amop->setIoService(ioService);
+    amop->setFrontServiceInterface(m_frontServiceInterface);
+    amop->setKeyFactory(m_keyFactory);
+    amop->setMessageFactory(messageFactory);
+    return amop;
 }
 
 JsonRpcInterface::Ptr RpcFactory::buildJsonRpc(const NodeInfo& _nodeInfo)
@@ -174,6 +193,8 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _node
 
     auto topicManager = std::make_shared<amop::TopicManager>();
     auto wsMessageFactory = std::make_shared<ws::WsMessageFactory>();
+    auto requestFactory = std::make_shared<ws::AMOPRequestFactory>();
+
     auto threadPool = std::make_shared<bcos::ThreadPool>("ws-service", _threadCount);
     // WsService
     auto wsService = std::make_shared<ws::WsService>();
@@ -182,6 +203,7 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _node
     wsService->setTopicManager(topicManager);
     wsService->setIoc(httpServer->ioc());
     wsService->setMessageFactory(wsMessageFactory);
+    wsService->setRequestFactory(requestFactory);
     wsService->setThreadPool(threadPool);
 
     httpServer->setWsUpgradeHandler(
@@ -222,9 +244,20 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _node
         });
     wsService->initMethod();
 
+    // AMOP
+    auto amop = buildAMOP();
+    amop->setTopicManager(topicManager);
+    amop->setIoService(httpServer->ioc());
+
+    // rpc
     auto rpc = std::make_shared<Rpc>();
     rpc->setHttpServer(httpServer);
     rpc->setWsService(wsService);
+    rpc->setAMOP(amop);
+
+    amop->setWsService(std::weak_ptr<ws::WsService>(wsService));
+    wsService->setAMOP(std::weak_ptr<amop::AMOP>(amop));
+
     RPC_FACTORY(INFO) << LOG_BADGE("buildRpc") << LOG_KV("listenIP", _listenIP)
                       << LOG_KV("listenPort", _listenPort) << LOG_KV("threadCount", _threadCount);
     return rpc;

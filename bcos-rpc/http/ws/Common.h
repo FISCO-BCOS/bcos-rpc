@@ -49,5 +49,10 @@ struct Options
     uint32_t timeout = 0;  ///< The timeout value of async function, in milliseconds.
 };
 
+enum WsStatusCode
+{
+    InvalidRequestParams = 100,
+};
+
 }  // namespace ws
 }  // namespace bcos
