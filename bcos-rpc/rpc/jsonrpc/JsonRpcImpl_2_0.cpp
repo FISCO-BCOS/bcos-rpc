@@ -84,9 +84,9 @@ void JsonRpcImpl_2_0::initMethod()
 
     for (const auto& method : m_methodToFunc)
     {
-        RPC_IMPL_LOG(INFO) << LOG_DESC("initMethod") << LOG_KV("method", method.first);
+        RPC_IMPL_LOG(INFO) << LOG_BADGE("initMethod") << LOG_KV("method", method.first);
     }
-    RPC_IMPL_LOG(INFO) << LOG_DESC("initMethod") << LOG_KV("size", m_methodToFunc.size());
+    RPC_IMPL_LOG(INFO) << LOG_BADGE("initMethod") << LOG_KV("size", m_methodToFunc.size());
 }
 
 std::string JsonRpcImpl_2_0::encodeData(bcos::bytesConstRef _data)
@@ -157,7 +157,7 @@ void JsonRpcImpl_2_0::parseRpcRequestJson(
             _jsonRequest.id = id;
             _jsonRequest.params = jParams;
 
-            RPC_IMPL_LOG(DEBUG) << LOG_DESC("parseRpcRequestJson") << LOG_KV("method", method)
+            RPC_IMPL_LOG(DEBUG) << LOG_BADGE("parseRpcRequestJson") << LOG_KV("method", method)
                                 << LOG_KV("requestMessage", _requestBody);
 
             // success return
@@ -167,13 +167,13 @@ void JsonRpcImpl_2_0::parseRpcRequestJson(
     }
     catch (const std::exception& e)
     {
-        RPC_IMPL_LOG(ERROR) << LOG_DESC("parseRpcRequestJson") << LOG_KV("request", _requestBody)
+        RPC_IMPL_LOG(ERROR) << LOG_BADGE("parseRpcRequestJson") << LOG_KV("request", _requestBody)
                             << LOG_KV("error", boost::diagnostic_information(e));
         BOOST_THROW_EXCEPTION(
             JsonRpcException(JsonRpcError::ParseError, "Invalid JSON was received by the server."));
     }
 
-    RPC_IMPL_LOG(ERROR) << LOG_DESC("parseRpcRequestJson") << LOG_KV("request", _requestBody)
+    RPC_IMPL_LOG(ERROR) << LOG_BADGE("parseRpcRequestJson") << LOG_KV("request", _requestBody)
                         << LOG_KV("errorMessage", errorMessage);
 
     BOOST_THROW_EXCEPTION(JsonRpcException(
@@ -223,7 +223,7 @@ void JsonRpcImpl_2_0::parseRpcResponseJson(
                 _jsonResponse.result = root["result"];
             }
 
-            RPC_IMPL_LOG(DEBUG) << LOG_DESC("parseRpcResponseJson")
+            RPC_IMPL_LOG(DEBUG) << LOG_BADGE("parseRpcResponseJson")
                                 << LOG_KV("jsonrpc", _jsonResponse.jsonrpc)
                                 << LOG_KV("id", _jsonResponse.id)
                                 << LOG_KV("error", _jsonResponse.error.toString())
@@ -234,13 +234,14 @@ void JsonRpcImpl_2_0::parseRpcResponseJson(
     }
     catch (std::exception& e)
     {
-        RPC_IMPL_LOG(ERROR) << LOG_DESC("parseRpcResponseJson") << LOG_KV("response", _responseBody)
+        RPC_IMPL_LOG(ERROR) << LOG_BADGE("parseRpcResponseJson")
+                            << LOG_KV("response", _responseBody)
                             << LOG_KV("error", boost::diagnostic_information(e));
         BOOST_THROW_EXCEPTION(
             JsonRpcException(JsonRpcError::ParseError, "Invalid JSON was received by the server."));
     }
 
-    RPC_IMPL_LOG(ERROR) << LOG_DESC("parseRpcResponseJson") << LOG_KV("response", _responseBody)
+    RPC_IMPL_LOG(ERROR) << LOG_BADGE("parseRpcResponseJson") << LOG_KV("response", _responseBody)
                         << LOG_KV("errorMessage", errorMessage);
 
     BOOST_THROW_EXCEPTION(JsonRpcException(
@@ -310,7 +311,7 @@ void JsonRpcImpl_2_0::onRPCRequest(const std::string& _requestBody, Sender _send
 
                 auto strResp = toStringResponse(response);
                 _sender(strResp);
-                RPC_IMPL_LOG(TRACE) << LOG_DESC("onRPCRequest") << LOG_KV("request", _requestBody)
+                RPC_IMPL_LOG(TRACE) << LOG_BADGE("onRPCRequest") << LOG_KV("request", _requestBody)
                                     << LOG_KV("response", strResp);
             });
 
@@ -333,7 +334,7 @@ void JsonRpcImpl_2_0::onRPCRequest(const std::string& _requestBody, Sender _send
     // error response
     _sender(strResp);
 
-    RPC_IMPL_LOG(DEBUG) << LOG_DESC("onRPCRequest") << LOG_KV("request", _requestBody)
+    RPC_IMPL_LOG(DEBUG) << LOG_BADGE("onRPCRequest") << LOG_KV("request", _requestBody)
                         << LOG_KV("response", strResp);
 }
 

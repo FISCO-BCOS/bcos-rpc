@@ -41,7 +41,8 @@ bool TopicManager::parseSubTopicsJson(const std::string& _json, TopicItems& _top
     {
         if (!jsonReader.parse(_json, root))
         {
-            TOPIC_LOG(ERROR) << "parseSubTopicsJson unable to parse json" << LOG_KV("json:", _json);
+            TOPIC_LOG(ERROR) << LOG_BADGE("parseSubTopicsJson") << LOG_DESC("unable to parse json")
+                             << LOG_KV("json:", _json);
             return false;
         }
 
@@ -57,13 +58,14 @@ bool TopicManager::parseSubTopicsJson(const std::string& _json, TopicItems& _top
 
         _topicItems = topicItems;
 
-        TOPIC_LOG(INFO) << LOG_DESC("parseSubTopicsJson")
+        TOPIC_LOG(INFO) << LOG_BADGE("parseSubTopicsJson")
                         << LOG_KV("topicItems size", topicItems.size()) << LOG_KV("json", _json);
         return true;
     }
     catch (const std::exception& e)
     {
-        TOPIC_LOG(ERROR) << LOG_DESC("parseSubTopicsJson: " + boost::diagnostic_information(e))
+        TOPIC_LOG(ERROR) << LOG_BADGE("parseSubTopicsJson")
+                         << LOG_KV("error", boost::diagnostic_information(e))
                          << LOG_KV("json:", _json);
         return false;
     }
@@ -99,7 +101,7 @@ void TopicManager::subTopic(const std::string& _client, const TopicItems& _topic
         incTopicSeq();
     }
 
-    TOPIC_LOG(INFO) << LOG_DESC("subTopic") << LOG_KV("client", _client)
+    TOPIC_LOG(INFO) << LOG_BADGE("subTopic") << LOG_KV("client", _client)
                     << LOG_KV("topicSeq", topicSeq())
                     << LOG_KV("topicItems size", _topicItems.size());
 }
@@ -123,7 +125,7 @@ bool TopicManager::queryTopicItemsByClient(const std::string& _client, TopicItem
         }
     }
 
-    TOPIC_LOG(INFO) << LOG_DESC("queryTopicItemsByClient") << LOG_KV("client", _client)
+    TOPIC_LOG(INFO) << LOG_BADGE("queryTopicItemsByClient") << LOG_KV("client", _client)
                     << LOG_KV("result", result) << LOG_KV("topicItems size", _topicItems.size());
     return result;
 }
@@ -141,7 +143,7 @@ void TopicManager::removeTopicsByClient(const std::string& _client)
         incTopicSeq();
     }
 
-    TOPIC_LOG(INFO) << LOG_DESC("removeTopicsByClient") << LOG_KV("client", _client)
+    TOPIC_LOG(INFO) << LOG_BADGE("removeTopicsByClient") << LOG_KV("client", _client)
                     << LOG_KV("topicSeq", topicSeq());
 }
 
@@ -177,13 +179,13 @@ std::string TopicManager::queryTopicsSubByClient()
         Json::FastWriter writer;
         std::string topicJson = writer.write(jResp);
 
-        TOPIC_LOG(DEBUG) << LOG_DESC("queryTopicsSubByClient") << LOG_KV("topicSeq", seq)
+        TOPIC_LOG(DEBUG) << LOG_BADGE("queryTopicsSubByClient") << LOG_KV("topicSeq", seq)
                          << LOG_KV("topicJson", topicJson);
         return topicJson;
     }
     catch (const std::exception& e)
     {
-        TOPIC_LOG(ERROR) << LOG_DESC("queryTopicsSubByClient")
+        TOPIC_LOG(ERROR) << LOG_BADGE("queryTopicsSubByClient")
                          << LOG_KV("error", boost::diagnostic_information(e));
         return "";
     }
@@ -206,7 +208,7 @@ bool TopicManager::parseTopicItemsJson(
     {
         if (!jsonReader.parse(_json, root))
         {
-            TOPIC_LOG(ERROR) << "parseTopicItemsJson unable to parse json"
+            TOPIC_LOG(ERROR) << LOG_BADGE("parseTopicItemsJson") << LOG_DESC("unable to parse json")
                              << LOG_KV("json:", _json);
             return false;
         }
@@ -226,13 +228,14 @@ bool TopicManager::parseTopicItemsJson(
         _topicSeq = topicSeq;
         _topicItems = topicItems;
 
-        TOPIC_LOG(INFO) << LOG_DESC("parseTopicItemsJson") << LOG_KV("topicSeq", topicSeq)
+        TOPIC_LOG(INFO) << LOG_BADGE("parseTopicItemsJson") << LOG_KV("topicSeq", topicSeq)
                         << LOG_KV("topicItems size", topicItems.size()) << LOG_KV("json", _json);
         return true;
     }
     catch (const std::exception& e)
     {
-        TOPIC_LOG(ERROR) << LOG_DESC("parseTopicItemsJson: " + boost::diagnostic_information(e))
+        TOPIC_LOG(ERROR) << LOG_BADGE("parseTopicItemsJson") << LOG_DESC("parse json exception")
+                         << LOG_KV("error", boost::diagnostic_information(e))
                          << LOG_KV("json:", _json);
         return false;
     }
@@ -283,7 +286,7 @@ void TopicManager::notifyNodeIDs(const bcos::crypto::NodeIDs& _nodeIDs)
         }
     }
 
-    TOPIC_LOG(INFO) << LOG_DESC("notifyNodeIDs") << LOG_KV("removeCount", removeCount);
+    TOPIC_LOG(INFO) << LOG_BADGE("notifyNodeIDs") << LOG_KV("removeCount", removeCount);
 }
 
 /**
@@ -302,7 +305,7 @@ void TopicManager::updateSeqAndTopicsByNodeID(
         m_nodeID2TopicItems[_nodeID->hex()] = _topicItems;
     }
 
-    TOPIC_LOG(INFO) << LOG_DESC("updateSeqAndTopicsByNodeID") << LOG_KV("nodeID", _nodeID->hex())
+    TOPIC_LOG(INFO) << LOG_BADGE("updateSeqAndTopicsByNodeID") << LOG_KV("nodeID", _nodeID->hex())
                     << LOG_KV("topicSeq", _topicSeq)
                     << LOG_KV("topicItems size", _topicItems.size());
 }
@@ -351,6 +354,6 @@ void TopicManager::queryClientsByTopic(
         }
     }
 
-    TOPIC_LOG(INFO) << LOG_DESC("queryClientsByTopic") << LOG_KV("topic", _topic)
+    TOPIC_LOG(INFO) << LOG_BADGE("queryClientsByTopic") << LOG_KV("topic", _topic)
                     << LOG_KV("clients size", _clients.size());
 }

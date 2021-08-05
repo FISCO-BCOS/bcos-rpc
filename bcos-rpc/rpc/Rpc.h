@@ -26,6 +26,8 @@
 #include <bcos-rpc/http/ws/WsService.h>
 #include <bcos-rpc/rpc/Common.h>
 #include <bcos-rpc/rpc/jsonrpc/Common.h>
+#include <iterator>
+#include <thread>
 
 namespace bcos
 {
@@ -42,6 +44,20 @@ public:
 public:
     virtual void start() override;
     virtual void stop() override;
+
+    void startThread()
+    {
+        // start threads
+        if (m_threads->empty())
+        {
+            auto& ioc = m_ioc;
+            m_threads->reserve(m_threadC);
+            for (auto i = m_threadC; i > 0; --i)
+            {
+                m_threads->emplace_back([&ioc]() { ioc->run(); });
+            }
+        }
+    }
 
 public:
     /**
@@ -63,10 +79,23 @@ public:
     bcos::amop::AMOP::Ptr AMOP() const { return m_AMOP; }
     void setAMOP(bcos::amop::AMOP::Ptr _AMOP) { m_AMOP = _AMOP; }
 
+    std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
+    void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
+
+    void setThreadC(std::size_t _threadC) { m_threadC = _threadC; }
+    std::size_t threadC() const { return m_threadC; }
+
+    std::shared_ptr<std::vector<std::thread>> threads() const { return m_threads; }
+    void setThreads(std::shared_ptr<std::vector<std::thread>> _threads) { m_threads = _threads; }
+
 private:
     bcos::http::HttpServer::Ptr m_httpServer;
     bcos::ws::WsService::Ptr m_wsService;
     bcos::amop::AMOP::Ptr m_AMOP;
+    std::shared_ptr<boost::asio::io_context> m_ioc;
+
+    std::size_t m_threadC;
+    std::shared_ptr<std::vector<std::thread>> m_threads;
 };
 
 }  // namespace rpc

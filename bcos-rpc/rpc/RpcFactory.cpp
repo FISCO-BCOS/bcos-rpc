@@ -68,13 +68,13 @@ void RpcConfig::initConfig(const std::string& _configPath)
         m_listenPort = listenPort;
         m_threadCount = threadCount;
 
-        RPC_FACTORY(INFO) << LOG_DESC("initConfig") << LOG_KV("listenIP", listenIP)
+        RPC_FACTORY(INFO) << LOG_BADGE("initConfig") << LOG_KV("listenIP", listenIP)
                           << LOG_KV("listenPort", listenPort) << LOG_KV("threadCount", threadCount);
     }
     catch (const std::exception& e)
     {
         boost::filesystem::path full_path(boost::filesystem::current_path());
-        RPC_FACTORY(ERROR) << LOG_DESC("initConfig") << LOG_KV("configPath", _configPath)
+        RPC_FACTORY(ERROR) << LOG_BADGE("initConfig") << LOG_KV("configPath", _configPath)
                            << LOG_KV("currentPath", full_path.string())
                            << LOG_KV("error: ", boost::diagnostic_information(e));
         BOOST_THROW_EXCEPTION(
@@ -134,8 +134,6 @@ bcos::amop::AMOP::Ptr RpcFactory::buildAMOP()
 {
     auto amop = std::make_shared<bcos::amop::AMOP>();
     auto messageFactory = std::make_shared<bcos::amop::MessageFactory>();
-    // auto ioService = std::make_shared<boost::asio::io_service>();
-    // amop->setIoService(ioService);
     amop->setFrontServiceInterface(m_frontServiceInterface);
     amop->setKeyFactory(m_keyFactory);
     amop->setMessageFactory(messageFactory);
@@ -180,14 +178,18 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _node
     uint16_t _listenPort = _rpcConfig.m_listenPort;
     std::size_t _threadCount = _rpcConfig.m_threadCount;
 
-    checkParams();
+    // checkParams();
+
+    // io_context
+    auto ioc = std::make_shared<boost::asio::io_context>();
+    auto threads = std::make_shared<std::vector<std::thread>>();
 
     // JsonRpcImpl_2_0
     auto jsonRpcInterface = buildJsonRpc(_nodeInfo);
 
     // HttpServer
     auto httpServerFactory = std::make_shared<bcos::http::HttpServerFactory>();
-    auto httpServer = httpServerFactory->buildHttpServer(_listenIP, _listenPort, _threadCount);
+    auto httpServer = httpServerFactory->buildHttpServer(_listenIP, _listenPort, ioc);
     httpServer->setRequestHandler(std::bind(&bcos::rpc::JsonRpcInterface::onRPCRequest,
         jsonRpcInterface, std::placeholders::_1, std::placeholders::_2));
 
@@ -201,7 +203,7 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _node
     auto weakWsService = std::weak_ptr<ws::WsService>(wsService);
     wsService->setJsonRpcInterface(jsonRpcInterface);
     wsService->setTopicManager(topicManager);
-    wsService->setIoc(httpServer->ioc());
+    wsService->setIoc(ioc);
     wsService->setMessageFactory(wsMessageFactory);
     wsService->setRequestFactory(requestFactory);
     wsService->setThreadPool(threadPool);
@@ -247,13 +249,16 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _node
     // AMOP
     auto amop = buildAMOP();
     amop->setTopicManager(topicManager);
-    amop->setIoService(httpServer->ioc());
+    amop->setIoService(ioc);
 
     // rpc
     auto rpc = std::make_shared<Rpc>();
     rpc->setHttpServer(httpServer);
     rpc->setWsService(wsService);
     rpc->setAMOP(amop);
+    rpc->setIoc(ioc);
+    rpc->setThreadC(_threadCount);
+    rpc->setThreads(threads);
 
     amop->setWsService(std::weak_ptr<ws::WsService>(wsService));
     wsService->setAMOP(std::weak_ptr<amop::AMOP>(amop));

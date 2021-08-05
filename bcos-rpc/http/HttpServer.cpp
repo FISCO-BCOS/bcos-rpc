@@ -19,6 +19,7 @@
  */
 
 #include <bcos-rpc/http/HttpServer.h>
+#include <memory>
 
 using namespace bcos;
 using namespace bcos::http;
@@ -72,17 +73,6 @@ void HttpServer::startListen()
     // start accept
     doAccept();
 
-    // start threads
-    if (m_threads->empty())
-    {
-        auto ioc = m_ioc;
-        m_threads->reserve(m_threadCount);
-        for (auto i = m_threadCount; i > 0; --i)
-        {
-            m_threads->emplace_back([ioc]() { ioc->run(); });
-        }
-    }
-
     HTTP_SERVER(INFO) << LOG_BADGE("startListen") << LOG_KV("ip", endpoint.address().to_string())
                       << LOG_KV("port", endpoint.port());
 }
@@ -97,18 +87,6 @@ void HttpServer::stop()
     if (m_ioc && !m_ioc->stopped())
     {
         m_ioc->stop();
-    }
-
-    if (m_threads && !m_threads->empty())
-    {
-        for (auto& t : *m_threads)
-        {
-            if (t.joinable())
-            {
-                t.join();
-            }
-        }
-        m_threads->clear();
     }
 
     HTTP_SERVER(INFO) << LOG_BADGE("stop") << LOG_DESC("http server");
@@ -148,29 +126,24 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
  * @param _listenIP: listen ip
  * @param _listenPort: listen port
  * @param _threadCount: thread count
+ * @param _ioc: io_context
  * @return HttpServer::Ptr:
  */
-HttpServer::Ptr HttpServerFactory::buildHttpServer(
-    const std::string& _listenIP, uint16_t _listenPort, std::size_t _threadCount)
+HttpServer::Ptr HttpServerFactory::buildHttpServer(const std::string& _listenIP,
+    uint16_t _listenPort, std::shared_ptr<boost::asio::io_context> _ioc)
 {
     // create httpserver and launch a listening port
     auto server = std::make_shared<bcos::http::HttpServer>(_listenIP, _listenPort);
-    // The io_context is required for all I/O
-    auto ioc = std::make_shared<boost::asio::io_context>(_threadCount);
     auto acceptor =
-        std::make_shared<boost::asio::ip::tcp::acceptor>(boost::asio::make_strand(*ioc));
+        std::make_shared<boost::asio::ip::tcp::acceptor>(boost::asio::make_strand(*_ioc));
 
-    // Run the I/O service on the requested number of threads
-    auto threads = std::make_shared<std::vector<std::thread>>();
     auto sessionFactory = std::make_shared<bcos::http::HttpSessionFactory>();
 
-    server->setIoc(ioc);
+    server->setIoc(_ioc);
     server->setAcceptor(acceptor);
     server->setSessionFactory(sessionFactory);
-    server->setThreads(threads);
-    server->setThreadCount(_threadCount);
 
     HTTP_SERVER(INFO) << LOG_BADGE("buildHttpServer") << LOG_KV("listenIP", _listenIP)
-                      << LOG_KV("listenPort", _listenPort) << LOG_KV("threadCount", _threadCount);
+                      << LOG_KV("listenPort", _listenPort);
     return server;
 }

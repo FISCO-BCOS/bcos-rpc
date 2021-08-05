@@ -19,7 +19,7 @@
  * @date 2021-07-15
  */
 
-#include "libutilities/Log.h"
+#include <bcos-framework/libutilities/Log.h>
 #include <bcos-rpc/rpc/Rpc.h>
 using namespace bcos;
 using namespace bcos::rpc;
@@ -32,24 +32,51 @@ void Rpc::start()
     m_wsService->start();
     // start jsonhttp service
     m_httpServer->startListen();
-    RPC_LOG(INFO) << LOG_BADGE("start");
+    // start thread for io
+    startThread();
+    RPC_LOG(INFO) << LOG_BADGE("start") << LOG_DESC("start amop successfully");
 }
 
 void Rpc::stop()
 {
+    // stop thread
+    if (m_threads && !m_threads->empty())
+    {
+        for (auto& t : *m_threads)
+        {
+            if (t.joinable())
+            {
+                t.join();
+            }
+        }
+        m_threads->clear();
+    }
+
+    // stop io
+    if (m_ioc && !m_ioc->stopped())
+    {
+        m_ioc->stop();
+    }
+
+    // stop http server
     if (m_httpServer)
     {
         m_httpServer->stop();
     }
+
+    // stop ws service
     if (m_wsService)
     {
         m_wsService->stop();
     }
+
+    // stop amop
     if (m_AMOP)
     {
         m_AMOP->stop();
     }
-    RPC_LOG(INFO) << LOG_BADGE("stop");
+
+    RPC_LOG(INFO) << LOG_BADGE("stop") << LOG_DESC("stop amop successfully");
 }
 
 /**

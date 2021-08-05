@@ -65,8 +65,6 @@ public:
     {
         m_acceptor = _acceptor;
     }
-    std::shared_ptr<std::vector<std::thread>> threads() { return m_threads; }
-    void setThreads(std::shared_ptr<std::vector<std::thread>> _threads) { m_threads = _threads; }
 
     void setThreadCount(uint32_t _threadCount) { m_threadCount = _threadCount; }
     uint32_t getThreadCount() { return m_threadCount; }
@@ -87,7 +85,6 @@ private:
     std::shared_ptr<HttpSessionFactory> m_sessionFactory;
     std::shared_ptr<boost::asio::io_context> m_ioc;
     std::shared_ptr<boost::asio::ip::tcp::acceptor> m_acceptor;
-    std::shared_ptr<std::vector<std::thread>> m_threads;
 };
 
 // The http server factory
@@ -101,11 +98,11 @@ public:
      * @brief: create http server
      * @param _listenIP: listen ip
      * @param _listenPort: listen port
-     * @param _threadCount: thread count
+     * @param _ioc: io_context
      * @return HttpServer::Ptr:
      */
-    HttpServer::Ptr buildHttpServer(
-        const std::string& _listenIP, uint16_t _listenPort, std::size_t _threadCount);
+    HttpServer::Ptr buildHttpServer(const std::string& _listenIP, uint16_t _listenPort,
+        std::shared_ptr<boost::asio::io_context> _ioc);
 };
 
 }  // namespace http
