@@ -332,7 +332,7 @@ void WsService::onRecvRPCRequest(
 void WsService::onRecvSubTopics(
     std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session)
 {
-    auto request = std::string(_msg->data()->begin(), _msg->data()->begin());
+    auto request = std::string(_msg->data()->begin(), _msg->data()->end());
     auto endpoint = _session->remoteEndPoint();
     m_topicManager->subTopic(endpoint, request);
 

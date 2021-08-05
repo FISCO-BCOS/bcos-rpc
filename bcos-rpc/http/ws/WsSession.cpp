@@ -145,7 +145,7 @@ void WsSession::onRead(boost::beast::error_code _ec, std::size_t _size)
     m_buffer.consume(m_buffer.size());
 
     auto session = shared_from_this();
-    auto seq = std::string(message->seq()->begin(), message->seq()->begin());
+    auto seq = std::string(message->seq()->begin(), message->seq()->end());
     auto self = std::weak_ptr<WsSession>(session);
     auto callback = getAndRemoveRespCallback(seq);
 
@@ -226,7 +226,7 @@ void WsSession::asyncWrite()
 void WsSession::asyncSendMessage(
     std::shared_ptr<WsMessage> _msg, Options _options, RespCallBack _respFunc)
 {
-    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->begin());
+    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
     auto buffer = std::make_shared<bcos::bytes>();
     _msg->encode(*buffer);
 
