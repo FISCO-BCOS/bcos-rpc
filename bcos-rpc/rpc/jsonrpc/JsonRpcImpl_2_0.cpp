@@ -308,7 +308,6 @@ void JsonRpcImpl_2_0::onRPCRequest(const std::string& _requestBody, Sender _send
                 {
                     response.result.swap(_result);
                 }
-
                 auto strResp = toStringResponse(response);
                 _sender(strResp);
                 RPC_IMPL_LOG(TRACE) << LOG_BADGE("onRPCRequest") << LOG_KV("request", _requestBody)
@@ -494,9 +493,10 @@ void JsonRpcImpl_2_0::call(const std::string& _to, const std::string& _data, Res
             }
             else
             {
-                RPC_IMPL_LOG(ERROR) << LOG_BADGE("call") << LOG_KV("to", _to)
-                                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                RPC_IMPL_LOG(ERROR)
+                    << LOG_BADGE("call") << LOG_KV("to", _to)
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
 
             _respFunc(_error, jResp);
@@ -519,8 +519,8 @@ void JsonRpcImpl_2_0::sendTransaction(
                 RPC_IMPL_LOG(ERROR)
                     << LOG_BADGE("sendTransaction") << LOG_KV("data", _data)
                     << LOG_KV("requireProof", _requireProof)
-                    << LOG_KV("errorCode", _error ? _error->errorCode() : -1)
-                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : std::string(""));
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
                 Json::Value jResp;
                 _respFunc(_error, jResp);
                 return;
@@ -550,9 +550,8 @@ void JsonRpcImpl_2_0::sendTransaction(
                             << LOG_BADGE("sendTransaction") << LOG_DESC("getTransactionReceipt")
                             << LOG_KV("hexPreTxHash", hexPreTxHash)
                             << LOG_KV("requireProof", _requireProof)
-                            << LOG_KV("errorCode", _error ? _error->errorCode() : -1)
-                            << LOG_KV("errorMessage",
-                                   _error ? _error->errorMessage() : std::string(""));
+                            << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                            << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
                         _respFunc(_error, jReceipt);
                         return;
                     }
@@ -574,9 +573,9 @@ void JsonRpcImpl_2_0::sendTransaction(
                                 RPC_IMPL_LOG(WARNING)
                                     << LOG_BADGE("sendTransaction") << LOG_DESC("getTransaction")
                                     << LOG_KV("hexPreTxHash", hexPreTxHash)
-                                    << LOG_KV("errorCode", _error ? _error->errorCode() : -1)
+                                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
                                     << LOG_KV("errorMessage",
-                                           _error ? _error->errorMessage() : std::string(""));
+                                           _error ? _error->errorMessage() : "success");
                             }
                             else if (_jTx.isMember("transactionProof"))
                             {
@@ -663,10 +662,11 @@ void JsonRpcImpl_2_0::getTransaction(
             }
             else
             {
-                RPC_IMPL_LOG(ERROR) << LOG_BADGE("getTransaction") << LOG_KV("txHash", _txHash)
-                                    << LOG_KV("requireProof", _requireProof)
-                                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                RPC_IMPL_LOG(ERROR)
+                    << LOG_BADGE("getTransaction") << LOG_KV("txHash", _txHash)
+                    << LOG_KV("requireProof", _requireProof)
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
 
             _respFunc(_error, jResp);
@@ -707,8 +707,8 @@ void JsonRpcImpl_2_0::getTransactionReceipt(
                 RPC_IMPL_LOG(ERROR)
                     << LOG_BADGE("getTransactionReceipt") << LOG_KV("txHash", _txHash)
                     << LOG_KV("requireProof", _requireProof)
-                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
 
             _respFunc(_error, jResp);
@@ -739,8 +739,8 @@ void JsonRpcImpl_2_0::getBlockByHash(
                 RPC_IMPL_LOG(ERROR)
                     << LOG_BADGE("getBlockByHash") << LOG_KV("blockHash", _blockHash)
                     << LOG_KV("onlyHeader", _onlyHeader) << LOG_KV("onlyTxHash", _onlyTxHash)
-                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
                 Json::Value jResp;
                 _respFunc(_error, jResp);
             }
@@ -763,8 +763,8 @@ void JsonRpcImpl_2_0::getBlockByNumber(
                 RPC_IMPL_LOG(ERROR)
                     << LOG_BADGE("getBlockByNumber") << LOG_KV("blockNumber", _blockNumber)
                     << LOG_KV("onlyHeader", _onlyHeader) << LOG_KV("onlyTxHash", _onlyTxHash)
-                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
             else
             {
@@ -789,9 +789,10 @@ void JsonRpcImpl_2_0::getBlockHashByNumber(int64_t _blockNumber, RespFunc _respF
         _blockNumber, [_respFunc](Error::Ptr _error, crypto::HashType const& _hashValue) {
             if (_error && (_error->errorCode() != bcos::protocol::CommonError::SUCCESS))
             {
-                RPC_IMPL_LOG(ERROR) << LOG_BADGE("getBlockHashByNumber")
-                                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                RPC_IMPL_LOG(ERROR)
+                    << LOG_BADGE("getBlockHashByNumber")
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
 
             Json::Value jResp = _hashValue.hexPrefixed();
@@ -807,10 +808,11 @@ void JsonRpcImpl_2_0::getBlockNumber(RespFunc _respFunc)
         [_respFunc](Error::Ptr _error, protocol::BlockNumber _blockNumber) {
             if (_error && (_error->errorCode() != bcos::protocol::CommonError::SUCCESS))
             {
-                RPC_IMPL_LOG(ERROR) << LOG_BADGE("getBlockNumber")
-                                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage())
-                                    << LOG_KV("blockNumber", _blockNumber);
+                RPC_IMPL_LOG(ERROR)
+                    << LOG_BADGE("getBlockNumber")
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success")
+                    << LOG_KV("blockNumber", _blockNumber);
             }
 
             Json::Value jResp = _blockNumber;
@@ -836,8 +838,8 @@ void JsonRpcImpl_2_0::getCode(const std::string _contractAddress, RespFunc _resp
             else
             {
                 RPC_IMPL_LOG(ERROR)
-                    << LOG_BADGE("getCode") << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage())
+                    << LOG_BADGE("getCode") << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success")
                     << LOG_KV("contractAddress", _contractAddress);
             }
 
@@ -865,9 +867,10 @@ void JsonRpcImpl_2_0::getSealerList(RespFunc _respFunc)
             }
             else
             {
-                RPC_IMPL_LOG(ERROR) << LOG_BADGE("getSealerList")
-                                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                RPC_IMPL_LOG(ERROR)
+                    << LOG_BADGE("getSealerList")
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
 
             _respFunc(_error, jResp);
@@ -893,9 +896,10 @@ void JsonRpcImpl_2_0::getObserverList(RespFunc _respFunc)
             }
             else
             {
-                RPC_IMPL_LOG(ERROR) << LOG_BADGE("getObserverList")
-                                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                RPC_IMPL_LOG(ERROR)
+                    << LOG_BADGE("getObserverList")
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
 
             _respFunc(_error, jResp);
@@ -915,9 +919,10 @@ void JsonRpcImpl_2_0::getPbftView(RespFunc _respFunc)
             }
             else
             {
-                RPC_IMPL_LOG(ERROR) << LOG_BADGE("getPbftView")
-                                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                RPC_IMPL_LOG(ERROR)
+                    << LOG_BADGE("getPbftView")
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
 
             _respFunc(_error, jResp);
@@ -937,9 +942,10 @@ void JsonRpcImpl_2_0::getPendingTxSize(RespFunc _respFunc)
             }
             else
             {
-                RPC_IMPL_LOG(ERROR) << LOG_BADGE("getPendingTxSize")
-                                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                RPC_IMPL_LOG(ERROR)
+                    << LOG_BADGE("getPendingTxSize")
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
 
             _respFunc(_error, jResp);
@@ -959,8 +965,9 @@ void JsonRpcImpl_2_0::getSyncStatus(RespFunc _respFunc)
         else
         {
             RPC_IMPL_LOG(ERROR) << LOG_BADGE("getSyncStatus")
-                                << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                                << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                                << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                                << LOG_KV(
+                                       "errorMessage", _error ? _error->errorMessage() : "success");
         }
         _respFunc(_error, jResp);
     });
@@ -980,9 +987,10 @@ void JsonRpcImpl_2_0::getSystemConfigByKey(const std::string& _keyValue, RespFun
             }
             else
             {
-                RPC_IMPL_LOG(ERROR) << LOG_BADGE("asyncGetSystemConfigByKey")
-                                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                RPC_IMPL_LOG(ERROR)
+                    << LOG_BADGE("asyncGetSystemConfigByKey")
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
 
             _respFunc(_error, jResp);
@@ -1005,9 +1013,10 @@ void JsonRpcImpl_2_0::getTotalTransactionCount(RespFunc _respFunc)
             }
             else
             {
-                RPC_IMPL_LOG(ERROR) << LOG_BADGE("getTotalTransactionCount")
-                                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                RPC_IMPL_LOG(ERROR)
+                    << LOG_BADGE("getTotalTransactionCount")
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
 
             _respFunc(_error, jResp);
@@ -1026,9 +1035,10 @@ void JsonRpcImpl_2_0::getPeers(RespFunc _respFunc)
             }
             else
             {
-                RPC_IMPL_LOG(ERROR) << LOG_BADGE("getPeers")
-                                    << LOG_KV("errorCode", _error ? 0 : _error->errorCode())
-                                    << LOG_KV("errorMessage", _error ? 0 : _error->errorMessage());
+                RPC_IMPL_LOG(ERROR)
+                    << LOG_BADGE("getPeers")
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
 
             _respFunc(_error, jResp);
