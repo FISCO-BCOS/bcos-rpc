@@ -74,9 +74,7 @@ set(JSONRPC_TARGET "jsonrpc")
 set(HTTP_TARGET "http")
 set(WS_SERVICE_TARGET "wsservice")
 
-add_subdirectory(bcos-rpc/rpc)
-add_subdirectory(bcos-rpc/amop)
-add_subdirectory(bcos-rpc/http)
+add_subdirectory(bcos-rpc)
 
 if (TESTS)
     include(InstallBcosCryptoDependencies)

@@ -19,10 +19,10 @@
  */
 #pragma once
 
-#include "libutilities/Common.h"
 #include <bcos-framework/interfaces/protocol/ProtocolTypeDef.h>
+#include <bcos-framework/libutilities/Common.h>
 #include <bcos-rpc/http/ws/Common.h>
-#include <bcos-rpc/rpc/jsonrpc/JsonRpcInterface.h>
+#include <bcos-rpc/jsonrpc/JsonRpcInterface.h>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/strand.hpp>

@@ -20,7 +20,7 @@
  */
 
 #include <bcos-framework/libutilities/Log.h>
-#include <bcos-rpc/rpc/Rpc.h>
+#include <bcos-rpc/Rpc.h>
 using namespace bcos;
 using namespace bcos::rpc;
 

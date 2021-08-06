@@ -25,8 +25,8 @@
 #include <bcos-framework/libutilities/Base64.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <bcos-rpc/http/ws/WsVersion.h>
-#include <bcos-rpc/rpc/jsonrpc/Common.h>
-#include <bcos-rpc/rpc/jsonrpc/JsonRpcImpl_2_0.h>
+#include <bcos-rpc/jsonrpc/Common.h>
+#include <bcos-rpc/jsonrpc/JsonRpcImpl_2_0.h>
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/binary_from_base64.hpp>
 #include <boost/archive/iterators/transform_width.hpp>

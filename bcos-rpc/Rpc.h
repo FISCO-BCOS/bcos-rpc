@@ -21,11 +21,11 @@
 
 #pragma once
 #include <bcos-framework/interfaces/rpc/RPCInterface.h>
+#include <bcos-rpc/Common.h>
 #include <bcos-rpc/amop/AMOP.h>
 #include <bcos-rpc/http/HttpServer.h>
 #include <bcos-rpc/http/ws/WsService.h>
-#include <bcos-rpc/rpc/Common.h>
-#include <bcos-rpc/rpc/jsonrpc/Common.h>
+#include <bcos-rpc/jsonrpc/Common.h>
 #include <iterator>
 #include <thread>
 

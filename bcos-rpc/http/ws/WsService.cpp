@@ -346,11 +346,16 @@ void WsService::onRecvSubTopics(
 void WsService::onRecvAMOPRequest(
     std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session)
 {
-    // TODO: handler error
     auto factory = std::make_shared<AMOPRequestFactory>();
     auto request = factory->buildRequest();
-    request->decode(bytesConstRef(_msg->data()->data(), _msg->data()->size()));
-
+    auto size = request->decode(bytesConstRef(_msg->data()->data(), _msg->data()->size()));
+    if (size < 0)
+    {
+        WEBSOCKET_SERVICE(ERROR) << LOG_BADGE("onRecvAMOPRequest")
+                                 << LOG_DESC("decode message failed")
+                                 << LOG_KV("data", *toHexString(_msg->data()));
+        return;
+    }
     auto buffer = std::make_shared<bcos::bytes>();
     _msg->encode(*buffer);
     auto topic = request->topic();
@@ -401,7 +406,14 @@ void WsService::onRecvAMOPBroadcast(
     boost::ignore_unused(_session);
 
     auto request = m_requestFactory->buildRequest();
-    request->decode(bytesConstRef(_msg->data()->data(), _msg->data()->size()));
+    auto size = request->decode(bytesConstRef(_msg->data()->data(), _msg->data()->size()));
+    if (size < 0)
+    {
+        WEBSOCKET_SERVICE(ERROR) << LOG_BADGE("onRecvAMOPBroadcast")
+                                 << LOG_DESC("decode message failed")
+                                 << LOG_KV("data", *toHexString(_msg->data()));
+        return;
+    }
 
     auto topic = request->topic();
     WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("onRecvAMOPBroadcast") << LOG_KV("seq", _msg->seq())
@@ -422,7 +434,14 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
 {
     // WsMessage
     auto message = m_messageFactory->buildMessage();
-    message->decode(_data.data(), _data.size());
+    auto size = message->decode(_data.data(), _data.size());
+    if (size < 0)
+    {
+        WEBSOCKET_SERVICE(ERROR) << LOG_BADGE("onRecvAMOPMessage")
+                                 << LOG_DESC("decode message failed")
+                                 << LOG_KV("data", *toHexString(_data));
+        return;
+    }
 
     // AMOPRequest
     auto request = m_requestFactory->buildRequest();
@@ -549,7 +568,14 @@ void WsService::onRecvAMOPBroadcastMessage(bytesConstRef _data)
 {
     // WsMessage
     auto message = m_messageFactory->buildMessage();
-    message->decode(_data.data(), _data.size());
+    auto size = message->decode(_data.data(), _data.size());
+    if (size < 0)
+    {
+        WEBSOCKET_SERVICE(ERROR) << LOG_BADGE("onRecvAMOPBroadcastMessage")
+                                 << LOG_DESC("decode message failed")
+                                 << LOG_KV("data", *toHexString(_data));
+        return;
+    }
 
     // AMOPRequest
     auto request = m_requestFactory->buildRequest();

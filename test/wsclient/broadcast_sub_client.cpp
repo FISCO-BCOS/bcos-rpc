@@ -184,15 +184,29 @@ public:
         auto message = m_messageFactory->buildMessage();
         message->decode(data, size);
         auto seq = std::string(message->seq()->begin(), message->seq()->end());
-        auto requestFactory = std::make_shared<bcos::ws::AMOPRequestFactory>();
-        auto request = requestFactory->buildRequest();
-        request->decode(bcos::bytesConstRef(message->data()->data(), message->data()->size()));
+        auto type = message->type();
+        if (type == bcos::ws::WsMessageType::AMOP_REQUEST ||
+            type == bcos::ws::WsMessageType::AMOP_RESPONSE)
+        {
+            auto requestFactory = std::make_shared<bcos::ws::AMOPRequestFactory>();
+            auto request = requestFactory->buildRequest();
+            request->decode(bcos::bytesConstRef(message->data()->data(), message->data()->size()));
 
-        BCOS_LOG(INFO) << "     receive: ";
-        BCOS_LOG(INFO) << "         seq: " << seq;
-        BCOS_LOG(INFO) << "         size: " << request->data().size();
-        BCOS_LOG(INFO) << "         data: "
-                       << std::string(request->data().begin(), request->data().end());
+            BCOS_LOG(INFO) << "     receive: ";
+            BCOS_LOG(INFO) << "         seq: " << seq;
+            BCOS_LOG(INFO) << "         type: " << type;
+            BCOS_LOG(INFO) << "         data: "
+                           << std::string(request->data().begin(), request->data().end());
+        }
+        else
+        {
+            BCOS_LOG(INFO) << "     receive: ";
+            BCOS_LOG(INFO) << "         seq: " << seq;
+            BCOS_LOG(INFO) << "         type: " << type;
+            BCOS_LOG(INFO) << "         data: "
+                           << std::string(message->data()->begin(), message->data()->end());
+        }
+
         m_buffer.consume(m_buffer.size());
 
         // read a message into our buffer

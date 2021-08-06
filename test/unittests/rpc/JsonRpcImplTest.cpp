@@ -20,7 +20,7 @@
  */
 
 #include <bcos-framework/testutils/TestPromptFixture.h>
-#include <bcos-rpc/rpc/jsonrpc/JsonRpcImpl_2_0.h>
+#include <bcos-rpc/jsonrpc/JsonRpcImpl_2_0.h>
 #include <boost/test/unit_test.hpp>
 
 using namespace bcos;

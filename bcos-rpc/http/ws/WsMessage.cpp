@@ -37,6 +37,18 @@ const size_t WsMessage::SEQ_LENGTH;
 /// type(2) + error(2) + seq(32) + data(N)
 const size_t WsMessage::MESSAGE_MIN_LENGTH;
 
+// check offset length overflow when decode message
+#define OFFSET_CHECK(offset, step, length)                                                  \
+    do                                                                                      \
+    {                                                                                       \
+        if (offset + step > length)                                                         \
+        {                                                                                   \
+            throw std::runtime_error("offset overflow, offset: " + std::to_string(offset) + \
+                                     ",step: " + std::to_string(step) +                     \
+                                     " ,length: " + std::to_string(length));                \
+        }                                                                                   \
+    } while (0)
+
 bool WsMessage::encode(bcos::bytes& _buffer)
 {
     /*
@@ -117,14 +129,25 @@ std::size_t AMOPRequest::decode(bytesConstRef _data)
         return -1;
     }
 
-    std::size_t offset = 0;
-    uint16_t topicLen =
-        boost::asio::detail::socket_ops::network_to_host_short(*((uint16_t*)_data.data()));
-    offset += 2;
-    // topic
-    m_topic = std::string(_data.data() + offset, _data.data() + offset + topicLen);
-    offset += topicLen;
-    // data
-    m_data = _data.getCroppedData(offset);
-    return _data.size();
+    try
+    {
+        std::size_t length = _data.size();
+        std::size_t offset = 0;
+
+        OFFSET_CHECK(offset, 2, length);
+        uint16_t topicLen =
+            boost::asio::detail::socket_ops::network_to_host_short(*((uint16_t*)_data.data()));
+        offset += 2;
+        OFFSET_CHECK(offset, topicLen, length);
+        // topic
+        m_topic = std::string(_data.data() + offset, _data.data() + offset + topicLen);
+        offset += topicLen;
+        // data
+        m_data = _data.getCroppedData(offset);
+        return _data.size();
+    }
+    catch (const std::string& _e)
+    {
+        return -1;
+    }
 }

@@ -26,7 +26,7 @@
 #include <bcos-framework/interfaces/ledger/LedgerInterface.h>
 #include <bcos-framework/interfaces/sync/BlockSyncInterface.h>
 #include <bcos-framework/interfaces/txpool/TxPoolInterface.h>
-#include <bcos-rpc/rpc/jsonrpc/JsonRpcInterface.h>
+#include <bcos-rpc/jsonrpc/JsonRpcInterface.h>
 #include <json/json.h>
 #include <boost/core/ignore_unused.hpp>
 #include <unordered_map>

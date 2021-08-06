@@ -18,7 +18,7 @@
  * @date 2021-07-28
  */
 #pragma once
-#include "libutilities/Common.h"
+#include <bcos-framework/libutilities/Common.h>
 #include <bcos-rpc/http/Common.h>
 #include <bcos-rpc/http/ws/Common.h>
 #include <bcos-rpc/http/ws/WsMessage.h>

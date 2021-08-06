@@ -21,7 +21,6 @@
 
 #include <bcos-framework/interfaces/crypto/KeyInterface.h>
 #include <bcos-framework/libutilities/Common.h>
-
 #include <bcos-rpc/amop/Common.h>
 #include <algorithm>
 #include <shared_mutex>

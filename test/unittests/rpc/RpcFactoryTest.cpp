@@ -20,7 +20,7 @@
  */
 
 #include <bcos-framework/testutils/TestPromptFixture.h>
-#include <bcos-rpc/rpc/RpcFactory.h>
+#include <bcos-rpc/RpcFactory.h>
 #include <boost/test/unit_test.hpp>
 
 using namespace bcos;

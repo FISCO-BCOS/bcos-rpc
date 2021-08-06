@@ -23,7 +23,7 @@
 
 #include <bcos-framework/interfaces/protocol/CommonError.h>
 #include <bcos-framework/libutilities/Error.h>
-#include <bcos-rpc/rpc/jsonrpc/Common.h>
+#include <bcos-rpc/jsonrpc/Common.h>
 #include <json/json.h>
 #include <functional>
 

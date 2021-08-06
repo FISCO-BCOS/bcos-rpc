@@ -18,12 +18,12 @@
  * @date 2021-06-21
  */
 
-#include "libutilities/Log.h"
 #include <bcos-framework/interfaces/front/FrontServiceInterface.h>
 #include <bcos-framework/interfaces/protocol/CommonError.h>
 #include <bcos-framework/interfaces/protocol/Protocol.h>
 #include <bcos-framework/libutilities/DataConvertUtility.h>
 #include <bcos-framework/libutilities/Exceptions.h>
+#include <bcos-framework/libutilities/Log.h>
 #include <bcos-rpc/amop/AMOP.h>
 #include <bcos-rpc/amop/AMOPMessage.h>
 #include <bcos-rpc/amop/Common.h>
@@ -346,8 +346,8 @@ void AMOP::onReceiveAMOPBroadcastMessage(
  * @param _data: the message data
  * @return void
  */
-void AMOP::asyncNotifyAmopMessage(
-    bcos::crypto::NodeIDPtr _nodeID, const std::string& _id, bcos::bytesConstRef _data)
+void AMOP::asyncNotifyAmopMessage(bcos::crypto::NodeIDPtr _nodeID, const std::string& _id,
+    bcos::bytesConstRef _data, std::function<void(bcos::Error::Ptr _error)> _callback)
 {
     auto message = m_messageFactory->buildMessage();
     auto size = message->decode(_data);
@@ -369,6 +369,11 @@ void AMOP::asyncNotifyAmopMessage(
         AMOP_LOG(ERROR) << LOG_DESC("asyncNotifyAmopMessage unrecognized message type")
                         << LOG_KV("type", message->type()) << LOG_KV("nodeID", _nodeID->hex())
                         << LOG_KV("id", _id) << LOG_KV("data", *toHexString(_data));
+    }
+
+    if (_callback)
+    {
+        _callback(nullptr);
     }
 }
 

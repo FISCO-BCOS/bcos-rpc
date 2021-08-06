@@ -57,7 +57,7 @@ public:
      * @return void
      */
     virtual void asyncNotifyAmopMessage(bcos::crypto::NodeIDPtr _nodeID, const std::string& _id,
-        bcos::bytesConstRef _data) override;
+        bcos::bytesConstRef _data, std::function<void(bcos::Error::Ptr _error)> _callback) override;
     /**
      * @brief: async receive nodeIDs from front service
      * @param _nodeIDs: the nodeIDs

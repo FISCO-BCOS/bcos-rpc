@@ -28,9 +28,9 @@
 #include <bcos-framework/interfaces/ledger/LedgerInterface.h>
 #include <bcos-framework/interfaces/sync/BlockSyncInterface.h>
 #include <bcos-framework/interfaces/txpool/TxPoolInterface.h>
+#include <bcos-rpc/Rpc.h>
 #include <bcos-rpc/amop/AMOP.h>
-#include <bcos-rpc/rpc/Rpc.h>
-#include <bcos-rpc/rpc/jsonrpc/JsonRpcImpl_2_0.h>
+#include <bcos-rpc/jsonrpc/JsonRpcImpl_2_0.h>
 
 namespace bcos
 {
