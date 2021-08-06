@@ -39,6 +39,12 @@ void Rpc::start()
 
 void Rpc::stop()
 {
+    // stop io
+    if (m_ioc && !m_ioc->stopped())
+    {
+        m_ioc->stop();
+    }
+
     // stop thread
     if (m_threads && !m_threads->empty())
     {
@@ -50,12 +56,6 @@ void Rpc::stop()
             }
         }
         m_threads->clear();
-    }
-
-    // stop io
-    if (m_ioc && !m_ioc->stopped())
-    {
-        m_ioc->stop();
     }
 
     // stop http server
