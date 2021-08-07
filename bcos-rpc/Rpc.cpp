@@ -94,3 +94,28 @@ void Rpc::asyncNotifyBlockNumber(
         _callback(nullptr);
     }
 }
+
+/**
+ * @brief: async receive message from front service
+ * @param _nodeID: the message sender nodeID
+ * @param _id: the id of this message, it can by used to send response to the peer
+ * @param _data: the message data
+ * @return void
+ */
+void Rpc::asyncNotifyAmopMessage(bcos::crypto::NodeIDPtr _nodeID, const std::string& _id,
+    bcos::bytesConstRef _data, std::function<void(Error::Ptr _error)> _onRecv)
+{
+    m_AMOP->asyncNotifyAmopMessage(_nodeID, _id, _data, _onRecv);
+}
+
+/**
+ * @brief: async receive nodeIDs from front service
+ * @param _nodeIDs: the nodeIDs
+ * @param _callback: callback
+ * @return void
+ */
+void Rpc::asyncNotifyAmopNodeIDs(std::shared_ptr<const bcos::crypto::NodeIDs> _nodeIDs,
+    std::function<void(bcos::Error::Ptr _error)> _callback)
+{
+    m_AMOP->asyncNotifyAmopNodeIDs(_nodeIDs, _callback);
+}

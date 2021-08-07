@@ -89,7 +89,7 @@ public:
 
 public:
     bool encode(bcos::bytes& _buffer);
-    std::size_t decode(bytesConstRef _data);
+    ssize_t decode(bytesConstRef _data);
 
 private:
     std::string m_topic;

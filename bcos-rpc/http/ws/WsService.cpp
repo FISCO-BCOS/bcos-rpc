@@ -352,8 +352,11 @@ void WsService::onRecvAMOPRequest(
     if (size < 0)
     {
         WEBSOCKET_SERVICE(ERROR) << LOG_BADGE("onRecvAMOPRequest")
-                                 << LOG_DESC("decode message failed")
-                                 << LOG_KV("data", *toHexString(_msg->data()));
+                                 << LOG_DESC("decode amop request message failed")
+                                 << LOG_KV("endpoint",
+                                        _session ? _session->remoteEndPoint() : std::string(""))
+                                 << LOG_KV("data",
+                                        *toHexString(_msg->data()->begin(), _msg->data()->end()));
         return;
     }
     auto buffer = std::make_shared<bcos::bytes>();
@@ -410,8 +413,11 @@ void WsService::onRecvAMOPBroadcast(
     if (size < 0)
     {
         WEBSOCKET_SERVICE(ERROR) << LOG_BADGE("onRecvAMOPBroadcast")
-                                 << LOG_DESC("decode message failed")
-                                 << LOG_KV("data", *toHexString(_msg->data()));
+                                 << LOG_DESC("decode amop broadcast message failed")
+                                 << LOG_KV("endpoint",
+                                        _session ? _session->remoteEndPoint() : std::string(""))
+                                 << LOG_KV("data",
+                                        *toHexString(_msg->data()->begin(), _msg->data()->end()));
         return;
     }
 
@@ -438,14 +444,21 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
     if (size < 0)
     {
         WEBSOCKET_SERVICE(ERROR) << LOG_BADGE("onRecvAMOPMessage")
-                                 << LOG_DESC("decode message failed")
+                                 << LOG_DESC("decode message failed") << LOG_KV("nodeID", nodeID)
                                  << LOG_KV("data", *toHexString(_data));
         return;
     }
 
     // AMOPRequest
     auto request = m_requestFactory->buildRequest();
-    request->decode(bytesConstRef(message->data()->data(), message->data()->size()));
+    size = request->decode(bytesConstRef(message->data()->data(), message->data()->size()));
+    if (size < 0)
+    {
+        WEBSOCKET_SERVICE(ERROR) << LOG_BADGE("onRecvAMOPMessage")
+                                 << LOG_DESC("decode amop message failed")
+                                 << LOG_KV("nodeID", nodeID) << LOG_KV("data", *toHexString(_data));
+        return;
+    }
 
     // message seq
     std::string topic = request->topic();
@@ -543,7 +556,9 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
                             << LOG_DESC("asyncSendMessage callback error and try to send again")
                             << LOG_KV("endpoint",
                                    (_session ? _session->remoteEndPoint() : std::string("")))
-                            << LOG_KV("topic", retry->m_topic) << LOG_KV("nodeID", retry->m_nodeID);
+                            << LOG_KV("topic", retry->m_topic) << LOG_KV("nodeID", retry->m_nodeID)
+                            << LOG_KV("errorCode", _error ? _error->errorCode() : -1)
+                            << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
                         return retry->sendMessage();
                     }
 
@@ -579,7 +594,14 @@ void WsService::onRecvAMOPBroadcastMessage(bytesConstRef _data)
 
     // AMOPRequest
     auto request = m_requestFactory->buildRequest();
-    request->decode(bytesConstRef(message->data()->data(), message->data()->size()));
+    size = request->decode(bytesConstRef(message->data()->data(), message->data()->size()));
+    if (size < 0)
+    {
+        WEBSOCKET_SERVICE(ERROR) << LOG_BADGE("onRecvAMOPBroadcastMessage")
+                                 << LOG_DESC("decode amop message failed")
+                                 << LOG_KV("data", *toHexString(_data));
+        return;
+    }
 
     // message seq
     std::string topic = request->topic();
@@ -589,9 +611,9 @@ void WsService::onRecvAMOPBroadcastMessage(bytesConstRef _data)
     m_topicManager->queryClientsByTopic(topic, clients);
     if (clients.empty())
     {
-        WEBSOCKET_SERVICE(INFO) << LOG_BADGE("onRecvAMOPBroadcastMessage")
-                                << LOG_DESC("no client subscribe the topic") << LOG_KV("seq", seq)
-                                << LOG_KV("topic", topic);
+        WEBSOCKET_SERVICE(WARNING)
+            << LOG_BADGE("onRecvAMOPBroadcastMessage") << LOG_DESC("no client subscribe the topic")
+            << LOG_KV("seq", seq) << LOG_KV("topic", topic);
         return;
     }
 

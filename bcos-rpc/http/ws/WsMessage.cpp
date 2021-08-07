@@ -122,7 +122,7 @@ bool AMOPRequest::encode(bcos::bytes& _buffer)
     return true;
 }
 
-std::size_t AMOPRequest::decode(bytesConstRef _data)
+ssize_t AMOPRequest::decode(bytesConstRef _data)
 {
     if (_data.size() < MESSAGE_MIN_LENGTH)
     {

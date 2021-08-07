@@ -34,7 +34,7 @@ class WsService;
 }
 namespace amop
 {
-class AMOP : public AMOPInterface, public std::enable_shared_from_this<AMOP>
+class AMOP : public std::enable_shared_from_this<AMOP>
 {
 public:
     using Ptr = std::shared_ptr<AMOP>;
@@ -46,8 +46,8 @@ public:
     void initMsgHandler();
 
 public:
-    virtual void start() override;
-    virtual void stop() override;
+    virtual void start();
+    virtual void stop();
 
     /**
      * @brief: async receive message from front service
@@ -57,7 +57,7 @@ public:
      * @return void
      */
     virtual void asyncNotifyAmopMessage(bcos::crypto::NodeIDPtr _nodeID, const std::string& _id,
-        bcos::bytesConstRef _data, std::function<void(bcos::Error::Ptr _error)> _callback) override;
+        bcos::bytesConstRef _data, std::function<void(bcos::Error::Ptr _error)> _callback);
     /**
      * @brief: async receive nodeIDs from front service
      * @param _nodeIDs: the nodeIDs
@@ -65,7 +65,7 @@ public:
      * @return void
      */
     virtual void asyncNotifyAmopNodeIDs(std::shared_ptr<const crypto::NodeIDs> _nodeIDs,
-        std::function<void(bcos::Error::Ptr _error)> _callback) override;
+        std::function<void(bcos::Error::Ptr _error)> _callback);
 
     /**
      * @brief: async send message to random node subscribe _topic

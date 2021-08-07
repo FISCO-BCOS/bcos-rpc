@@ -20,6 +20,7 @@
  */
 
 #pragma once
+#include <bcos-framework/interfaces/amop/AMOPInterface.h>
 #include <bcos-framework/interfaces/rpc/RPCInterface.h>
 #include <bcos-rpc/Common.h>
 #include <bcos-rpc/amop/AMOP.h>
@@ -33,7 +34,9 @@ namespace bcos
 {
 namespace rpc
 {
-class Rpc : public RPCInterface, public std::enable_shared_from_this<Rpc>
+class Rpc : public RPCInterface,
+            public amop::AMOPInterface,
+            public std::enable_shared_from_this<Rpc>
 {
 public:
     using Ptr = std::shared_ptr<Rpc>;
@@ -68,6 +71,24 @@ public:
      */
     virtual void asyncNotifyBlockNumber(bcos::protocol::BlockNumber _blockNumber,
         std::function<void(Error::Ptr)> _callback) override;
+
+    /**
+     * @brief: async receive message from front service
+     * @param _nodeID: the message sender nodeID
+     * @param _id: the id of this message, it can by used to send response to the peer
+     * @param _data: the message data
+     * @return void
+     */
+    virtual void asyncNotifyAmopMessage(bcos::crypto::NodeIDPtr _nodeID, const std::string& _id,
+        bcos::bytesConstRef _data, std::function<void(Error::Ptr _error)> _onRecv) override;
+    /**
+     * @brief: async receive nodeIDs from front service
+     * @param _nodeIDs: the nodeIDs
+     * @param _callback: callback
+     * @return void
+     */
+    virtual void asyncNotifyAmopNodeIDs(std::shared_ptr<const bcos::crypto::NodeIDs> _nodeIDs,
+        std::function<void(bcos::Error::Ptr _error)> _callback) override;
 
 public:
     bcos::http::HttpServer::Ptr httpServer() const { return m_httpServer; }
