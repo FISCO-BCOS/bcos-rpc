@@ -475,7 +475,8 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
         message->setType(WsMessageType::AMOP_RESPONSE);
         message->encode(*buffer);
 
-        _callback(bytesConstRef(buffer->data(), buffer->size()));
+        m_threadPool->enqueue(
+            [buffer, _callback]() { _callback(bytesConstRef(buffer->data(), buffer->size())); });
 
         WEBSOCKET_SERVICE(WARNING)
             << LOG_BADGE("onRecvAMOPMessage") << LOG_DESC("no client subscribe the topic")
@@ -491,7 +492,7 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
         std::shared_ptr<WsMessage> m_message;
         std::vector<std::string> m_clients;
         std::shared_ptr<WsService> m_wsService;
-        std::function<void(bytesConstRef _data)> m_callback;
+        std::function<void(std::shared_ptr<bcos::bytes> _data)> m_callback;
 
     public:
         WsSession::Ptr chooseSession()
@@ -533,7 +534,7 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
                 m_message->setType(WsMessageType::AMOP_RESPONSE);
                 m_message->encode(*buffer);
 
-                m_callback(bytesConstRef(buffer->data(), buffer->size()));
+                m_callback(buffer);
                 return;
             }
 
@@ -564,7 +565,7 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
 
                     auto buffer = std::make_shared<bcos::bytes>();
                     _msg->encode(*buffer);
-                    retry->m_callback(bytesConstRef(buffer->data(), buffer->size()));
+                    retry->m_callback(buffer);
                 });
         }
     };
@@ -575,7 +576,9 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
     retry->m_clients = clients;
     retry->m_message = message;
     retry->m_wsService = shared_from_this();
-    retry->m_callback = _callback;
+    retry->m_callback = [_callback](std::shared_ptr<bcos::bytes> _data) {
+        _callback(bytesConstRef(_data->data(), _data->size()));
+    };
     retry->sendMessage();
 }
 
@@ -663,7 +666,7 @@ void WsService::notifyBlockNumberToClient(bcos::protocol::BlockNumber _blockNumb
     auto allSessions = sessions();
     for (const auto& session : allSessions)
     {
-        if (session->isConnected())
+        if (session && session->isConnected())
         {
             notifyBlockNumberToClient(session, _blockNumber);
         }
