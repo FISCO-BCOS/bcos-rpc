@@ -469,8 +469,7 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
     if (clients.empty())
     {
         auto buffer = std::make_shared<bcos::bytes>();
-        // TODO: set the error code
-        message->setStauts(bcos::protocol::CommonError::TIMEOUT);
+        message->setStauts(bcos::protocol::CommonError::NotFoundClientByTopicDispatchMsg);
         message->data()->clear();
         message->setType(WsMessageType::AMOP_RESPONSE);
         message->encode(*buffer);

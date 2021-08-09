@@ -354,6 +354,10 @@ void AMOP::onReceiveAMOPBroadcastMessage(
 void AMOP::asyncNotifyAmopMessage(bcos::crypto::NodeIDPtr _nodeID, const std::string& _id,
     bcos::bytesConstRef _data, std::function<void(bcos::Error::Ptr _error)> _callback)
 {
+    if (_callback)
+    {
+        _callback(nullptr);
+    }
     auto message = m_messageFactory->buildMessage();
     auto size = message->decode(_data);
     if (size < 0)
@@ -375,11 +379,6 @@ void AMOP::asyncNotifyAmopMessage(bcos::crypto::NodeIDPtr _nodeID, const std::st
                         << LOG_BADGE("unrecognized message type") << LOG_KV("type", message->type())
                         << LOG_KV("nodeID", _nodeID->hex()) << LOG_KV("id", _id)
                         << LOG_KV("data", *toHexString(_data));
-    }
-
-    if (_callback)
-    {
-        _callback(nullptr);
     }
 }
 
@@ -415,9 +414,9 @@ void AMOP::asyncSendMessage(const std::string& _topic, bcos::bytesConstRef _data
     m_topicManager->queryNodeIDsByTopic(_topic, strNodeIDs);
     if (strNodeIDs.empty())
     {
-        // TODO: to define the specific error code
-        auto errorPtr = std::make_shared<Error>(bcos::protocol::CommonError::TIMEOUT,
-            "there has no node subscribe this topic, topic: " + _topic);
+        auto errorPtr =
+            std::make_shared<Error>(bcos::protocol::CommonError::NotFoundPeerByTopicSendMsg,
+                "there has no node subscribe this topic, topic: " + _topic);
         if (_respFunc)
         {
             _respFunc(errorPtr, bytesConstRef());
@@ -451,9 +450,9 @@ void AMOP::asyncSendMessage(const std::string& _topic, bcos::bytesConstRef _data
         {
             if (m_nodeIDs.empty())
             {
-                // TODO: to define the specific error code
-                auto errorPtr = std::make_shared<Error>(bcos::protocol::CommonError::TIMEOUT,
-                    "unable to send message to peer by topic");
+                auto errorPtr =
+                    std::make_shared<Error>(bcos::protocol::CommonError::AMOPSendMsgFailed,
+                        "unable to send message to peer by topic");
                 if (m_callback)
                 {
                     m_callback(errorPtr, bytesConstRef());
