@@ -19,7 +19,7 @@
  * @date 2021-07-12
  */
 
-#include "libutilities/Common.h"
+#include <bcos-framework/libutilities/Common.h>
 #include <bcos-framework/testutils/TestPromptFixture.h>
 #include <bcos-rpc/http/ws/WsMessage.h>
 #include <boost/test/unit_test.hpp>

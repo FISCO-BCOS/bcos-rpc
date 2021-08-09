@@ -83,13 +83,16 @@ void AMOP::initMsgHandler()
                 amop->onReceiveAMOPBroadcastMessage(_nodeID, _id, _msg);
             }
         };
+
+    AMOP_LOG(INFO) << LOG_BADGE("initMsgHandler")
+                   << LOG_KV("message handler size", m_messageHandler.size());
 }
 
 void AMOP::start()
 {
     if (m_run)
     {
-        AMOP_LOG(INFO) << LOG_DESC("amop is running");
+        AMOP_LOG(INFO) << LOG_BADGE("start") << LOG_DESC("amop is running");
         return;
     }
 
@@ -98,14 +101,14 @@ void AMOP::start()
     initMsgHandler();
     // broadcast topic seq periodically
     broadcastTopicSeq();
-    AMOP_LOG(INFO) << LOG_DESC("start amop successfully");
+    AMOP_LOG(INFO) << LOG_BADGE("start") << LOG_DESC("start amop successfully");
 }
 
 void AMOP::stop()
 {
     if (!m_run)
     {
-        AMOP_LOG(INFO) << LOG_DESC("amop is not running");
+        AMOP_LOG(INFO) << LOG_BADGE("stop") << LOG_DESC("amop is not running");
         return;
     }
 
@@ -117,7 +120,7 @@ void AMOP::stop()
         m_timer->cancel();
     }
 
-    AMOP_LOG(INFO) << LOG_DESC("stop amop successfully");
+    AMOP_LOG(INFO) << LOG_BADGE("stop") << LOG_DESC("stop amop successfully");
 }
 
 /**
@@ -148,7 +151,7 @@ void AMOP::broadcastTopicSeq()
     m_frontServiceInterface->asyncSendBroadcastMessage(
         bcos::protocol::ModuleID::AMOP, bytesConstRef(buffer->data(), buffer->size()));
 
-    AMOP_LOG(DEBUG) << LOG_DESC("broadcastTopicSeq") << LOG_KV("topicSeq", topicSeq);
+    AMOP_LOG(DEBUG) << LOG_BADGE("broadcastTopicSeq") << LOG_KV("topicSeq", topicSeq);
 
     auto self = std::weak_ptr<AMOP>(shared_from_this());
     m_timer = std::make_shared<boost::asio::deadline_timer>(
@@ -183,13 +186,13 @@ void AMOP::onReceiveTopicSeqMessage(
             boost::lexical_cast<uint32_t>(std::string(_msg->data().begin(), _msg->data().end()));
         if (!m_topicManager->checkTopicSeq(_nodeID, topicSeq))
         {
-            AMOP_LOG(TRACE) << LOG_DESC("onReceiveTopicSeqMessage")
+            AMOP_LOG(TRACE) << LOG_BADGE("onReceiveTopicSeqMessage")
                             << LOG_KV("nodeID", _nodeID->hex()) << LOG_KV("id", _id)
                             << LOG_KV("topicSeq", topicSeq);
             return;
         }
 
-        AMOP_LOG(INFO) << LOG_DESC("onReceiveTopicSeqMessage") << LOG_KV("nodeID", _nodeID->hex())
+        AMOP_LOG(INFO) << LOG_BADGE("onReceiveTopicSeqMessage") << LOG_KV("nodeID", _nodeID->hex())
                        << LOG_KV("id", _id) << LOG_KV("topicSeq", topicSeq);
 
         auto buffer = buildAndEncodeMessage(AMOPMessageType::RequestTopic, bytesConstRef());
@@ -199,10 +202,11 @@ void AMOP::onReceiveTopicSeqMessage(
                 const std::string& _id, bcos::front::ResponseFunc) {
                 if (_error && (_error->errorCode() != bcos::protocol::CommonError::SUCCESS))
                 {
-                    AMOP_LOG(WARNING) << LOG_DESC("onReceiveTopicSeqMessage response")
-                                      << LOG_KV("nodeID", _nodeID->hex()) << LOG_KV("id", _id)
-                                      << LOG_KV("errorCode", _error->errorCode())
-                                      << LOG_KV("errorMessage", _error->errorMessage());
+                    AMOP_LOG(WARNING)
+                        << LOG_BADGE("onReceiveTopicSeqMessage")
+                        << LOG_DESC("receive error callback") << LOG_KV("nodeID", _nodeID->hex())
+                        << LOG_KV("id", _id) << LOG_KV("errorCode", _error->errorCode())
+                        << LOG_KV("errorMessage", _error->errorMessage());
                 }
             });
     }
@@ -228,7 +232,7 @@ void AMOP::onReceiveRequestTopicMessage(
     {
         std::string topicJson = m_topicManager->queryTopicsSubByClient();
 
-        AMOP_LOG(INFO) << LOG_DESC("onReceiveRequestTopicMessage")
+        AMOP_LOG(INFO) << LOG_BADGE("onReceiveRequestTopicMessage")
                        << LOG_KV("nodeID", _nodeID->hex()) << LOG_KV("id", _id)
                        << LOG_KV("topicJson", topicJson);
 
@@ -240,16 +244,17 @@ void AMOP::onReceiveRequestTopicMessage(
                 const std::string& _id, bcos::front::ResponseFunc) {
                 if (_error && (_error->errorCode() != bcos::protocol::CommonError::SUCCESS))
                 {
-                    AMOP_LOG(WARNING) << LOG_DESC("onReceiveRequestTopicMessage response")
-                                      << LOG_KV("nodeID", _nodeID->hex()) << LOG_KV("id", _id)
-                                      << LOG_KV("errorCode", _error->errorCode())
-                                      << LOG_KV("errorMessage", _error->errorMessage());
+                    AMOP_LOG(WARNING)
+                        << LOG_BADGE("onReceiveRequestTopicMessage")
+                        << LOG_DESC("callback respones error") << LOG_KV("nodeID", _nodeID->hex())
+                        << LOG_KV("id", _id) << LOG_KV("errorCode", _error->errorCode())
+                        << LOG_KV("errorMessage", _error->errorMessage());
                 }
             });
     }
     catch (const std::exception& e)
     {
-        AMOP_LOG(ERROR) << LOG_DESC("onReceiveRequestTopicMessage")
+        AMOP_LOG(ERROR) << LOG_BADGE("onReceiveRequestTopicMessage")
                         << LOG_KV("nodeID", _nodeID->hex())
                         << LOG_KV("error", boost::diagnostic_information(e));
     }
@@ -277,7 +282,7 @@ void AMOP::onReceiveResponseTopicMessage(
     }
     catch (const std::exception& e)
     {
-        AMOP_LOG(ERROR) << LOG_DESC("onReceiveResponseTopicMessage")
+        AMOP_LOG(ERROR) << LOG_BADGE("onReceiveResponseTopicMessage")
                         << LOG_KV("nodeID", _nodeID->hex()) << LOG_KV("id", _id)
                         << LOG_KV("error", boost::diagnostic_information(e));
     }
@@ -299,7 +304,7 @@ void AMOP::onReceiveAMOPMessage(
         return;
     }
 
-    AMOP_LOG(TRACE) << LOG_DESC("onReceiveAMOPMessage") << LOG_KV("nodeID", _nodeID->hex())
+    AMOP_LOG(TRACE) << LOG_BADGE("onReceiveAMOPMessage") << LOG_KV("nodeID", _nodeID->hex())
                     << LOG_KV("id", _id);
 
     auto frontService = m_frontServiceInterface;
@@ -353,7 +358,7 @@ void AMOP::asyncNotifyAmopMessage(bcos::crypto::NodeIDPtr _nodeID, const std::st
     auto size = message->decode(_data);
     if (size < 0)
     {  // invalid format packet
-        AMOP_LOG(ERROR) << LOG_DESC("asyncNotifyAmopMessage illegal packet")
+        AMOP_LOG(ERROR) << LOG_BADGE("asyncNotifyAmopMessage") << LOG_BADGE("illegal packet")
                         << LOG_KV("nodeID", _nodeID->hex()) << LOG_KV("id", _id)
                         << LOG_KV("data", *toHexString(_data));
         return;
@@ -366,9 +371,10 @@ void AMOP::asyncNotifyAmopMessage(bcos::crypto::NodeIDPtr _nodeID, const std::st
     }
     else
     {
-        AMOP_LOG(ERROR) << LOG_DESC("asyncNotifyAmopMessage unrecognized message type")
-                        << LOG_KV("type", message->type()) << LOG_KV("nodeID", _nodeID->hex())
-                        << LOG_KV("id", _id) << LOG_KV("data", *toHexString(_data));
+        AMOP_LOG(ERROR) << LOG_BADGE("asyncNotifyAmopMessage")
+                        << LOG_BADGE("unrecognized message type") << LOG_KV("type", message->type())
+                        << LOG_KV("nodeID", _nodeID->hex()) << LOG_KV("id", _id)
+                        << LOG_KV("data", *toHexString(_data));
     }
 
     if (_callback)
@@ -391,7 +397,7 @@ void AMOP::asyncNotifyAmopNodeIDs(std::shared_ptr<const crypto::NodeIDs> _nodeID
     {
         _callback(nullptr);
     }
-    AMOP_LOG(INFO) << LOG_DESC("asyncNotifyAmopNodeIDs")
+    AMOP_LOG(INFO) << LOG_BADGE("asyncNotifyAmopNodeIDs")
                    << LOG_KV("nodeIDs size", (_nodeIDs ? _nodeIDs->size() : 0));
 }
 
@@ -411,14 +417,14 @@ void AMOP::asyncSendMessage(const std::string& _topic, bcos::bytesConstRef _data
     {
         // TODO: to define the specific error code
         auto errorPtr = std::make_shared<Error>(bcos::protocol::CommonError::TIMEOUT,
-            "there has no node follow the topic, topic: " + _topic);
+            "there has no node subscribe this topic, topic: " + _topic);
         if (_respFunc)
         {
             _respFunc(errorPtr, bytesConstRef());
         }
 
-        AMOP_LOG(WARNING) << LOG_DESC(
-                                 "asyncSendMessage there has no node follow the topic, topic: ")
+        AMOP_LOG(WARNING) << LOG_BADGE("asyncSendMessage")
+                          << LOG_DESC("there has no node subscribe the topic")
                           << LOG_KV("topic", _topic);
         return;
     }
@@ -446,8 +452,8 @@ void AMOP::asyncSendMessage(const std::string& _topic, bcos::bytesConstRef _data
             if (m_nodeIDs.empty())
             {
                 // TODO: to define the specific error code
-                auto errorPtr = std::make_shared<Error>(
-                    bcos::protocol::CommonError::TIMEOUT, "failed to send the message after retry");
+                auto errorPtr = std::make_shared<Error>(bcos::protocol::CommonError::TIMEOUT,
+                    "unable to send message to peer by topic");
                 if (m_callback)
                 {
                     m_callback(errorPtr, bytesConstRef());
@@ -479,16 +485,19 @@ void AMOP::asyncSendMessage(const std::string& _topic, bcos::bytesConstRef _data
                     }
                     if (_error && (_error->errorCode() != bcos::protocol::CommonError::SUCCESS))
                     {
-                        AMOP_LOG(DEBUG) << LOG_DESC("RetrySender::sendMessage response error")
-                                        << LOG_KV("nodeID", nodeID->hex())
-                                        << LOG_KV("errorCode", _error->errorCode())
-                                        << LOG_KV("errorMessage", _error->errorMessage());
+                        AMOP_LOG(DEBUG)
+                            << LOG_BADGE("RetrySender::sendMessage")
+                            << LOG_DESC("asyncSendMessageByNodeID callback response error")
+                            << LOG_KV("nodeID", nodeID->hex())
+                            << LOG_KV("errorCode", _error->errorCode())
+                            << LOG_KV("errorMessage", _error->errorMessage());
                         // try again to send to another node
                         self->sendMessage();
                     }
                     else
                     {
-                        AMOP_LOG(DEBUG) << LOG_DESC("RetrySender::sendMessage response ok")
+                        AMOP_LOG(DEBUG) << LOG_BADGE("RetrySender::sendMessage")
+                                        << LOG_DESC("asyncSendMessageByNodeID callback response ok")
                                         << LOG_KV("nodeID", nodeID->hex()) << LOG_KV("id", _id)
                                         << LOG_KV("data size", _data.size());
                         if (self->m_callback)
@@ -522,7 +531,8 @@ void AMOP::asyncSendBroadbastMessage(const std::string& _topic, bcos::bytesConst
     m_topicManager->queryNodeIDsByTopic(_topic, strNodeIDs);
     if (strNodeIDs.empty())
     {
-        AMOP_LOG(WARNING) << LOG_DESC("asyncSendBroadbastMessage no node follow topic")
+        AMOP_LOG(WARNING) << LOG_BADGE("asyncSendBroadbastMessage")
+                          << LOG_DESC("there no node subscribe this topic")
                           << LOG_KV("topic", _topic);
         return;
     }
@@ -539,6 +549,6 @@ void AMOP::asyncSendBroadbastMessage(const std::string& _topic, bcos::bytesConst
     m_frontServiceInterface->asyncSendMessageByNodeIDs(
         bcos::protocol::ModuleID::AMOP, nodeIDs, bytesConstRef(buffer->data(), buffer->size()));
 
-    AMOP_LOG(DEBUG) << LOG_DESC("asyncSendBroadbastMessage") << LOG_KV("topic", _topic)
-                    << LOG_KV("data size", _data.size());
+    AMOP_LOG(DEBUG) << LOG_BADGE("asyncSendBroadbastMessage") << LOG_DESC("send broadcast message")
+                    << LOG_KV("topic", _topic) << LOG_KV("data size", _data.size());
 }

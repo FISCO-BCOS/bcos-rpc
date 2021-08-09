@@ -86,7 +86,9 @@ public:
     bool isConnected() { return m_wsStream.next_layer().socket().is_open() && !m_isDrop; }
 
     std::string remoteEndPoint() const { return m_remoteEndPoint; }
+    void setRemoteEndPoint(const std::string &_remoteEndPoint) { m_remoteEndPoint = _remoteEndPoint; }
     std::string localEndPoint() const { return m_localEndPoint; }
+    void setLocalEndPoint(const std::string &_localEndPoint) { m_localEndPoint = _localEndPoint; }
 
     void setAcceptHandler(WsAcceptHandler _acceptHandler) { m_acceptHandler = _acceptHandler; }
     WsAcceptHandler acceptHandler() { return m_acceptHandler; }

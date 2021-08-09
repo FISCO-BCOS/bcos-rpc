@@ -167,6 +167,37 @@ Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath, const NodeInfo& _n
     return buildRpc(rpcConfig, _nodeInfo);
 }
 
+ws::WsSession::Ptr RpcFactory::buildWsSession(boost::asio::ip::tcp::socket&& _socket, std::weak_ptr<ws::WsService> _wsServicePtr) {
+    auto session = std::make_shared<ws::WsSession>(std::move(_socket));
+    auto sessionWeakPtr = std::weak_ptr<ws::WsSession>(session);
+    session->setAcceptHandler(
+        [_wsServicePtr](bcos::Error::Ptr _error, std::shared_ptr<ws::WsSession> _session) {
+            boost::ignore_unused(_error);
+            auto service = _wsServicePtr.lock();
+            if (service)
+            {
+                service->addSession(_session);
+            }
+        });
+    session->setDisconnectHandler(
+        [_wsServicePtr](bcos::Error::Ptr _error, std::shared_ptr<ws::WsSession> _session) {
+            auto service = _wsServicePtr.lock();
+            if (service)
+            {
+                service->onDisconnect(_error, _session);
+            }
+        });
+    session->setRecvMessageHandler(
+        [_wsServicePtr](bcos::Error::Ptr _error, std::shared_ptr<ws::WsMessage> _msg,
+            std::shared_ptr<ws::WsSession> _session) {
+            auto service = _wsServicePtr.lock();
+            if (service)
+            {
+                service->onRecvClientMessage(_error, _msg, _session);
+            }
+        });
+    return session;
+}
 /**
  * @brief: Rpc
  * @param _rpcConfig: rpc config
@@ -208,39 +239,13 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _node
     wsService->setRequestFactory(requestFactory);
     wsService->setThreadPool(threadPool);
 
+    auto rpcFactory = shared_from_this();
     httpServer->setWsUpgradeHandler(
-        [threadPool, wsMessageFactory, weakWsService](
+        [threadPool, wsMessageFactory, weakWsService, rpcFactory](
             boost::asio::ip::tcp::socket&& _socket, HttpRequest&& _httpRequest) {
-            auto session = std::make_shared<ws::WsSession>(std::move(_socket));
+            auto session = rpcFactory->buildWsSession(std::move(_socket), weakWsService);
             session->setThreadPool(threadPool);
             session->setMessageFactory(wsMessageFactory);
-            session->setAcceptHandler(
-                [weakWsService](bcos::Error::Ptr _error, std::shared_ptr<ws::WsSession> _session) {
-                    boost::ignore_unused(_error);
-                    auto service = weakWsService.lock();
-                    if (service)
-                    {
-                        service->addSession(_session);
-                    }
-                });
-            session->setDisconnectHandler(
-                [weakWsService](bcos::Error::Ptr _error, std::shared_ptr<ws::WsSession> _session) {
-                    auto service = weakWsService.lock();
-                    if (service)
-                    {
-                        service->onDisconnect(_error, _session);
-                    }
-                });
-            session->setRecvMessageHandler(
-                [weakWsService](bcos::Error::Ptr _error, std::shared_ptr<ws::WsMessage> _msg,
-                    std::shared_ptr<ws::WsSession> _session) {
-                    auto service = weakWsService.lock();
-                    if (service)
-                    {
-                        service->onRecvClientMessage(_error, _msg, _session);
-                    }
-                });
-
             // start websocket handshake
             session->doAccept(std::move(_httpRequest));
         });
