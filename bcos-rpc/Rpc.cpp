@@ -34,7 +34,7 @@ void Rpc::start()
     m_httpServer->startListen();
     // start thread for io
     startThread();
-    RPC_LOG(INFO) << LOG_BADGE("start") << LOG_DESC("start amop successfully");
+    BCOS_LOG(INFO) << LOG_DESC("[RPC][RPC][start]") << LOG_DESC("start amop successfully");
 }
 
 void Rpc::stop()
@@ -76,7 +76,7 @@ void Rpc::stop()
         m_AMOP->stop();
     }
 
-    RPC_LOG(INFO) << LOG_BADGE("stop") << LOG_DESC("stop amop successfully");
+    BCOS_LOG(INFO) << LOG_DESC("[RPC][RPC][stop]") << LOG_DESC("stop amop successfully");
 }
 
 /**

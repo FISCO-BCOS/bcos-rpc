@@ -22,7 +22,6 @@
 #pragma once
 #include <bcos-framework/interfaces/amop/AMOPInterface.h>
 #include <bcos-framework/interfaces/rpc/RPCInterface.h>
-#include <bcos-rpc/Common.h>
 #include <bcos-rpc/amop/AMOP.h>
 #include <bcos-rpc/http/HttpServer.h>
 #include <bcos-rpc/http/ws/WsService.h>

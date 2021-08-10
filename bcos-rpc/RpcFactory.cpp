@@ -68,15 +68,16 @@ void RpcConfig::initConfig(const std::string& _configPath)
         m_listenPort = listenPort;
         m_threadCount = threadCount;
 
-        RPC_FACTORY(INFO) << LOG_BADGE("initConfig") << LOG_KV("listenIP", listenIP)
-                          << LOG_KV("listenPort", listenPort) << LOG_KV("threadCount", threadCount);
+        BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][initConfig]") << LOG_KV("listenIP", listenIP)
+                       << LOG_KV("listenPort", listenPort) << LOG_KV("threadCount", threadCount);
     }
     catch (const std::exception& e)
     {
         boost::filesystem::path full_path(boost::filesystem::current_path());
-        RPC_FACTORY(ERROR) << LOG_BADGE("initConfig") << LOG_KV("configPath", _configPath)
-                           << LOG_KV("currentPath", full_path.string())
-                           << LOG_KV("error: ", boost::diagnostic_information(e));
+        BCOS_LOG(ERROR) << LOG_DESC("[RPC][FACTORY][initConfig]")
+                        << LOG_KV("configPath", _configPath)
+                        << LOG_KV("currentPath", full_path.string())
+                        << LOG_KV("error: ", boost::diagnostic_information(e));
         BOOST_THROW_EXCEPTION(
             InvalidParameter() << errinfo_comment("initConfig: currentPath:" + full_path.string() +
                                                   " ,error:" + boost::diagnostic_information(e)));
@@ -167,7 +168,9 @@ Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath, const NodeInfo& _n
     return buildRpc(rpcConfig, _nodeInfo);
 }
 
-ws::WsSession::Ptr RpcFactory::buildWsSession(boost::asio::ip::tcp::socket&& _socket, std::weak_ptr<ws::WsService> _wsServicePtr) {
+ws::WsSession::Ptr RpcFactory::buildWsSession(
+    boost::asio::ip::tcp::socket&& _socket, std::weak_ptr<ws::WsService> _wsServicePtr)
+{
     auto session = std::make_shared<ws::WsSession>(std::move(_socket));
     auto sessionWeakPtr = std::weak_ptr<ws::WsSession>(session);
     session->setAcceptHandler(
@@ -268,7 +271,7 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _node
     amop->setWsService(std::weak_ptr<ws::WsService>(wsService));
     wsService->setAMOP(std::weak_ptr<amop::AMOP>(amop));
 
-    RPC_FACTORY(INFO) << LOG_BADGE("buildRpc") << LOG_KV("listenIP", _listenIP)
-                      << LOG_KV("listenPort", _listenPort) << LOG_KV("threadCount", _threadCount);
+    BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][buildRpc]") << LOG_KV("listenIP", _listenIP)
+                   << LOG_KV("listenPort", _listenPort) << LOG_KV("threadCount", _threadCount);
     return rpc;
 }
