@@ -364,7 +364,7 @@ void WsService::onRecvAMOPRequest(
     auto topic = request->topic();
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
 
-    WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("onRecvAMOPRequest") << LOG_KV("seq", _msg->seq())
+    WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("onRecvAMOPRequest") << LOG_KV("seq", seq)
                              << LOG_KV("topic", topic);
     auto AMOP = m_AMOP.lock();
     if (!AMOP)

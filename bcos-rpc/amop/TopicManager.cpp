@@ -275,8 +275,8 @@ void TopicManager::notifyNodeIDs(const bcos::crypto::NodeIDs& _nodeIDs)
                         return it->first == _nodeID->hex();
                     }) == _nodeIDs.end())
             {  // nodeID is offline, remove the nodeID's state
-                it = m_nodeID2TopicSeq.erase(it);
                 m_nodeID2TopicItems.erase(it->first);
+                it = m_nodeID2TopicSeq.erase(it);
                 removeCount++;
             }
             else
