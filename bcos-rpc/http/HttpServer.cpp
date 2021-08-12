@@ -44,7 +44,8 @@ void HttpServer::startListen()
     m_acceptor->open(endpoint.protocol(), ec);
     if (ec)
     {
-        HTTP_SERVER(ERROR) << LOG_BADGE("open") << LOG_KV("error", ec);
+        HTTP_SERVER(ERROR) << LOG_BADGE("open") << LOG_KV("error", ec)
+                           << LOG_KV("message", ec.message());
         BOOST_THROW_EXCEPTION(std::runtime_error("acceptor open failed"));
     }
 
@@ -52,21 +53,25 @@ void HttpServer::startListen()
     m_acceptor->set_option(boost::asio::socket_base::reuse_address(true), ec);
     if (ec)
     {
-        HTTP_SERVER(ERROR) << LOG_BADGE("set_option") << LOG_KV("error", ec);
+        HTTP_SERVER(ERROR) << LOG_BADGE("set_option") << LOG_KV("error", ec)
+                           << LOG_KV("message", ec.message());
+
         BOOST_THROW_EXCEPTION(std::runtime_error("acceptor set_option failed"));
     }
 
     m_acceptor->bind(endpoint, ec);
     if (ec)
     {
-        HTTP_SERVER(ERROR) << LOG_BADGE("bind") << LOG_KV("error", ec);
+        HTTP_SERVER(ERROR) << LOG_BADGE("bind") << LOG_KV("error", ec)
+                           << LOG_KV("message", ec.message());
         BOOST_THROW_EXCEPTION(std::runtime_error("acceptor bind failed"));
     }
 
     m_acceptor->listen(boost::asio::socket_base::max_listen_connections, ec);
     if (ec)
     {
-        HTTP_SERVER(ERROR) << LOG_BADGE("listen") << LOG_KV("error", ec);
+        HTTP_SERVER(ERROR) << LOG_BADGE("listen") << LOG_KV("error", ec)
+                           << LOG_KV("message", ec.message());
         BOOST_THROW_EXCEPTION(std::runtime_error("acceptor listen failed"));
     }
 
