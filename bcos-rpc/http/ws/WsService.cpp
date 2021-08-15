@@ -30,6 +30,7 @@
 #include <bcos-rpc/http/ws/WsSession.h>
 #include <boost/core/ignore_unused.hpp>
 #include <algorithm>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <vector>
@@ -363,9 +364,10 @@ void WsService::onRecvAMOPRequest(
     _msg->encode(*buffer);
     auto topic = request->topic();
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+    auto type = _msg->type();
 
     WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("onRecvAMOPRequest") << LOG_KV("seq", seq)
-                             << LOG_KV("topic", topic);
+                             << LOG_KV("type", type) << LOG_KV("topic", topic);
     auto AMOP = m_AMOP.lock();
     if (!AMOP)
     {
@@ -373,7 +375,7 @@ void WsService::onRecvAMOPRequest(
     }
 
     AMOP->asyncSendMessage(topic, bcos::bytesConstRef(buffer->data(), buffer->size()),
-        [_msg, _session, topic, seq](bcos::Error::Ptr _error, bcos::bytesConstRef _data) {
+        [_msg, _session, topic, seq, type](bcos::Error::Ptr _error, bcos::bytesConstRef _data) {
             if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
             {
                 _msg->setStauts(_error->errorCode());
@@ -382,20 +384,18 @@ void WsService::onRecvAMOPRequest(
                 WEBSOCKET_SERVICE(ERROR)
                     << LOG_BADGE("onRecvAMOPRequest")
                     << LOG_DESC("AMOP async send message callback") << LOG_KV("seq", seq)
-                    << LOG_KV("topic", topic) << LOG_KV("errorCode", _error->errorCode())
+                    << LOG_KV("type", type) << LOG_KV("topic", topic)
+                    << LOG_KV("errorCode", _error->errorCode())
                     << LOG_KV("errorMessage", _error->errorMessage());
-            }
-            else
-            {
-                _msg->setData(std::make_shared<bcos::bytes>(_data.begin(), _data.end()));
-
-                WEBSOCKET_SERVICE(INFO)
-                    << LOG_BADGE("onRecvAMOPRequest")
-                    << LOG_DESC("AMOP async send message callback") << LOG_KV("seq", seq)
-                    << LOG_KV("topic", topic) << LOG_KV("data size", _data.size());
+                return _session->asyncSendMessage(_msg);
             }
 
-            // send response back to sdk
+            // Note:
+            auto size = _msg->decode(_data.data(), _data.size());
+            WEBSOCKET_SERVICE(DEBUG)
+                << LOG_BADGE("onRecvAMOPRequest") << LOG_DESC("AMOP async send message callback")
+                << LOG_KV("seq", seq) << LOG_KV("type", type) << LOG_KV("topic", topic)
+                << LOG_KV("size", size) << LOG_KV("data size", _data.size());
             _session->asyncSendMessage(_msg);
         });
 }
@@ -472,6 +472,7 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
         message->setStauts(bcos::protocol::CommonError::NotFoundClientByTopicDispatchMsg);
         message->data()->clear();
         message->setType(WsMessageType::AMOP_RESPONSE);
+        message->data()->clear();
         message->encode(*buffer);
 
         m_threadPool->enqueue(
@@ -528,7 +529,7 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
                     << LOG_KV("topic", m_topic) << LOG_KV("nodeID", m_nodeID);
 
                 auto buffer = std::make_shared<bcos::bytes>();
-                m_message->setStauts(bcos::protocol::CommonError::TIMEOUT);
+                m_message->setStauts(bcos::protocol::CommonError::NotFoundClientByTopicDispatchMsg);
                 m_message->data()->clear();
                 m_message->setType(WsMessageType::AMOP_RESPONSE);
                 m_message->encode(*buffer);
@@ -537,17 +538,11 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
                 return;
             }
 
-            auto self = std::weak_ptr<Retry>(shared_from_this());
+            auto self = shared_from_this();
             // Note: how to set the timeout
             session->asyncSendMessage(m_message, Options(30000),
                 [self](bcos::Error::Ptr _error, std::shared_ptr<WsMessage> _msg,
                     std::shared_ptr<WsSession> _session) {
-                    auto retry = self.lock();
-                    if (!retry)
-                    {
-                        return;
-                    }
-
                     // try again when send message to the session failed
                     if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
                     {
@@ -556,15 +551,23 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
                             << LOG_DESC("asyncSendMessage callback error and try to send again")
                             << LOG_KV("endpoint",
                                    (_session ? _session->remoteEndPoint() : std::string("")))
-                            << LOG_KV("topic", retry->m_topic) << LOG_KV("nodeID", retry->m_nodeID)
+                            << LOG_KV("topic", self->m_topic) << LOG_KV("nodeID", self->m_nodeID)
                             << LOG_KV("errorCode", _error ? _error->errorCode() : -1)
                             << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
-                        return retry->sendMessage();
+                        return self->sendMessage();
                     }
+
+                    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+                    auto data = _msg->data();
+
+                    WEBSOCKET_SERVICE(TRACE)
+                        << LOG_BADGE("onRecvAMOPMessage")
+                        << LOG_DESC("asyncSendMessage callback response") << LOG_KV("seq", seq)
+                        << LOG_KV("data size", data->size());
 
                     auto buffer = std::make_shared<bcos::bytes>();
                     _msg->encode(*buffer);
-                    retry->m_callback(buffer);
+                    self->m_callback(buffer);
                 });
         }
     };

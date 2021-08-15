@@ -28,6 +28,7 @@
 #include <bcos-rpc/amop/AMOPMessage.h>
 #include <bcos-rpc/amop/Common.h>
 #include <bcos-rpc/http/ws/WsService.h>
+#include <boost/core/ignore_unused.hpp>
 #include <algorithm>
 #include <random>
 
@@ -468,20 +469,14 @@ void AMOP::asyncSendMessage(const std::string& _topic, bcos::bytesConstRef _data
             auto nodeID = *m_nodeIDs.begin();
             m_nodeIDs.erase(m_nodeIDs.begin());
 
-            auto weakPtr = std::weak_ptr<RetrySender>(shared_from_this());
+            auto self = shared_from_this();
             // try to send message to node
             m_frontServiceInterface->asyncSendMessageByNodeID(bcos::protocol::ModuleID::AMOP,
                 nodeID, bytesConstRef(m_buffer->data(), m_buffer->size()), 0,
-                [weakPtr, nodeID](Error::Ptr _error, bcos::crypto::NodeIDPtr _nodeID,
+                [self, nodeID](Error::Ptr _error, bcos::crypto::NodeIDPtr _nodeID,
                     bytesConstRef _data, const std::string& _id,
                     bcos::front::ResponseFunc _respFunc) {
-                    (void)_respFunc;
-                    (void)_nodeID;
-                    auto self = weakPtr.lock();
-                    if (!self)
-                    {
-                        return;
-                    }
+                    boost::ignore_unused(_nodeID, _data, _id, _respFunc);
                     if (_error && (_error->errorCode() != bcos::protocol::CommonError::SUCCESS))
                     {
                         AMOP_LOG(DEBUG)
@@ -495,10 +490,6 @@ void AMOP::asyncSendMessage(const std::string& _topic, bcos::bytesConstRef _data
                     }
                     else
                     {
-                        AMOP_LOG(DEBUG) << LOG_BADGE("RetrySender::sendMessage")
-                                        << LOG_DESC("asyncSendMessageByNodeID callback response ok")
-                                        << LOG_KV("nodeID", nodeID->hex()) << LOG_KV("id", _id)
-                                        << LOG_KV("data size", _data.size());
                         if (self->m_callback)
                         {
                             self->m_callback(nullptr, _data);
