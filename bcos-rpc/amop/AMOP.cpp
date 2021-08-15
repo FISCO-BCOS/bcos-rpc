@@ -28,6 +28,7 @@
 #include <bcos-rpc/amop/AMOPMessage.h>
 #include <bcos-rpc/amop/Common.h>
 #include <bcos-rpc/http/ws/WsService.h>
+#include <boost/core/ignore_unused.hpp>
 #include <algorithm>
 #include <random>
 
@@ -475,9 +476,7 @@ void AMOP::asyncSendMessage(const std::string& _topic, bcos::bytesConstRef _data
                 [self, nodeID](Error::Ptr _error, bcos::crypto::NodeIDPtr _nodeID,
                     bytesConstRef _data, const std::string& _id,
                     bcos::front::ResponseFunc _respFunc) {
-                    (void)_respFunc;
-                    (void)_nodeID;
-
+                    boost::ignore_unused(_nodeID, _data, _id, _respFunc);
                     if (_error && (_error->errorCode() != bcos::protocol::CommonError::SUCCESS))
                     {
                         AMOP_LOG(DEBUG)
