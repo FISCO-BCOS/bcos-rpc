@@ -27,7 +27,6 @@ using namespace bcos::http;
 // start http server
 void HttpServer::startListen()
 {
-    // TODO: impl ssl
     if (m_acceptor && m_acceptor->is_open())
     {
         HTTP_SERVER(INFO) << LOG_BADGE("startListen") << LOG_DESC("http server is running");
@@ -35,7 +34,7 @@ void HttpServer::startListen()
     }
 
     HTTP_SERVER(INFO) << LOG_BADGE("startListen") << LOG_KV("listenIP", m_listenIP)
-                      << LOG_KV("listenPort", m_listenPort) << LOG_KV("threadCount", m_threadCount);
+                      << LOG_KV("listenPort", m_listenPort);
 
     auto address = boost::asio::ip::make_address(m_listenIP);
     auto endpoint = boost::asio::ip::tcp::endpoint{address, m_listenPort};
