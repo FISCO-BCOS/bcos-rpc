@@ -86,9 +86,12 @@ public:
     bool isConnected() { return m_wsStream.next_layer().socket().is_open() && !m_isDrop; }
 
     std::string remoteEndPoint() const { return m_remoteEndPoint; }
-    void setRemoteEndPoint(const std::string &_remoteEndPoint) { m_remoteEndPoint = _remoteEndPoint; }
+    void setRemoteEndPoint(const std::string& _remoteEndPoint)
+    {
+        m_remoteEndPoint = _remoteEndPoint;
+    }
     std::string localEndPoint() const { return m_localEndPoint; }
-    void setLocalEndPoint(const std::string &_localEndPoint) { m_localEndPoint = _localEndPoint; }
+    void setLocalEndPoint(const std::string& _localEndPoint) { m_localEndPoint = _localEndPoint; }
 
     void setAcceptHandler(WsAcceptHandler _acceptHandler) { m_acceptHandler = _acceptHandler; }
     WsAcceptHandler acceptHandler() { return m_acceptHandler; }
@@ -119,6 +122,12 @@ public:
 
     void setVersion(uint16_t _version) { m_version = _version; }
     uint16_t version() const { return m_version; }
+
+    std::size_t queueSize()
+    {
+        std::shared_lock lock(x_queue);
+        return m_queue.size();
+    }
 
     struct CallBack
     {

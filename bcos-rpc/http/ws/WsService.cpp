@@ -87,8 +87,17 @@ void WsService::doLoop()
         auto ss = service->sessions();
         for (auto const& session : ss)
         {
-            boost::ignore_unused(session);
-            // NOTE: server should send heartbeat message
+            auto queueSize = session->queueSize();
+            // TODO: if the session send queue is not empty, print the size, it should find a
+            // suitable
+            // threshold for early warning
+            if (!queueSize)
+            {
+                WEBSOCKET_SERVICE(INFO)
+                    << LOG_BADGE("doLoop") << LOG_DESC("session send queue size is not empty")
+                    << LOG_KV("endpoint", session->remoteEndPoint())
+                    << LOG_KV("queue size", queueSize);
+            }
         }
         WEBSOCKET_SERVICE(INFO) << LOG_BADGE("doLoop") << LOG_KV("connected sdk count", ss.size());
         service->doLoop();
@@ -439,6 +448,9 @@ void WsService::onRecvAMOPBroadcast(
     }
 }
 
+/**
+ * @brief: receive amop message from front service
+ */
 void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID,
     std::function<void(bytesConstRef _data)> _callback)
 {
@@ -588,6 +600,9 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
     retry->sendMessage();
 }
 
+/**
+ * @brief: receive amop broadcast message from front service
+ */
 void WsService::onRecvAMOPBroadcastMessage(bytesConstRef _data)
 {
     // WsMessage
