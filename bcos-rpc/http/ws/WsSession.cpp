@@ -36,8 +36,8 @@ using namespace bcos::ws;
 
 void WsSession::drop()
 {
-    WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop") << LOG_KV("remoteEndPoint", m_remoteEndPoint)
-                            << LOG_KV("localEndPoint", m_localEndPoint) << LOG_KV("session", this);
+    WEBSOCKET_SESSION(INFO) << LOG_BADGE("drop") << LOG_KV("endpoint", m_remoteEndPoint)
+                            << LOG_KV("session", this);
     m_isDrop = true;
     auto self = std::weak_ptr<WsSession>(shared_from_this());
     m_threadPool->enqueue([self]() {
@@ -62,8 +62,7 @@ void WsSession::disconnect()
     }
 
     WEBSOCKET_SESSION(INFO) << LOG_BADGE("disconnect") << LOG_DESC("disconnect the session")
-                            << LOG_KV("remoteEndPoint", m_remoteEndPoint)
-                            << LOG_KV("localEndPoint", m_localEndPoint) << LOG_KV("session", this);
+                            << LOG_KV("endpoint", m_remoteEndPoint) << LOG_KV("session", this);
 }
 
 void WsSession::doAccept(http::HttpRequest _req)
@@ -86,9 +85,6 @@ void WsSession::doAccept(http::HttpRequest _req)
     auto remoteEndPoint = m_wsStream.next_layer().socket().remote_endpoint();
     m_remoteEndPoint =
         remoteEndPoint.address().to_string() + ":" + std::to_string(remoteEndPoint.port());
-    auto localEndpoint = m_wsStream.next_layer().socket().local_endpoint();
-    m_localEndPoint =
-        localEndpoint.address().to_string() + ":" + std::to_string(localEndpoint.port());
 
     // accept the websocket handshake
     m_wsStream.async_accept(
@@ -96,7 +92,7 @@ void WsSession::doAccept(http::HttpRequest _req)
 
     WEBSOCKET_SESSION(INFO) << LOG_BADGE("doAccept") << LOG_DESC("start websocket handshake")
                             << LOG_KV("remoteEndPoint", m_remoteEndPoint)
-                            << LOG_KV("localEndPoint", m_localEndPoint) << LOG_KV("session", this);
+                            << LOG_KV("session", this);
 }
 
 void WsSession::onAccept(boost::beast::error_code _ec)
@@ -117,7 +113,7 @@ void WsSession::onAccept(boost::beast::error_code _ec)
 
     WEBSOCKET_SESSION(INFO) << LOG_BADGE("onAccept") << LOG_DESC("websocket handshake successfully")
                             << LOG_KV("remoteEndPoint", m_remoteEndPoint)
-                            << LOG_KV("localEndPoint", m_localEndPoint) << LOG_KV("session", this);
+                            << LOG_KV("session", this);
 }
 
 void WsSession::onRead(boost::beast::error_code _ec, std::size_t _size)
@@ -146,8 +142,7 @@ void WsSession::onRead(boost::beast::error_code _ec, std::size_t _size)
     if (decodeSize < 0)
     {  // invalid packet, stop this session ?
         WEBSOCKET_SESSION(WARNING) << LOG_BADGE("onRead") << LOG_DESC("invalid packet")
-                                   << LOG_KV("remoteEndpoint", remoteEndPoint())
-                                   << LOG_KV("localEndpoint", localEndPoint())
+                                   << LOG_KV("endpoint", remoteEndPoint())
                                    << LOG_KV("data", *toHexString(data, data + size));
         return drop();
     }

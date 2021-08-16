@@ -90,8 +90,6 @@ public:
     {
         m_remoteEndPoint = _remoteEndPoint;
     }
-    std::string localEndPoint() const { return m_localEndPoint; }
-    void setLocalEndPoint(const std::string& _localEndPoint) { m_localEndPoint = _localEndPoint; }
 
     void setAcceptHandler(WsAcceptHandler _acceptHandler) { m_acceptHandler = _acceptHandler; }
     WsAcceptHandler acceptHandler() { return m_acceptHandler; }
@@ -149,9 +147,8 @@ private:
     std::atomic_bool m_isDrop = false;
     // websocket stream
     boost::beast::websocket::stream<boost::beast::tcp_stream> m_wsStream;
-    std::string m_remoteEndPoint;
-    std::string m_localEndPoint;
 
+    std::string m_remoteEndPoint;
     // callbacks
     mutable std::shared_mutex x_callback;
     std::unordered_map<std::string, CallBack::Ptr> m_callbacks;
