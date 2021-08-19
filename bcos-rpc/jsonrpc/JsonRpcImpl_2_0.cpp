@@ -489,7 +489,7 @@ void JsonRpcImpl_2_0::call(const std::string& _to, const std::string& _data, Res
             {
                 jResp["blockNumber"] = _transactionReceiptPtr->blockNumber();
                 jResp["status"] = _transactionReceiptPtr->status();
-                jResp["output"] = toHexStringWithPrefix(_transactionReceiptPtr->output());
+                jResp["output"] = encodeData(_transactionReceiptPtr->output());
             }
             else
             {
