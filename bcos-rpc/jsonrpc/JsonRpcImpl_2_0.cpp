@@ -861,7 +861,10 @@ void JsonRpcImpl_2_0::getSealerList(RespFunc _respFunc)
                 {
                     for (const auto& consensusNodePtr : *_consensusNodeListPtr)
                     {
-                        jResp.append(consensusNodePtr->nodeID()->hex());
+                        Json::Value node;
+                        node["nodeID"] = consensusNodePtr->nodeID()->hex();
+                        node["weight"] = consensusNodePtr->weight();
+                        jResp.append(node);
                     }
                 }
             }
