@@ -613,6 +613,11 @@ void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string c
                                 jReceiptCopy["input"] = _jTx["input"];
                             }
 
+                            if (_jTx.isMember("input"))
+                            {
+                                jReceiptCopy["input"] = _jTx["input"];
+                            }
+
                             _respFunc(nullptr, jReceiptCopy);
                         });
                 });
