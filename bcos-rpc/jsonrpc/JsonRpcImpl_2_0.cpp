@@ -575,12 +575,6 @@ void JsonRpcImpl_2_0::sendTransaction(
                             {
                                 jReceiptCopy["transactionProof"] = _jTx["transactionProof"];
                             }
-                            else
-                            {
-                                RPC_IMPL_LOG(WARNING) << LOG_BADGE("sendTransaction")
-                                                      << LOG_DESC("getTransaction proof not found")
-                                                      << LOG_KV("hexPreTxHash", hexPreTxHash);
-                            }
 
                             if (_jTx.isMember("input"))
                             {
