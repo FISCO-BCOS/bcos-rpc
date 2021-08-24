@@ -174,7 +174,12 @@ void WsService::removeSession(const std::string& _endPoint)
 std::shared_ptr<WsSession> WsService::getSession(const std::string& _endPoint)
 {
     std::shared_lock lock(x_mutex);
-    return m_sessions[_endPoint];
+    auto it = m_sessions.find(_endPoint);
+    if (it != m_sessions.end())
+    {
+        return it->second;
+    }
+    return nullptr;
 }
 
 WsSessions WsService::sessions()
@@ -184,15 +189,9 @@ WsSessions WsService::sessions()
         std::shared_lock lock(x_mutex);
         for (const auto& session : m_sessions)
         {
-            if (session.second->isConnected())
+            if (session.second && session.second->isConnected())
             {
                 sessions.push_back(session.second);
-            }
-            else
-            {
-                WEBSOCKET_SERVICE(DEBUG)
-                    << LOG_BADGE("sessions") << LOG_DESC("the session is disconnected")
-                    << LOG_KV("endpoint", session.second->remoteEndPoint());
             }
         }
     }
