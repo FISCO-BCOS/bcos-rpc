@@ -108,7 +108,8 @@ void HttpServer::onAccept(boost::beast::error_code ec, boost::asio::ip::tcp::soc
 {
     if (ec)
     {
-        HTTP_SERVER(ERROR) << LOG_BADGE("accept") << LOG_KV("error", ec);
+        HTTP_SERVER(ERROR) << LOG_BADGE("accept") << LOG_KV("error", ec)
+                           << LOG_KV("message", ec.message());
     }
     else
     {

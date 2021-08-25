@@ -124,7 +124,8 @@ void WsSession::onRead(boost::beast::error_code _ec, std::size_t _size)
 {
     if (_ec)
     {
-        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("onRead") << LOG_KV("error", _ec);
+        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("onRead") << LOG_KV("error", _ec)
+                                 << LOG_KV("message", _ec.message());
         return drop();
     }
 
@@ -193,6 +194,8 @@ void WsSession::onWrite(boost::beast::error_code _ec, std::size_t)
 {
     if (_ec)
     {
+        WEBSOCKET_SESSION(ERROR) << LOG_BADGE("onWrite") << LOG_KV("error", _ec)
+                                 << LOG_KV("message", _ec.message());
         return drop();
     }
 
