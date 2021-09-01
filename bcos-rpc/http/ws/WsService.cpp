@@ -321,7 +321,7 @@ void WsService::onRecvRPCRequest(
         _msg->setData(std::make_shared<bcos::bytes>(_resp.begin(), _resp.end()));
         session->asyncSendMessage(_msg);
 
-        WEBSOCKET_SERVICE(DEBUG) << LOG_BADGE("onRecvRPCRequest") << LOG_KV("request", request)
+        WEBSOCKET_SERVICE(TRACE) << LOG_BADGE("onRecvRPCRequest") << LOG_KV("request", request)
                                  << LOG_KV("response", _resp);
     });
 }
