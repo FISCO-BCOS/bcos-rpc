@@ -476,7 +476,7 @@ void JsonRpcImpl_2_0::toJsonResp(
 
 void JsonRpcImpl_2_0::call(const std::string& _to, const std::string& _data, RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_DESC("call") << LOG_KV("to", _to);
+    RPC_IMPL_LOG(TRACE) << LOG_DESC("call") << LOG_KV("to", _to);
 
     auto transaction =
         m_transactionFactory->createTransaction(0, _to, *decodeData(_data), u256(0), 0, "", "", 0);
@@ -506,7 +506,7 @@ void JsonRpcImpl_2_0::call(const std::string& _to, const std::string& _data, Res
 void JsonRpcImpl_2_0::sendTransaction(
     const std::string& _data, bool _requireProof, RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_DESC("sendTransaction");
+    RPC_IMPL_LOG(TRACE) << LOG_DESC("sendTransaction");
 
     auto self = std::weak_ptr<JsonRpcImpl_2_0>(shared_from_this());
     auto transactionDataPtr = decodeData(_data);
@@ -529,7 +529,7 @@ void JsonRpcImpl_2_0::sendTransaction(
             auto txHash = _transactionSubmitResult->txHash();
             auto hexPreTxHash = txHash.hexPrefixed();
 
-            RPC_IMPL_LOG(DEBUG) << LOG_BADGE("sendTransaction") << LOG_DESC("getTransactionReceipt")
+            RPC_IMPL_LOG(TRACE) << LOG_BADGE("sendTransaction") << LOG_DESC("getTransactionReceipt")
                                 << LOG_KV("hexPreTxHash", hexPreTxHash)
                                 << LOG_KV("requireProof", _requireProof);
 
@@ -622,7 +622,7 @@ void JsonRpcImpl_2_0::addProofToResponse(
 void JsonRpcImpl_2_0::getTransaction(
     const std::string& _txHash, bool _requireProof, RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_DESC("getTransaction") << LOG_KV("txHash", _txHash)
+    RPC_IMPL_LOG(TRACE) << LOG_DESC("getTransaction") << LOG_KV("txHash", _txHash)
                         << LOG_KV("requireProof", _requireProof);
 
     bcos::crypto::HashListPtr hashListPtr = std::make_shared<bcos::crypto::HashList>();
@@ -669,7 +669,7 @@ void JsonRpcImpl_2_0::getTransaction(
 void JsonRpcImpl_2_0::getTransactionReceipt(
     const std::string& _txHash, bool _requireProof, RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_DESC("getTransactionReceipt") << LOG_KV("txHash", _txHash)
+    RPC_IMPL_LOG(TRACE) << LOG_DESC("getTransactionReceipt") << LOG_KV("txHash", _txHash)
                         << LOG_KV("requireProof", _requireProof);
 
     auto hash = bcos::crypto::HashType(_txHash);
@@ -734,7 +734,7 @@ void JsonRpcImpl_2_0::getTransactionReceipt(
 void JsonRpcImpl_2_0::getBlockByHash(
     const std::string& _blockHash, bool _onlyHeader, bool _onlyTxHash, RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_DESC("getBlockByHash") << LOG_KV("blockHash", _blockHash)
+    RPC_IMPL_LOG(TRACE) << LOG_DESC("getBlockByHash") << LOG_KV("blockHash", _blockHash)
                         << LOG_KV("onlyHeader", _onlyHeader) << LOG_KV("onlyTxHash", _onlyTxHash);
 
     auto self = std::weak_ptr<JsonRpcImpl_2_0>(shared_from_this());
@@ -766,7 +766,7 @@ void JsonRpcImpl_2_0::getBlockByHash(
 void JsonRpcImpl_2_0::getBlockByNumber(
     int64_t _blockNumber, bool _onlyHeader, bool _onlyTxHash, RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_DESC("getBlockByNumber") << LOG_KV("_blockNumber", _blockNumber)
+    RPC_IMPL_LOG(TRACE) << LOG_DESC("getBlockByNumber") << LOG_KV("_blockNumber", _blockNumber)
                         << LOG_KV("_onlyHeader", _onlyHeader) << LOG_KV("onlyTxHash", _onlyTxHash);
 
     m_ledgerInterface->asyncGetBlockDataByNumber(_blockNumber,
@@ -799,7 +799,7 @@ void JsonRpcImpl_2_0::getBlockByNumber(
 
 void JsonRpcImpl_2_0::getBlockHashByNumber(int64_t _blockNumber, RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_DESC("getBlockHashByNumber") << LOG_KV("blockNumber", _blockNumber);
+    RPC_IMPL_LOG(TRACE) << LOG_DESC("getBlockHashByNumber") << LOG_KV("blockNumber", _blockNumber);
 
     m_ledgerInterface->asyncGetBlockHashByNumber(
         _blockNumber, [_respFunc](Error::Ptr _error, crypto::HashType const& _hashValue) {
@@ -818,7 +818,7 @@ void JsonRpcImpl_2_0::getBlockHashByNumber(int64_t _blockNumber, RespFunc _respF
 
 void JsonRpcImpl_2_0::getBlockNumber(RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_BADGE("getBlockNumber");
+    RPC_IMPL_LOG(TRACE) << LOG_BADGE("getBlockNumber");
 
     m_ledgerInterface->asyncGetBlockNumber(
         [_respFunc](Error::Ptr _error, protocol::BlockNumber _blockNumber) {
@@ -838,7 +838,7 @@ void JsonRpcImpl_2_0::getBlockNumber(RespFunc _respFunc)
 
 void JsonRpcImpl_2_0::getCode(const std::string _contractAddress, RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_BADGE("getCode") << LOG_KV("contractAddress", _contractAddress);
+    RPC_IMPL_LOG(TRACE) << LOG_BADGE("getCode") << LOG_KV("contractAddress", _contractAddress);
 
     m_executorInterface->asyncGetCode(
         std::string_view(_contractAddress), [_contractAddress, _respFunc](const Error::Ptr& _error,
@@ -867,7 +867,7 @@ void JsonRpcImpl_2_0::getCode(const std::string _contractAddress, RespFunc _resp
 
 void JsonRpcImpl_2_0::getSealerList(RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_BADGE("getSealerList");
+    RPC_IMPL_LOG(TRACE) << LOG_BADGE("getSealerList");
 
     m_ledgerInterface->asyncGetNodeListByType(bcos::ledger::CONSENSUS_SEALER,
         [_respFunc](Error::Ptr _error, consensus::ConsensusNodeListPtr _consensusNodeListPtr) {
@@ -899,7 +899,7 @@ void JsonRpcImpl_2_0::getSealerList(RespFunc _respFunc)
 
 void JsonRpcImpl_2_0::getObserverList(RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_BADGE("getObserverList");
+    RPC_IMPL_LOG(TRACE) << LOG_BADGE("getObserverList");
 
     m_ledgerInterface->asyncGetNodeListByType(bcos::ledger::CONSENSUS_OBSERVER,
         [_respFunc](Error::Ptr _error, consensus::ConsensusNodeListPtr _consensusNodeListPtr) {
@@ -928,7 +928,7 @@ void JsonRpcImpl_2_0::getObserverList(RespFunc _respFunc)
 
 void JsonRpcImpl_2_0::getPbftView(RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_BADGE("getPbftView");
+    RPC_IMPL_LOG(TRACE) << LOG_BADGE("getPbftView");
 
     m_consensusInterface->asyncGetPBFTView(
         [_respFunc](Error::Ptr _error, bcos::consensus::ViewType _viewValue) {
@@ -951,7 +951,7 @@ void JsonRpcImpl_2_0::getPbftView(RespFunc _respFunc)
 
 void JsonRpcImpl_2_0::getPendingTxSize(RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_BADGE("getPendingTxSize");
+    RPC_IMPL_LOG(TRACE) << LOG_BADGE("getPendingTxSize");
 
     m_txPoolInterface->asyncGetPendingTransactionSize(
         [_respFunc](Error::Ptr _error, size_t _pendingTxSize) {
@@ -974,7 +974,7 @@ void JsonRpcImpl_2_0::getPendingTxSize(RespFunc _respFunc)
 
 void JsonRpcImpl_2_0::getSyncStatus(RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_BADGE("getSyncStatus");
+    RPC_IMPL_LOG(TRACE) << LOG_BADGE("getSyncStatus");
 
     m_blockSyncInterface->asyncGetSyncInfo([_respFunc](Error::Ptr _error, std::string _syncStatus) {
         Json::Value jResp;
@@ -995,7 +995,7 @@ void JsonRpcImpl_2_0::getSyncStatus(RespFunc _respFunc)
 
 void JsonRpcImpl_2_0::getSystemConfigByKey(const std::string& _keyValue, RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_DESC("getSystemConfigByKey") << LOG_KV("keyValue", _keyValue);
+    RPC_IMPL_LOG(TRACE) << LOG_DESC("getSystemConfigByKey") << LOG_KV("keyValue", _keyValue);
 
     m_ledgerInterface->asyncGetSystemConfigByKey(_keyValue,
         [_respFunc](Error::Ptr _error, std::string _value, protocol::BlockNumber _blockNumber) {
@@ -1019,7 +1019,7 @@ void JsonRpcImpl_2_0::getSystemConfigByKey(const std::string& _keyValue, RespFun
 
 void JsonRpcImpl_2_0::getTotalTransactionCount(RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_DESC("getTotalTransactionCount");
+    RPC_IMPL_LOG(TRACE) << LOG_DESC("getTotalTransactionCount");
 
     m_ledgerInterface->asyncGetTotalTransactionCount(
         [_respFunc](Error::Ptr _error, int64_t _totalTxCount, int64_t _failedTxCount,
@@ -1045,7 +1045,7 @@ void JsonRpcImpl_2_0::getTotalTransactionCount(RespFunc _respFunc)
 
 void JsonRpcImpl_2_0::getPeers(RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(DEBUG) << LOG_DESC("getPeers");
+    RPC_IMPL_LOG(TRACE) << LOG_DESC("getPeers");
     m_gatewayInterface->asyncGetPeers(
         [_respFunc](Error::Ptr _error, const std::string& _peersInfo) {
             Json::Value jResp;
