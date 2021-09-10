@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(test_buildMessage)
         std::string data = "HelloWorld.";
         auto factory = std::make_shared<WsMessageFactory>();
         auto msg = factory->buildMessage();
-        msg->setStauts(status);
+        msg->setStatus(status);
         msg->setType(type);
         msg->setData(std::make_shared<bcos::bytes>(data.begin(), data.end()));
 
@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE(test_buildMessage)
         auto factory = std::make_shared<WsMessageFactory>();
         auto msg =
             factory->buildMessage(type, std::make_shared<bcos::bytes>(data.begin(), data.end()));
-        msg->setStauts(status);
+        msg->setStatus(status);
         msg->setType(type);
 
         auto buffer = std::make_shared<bcos::bytes>();

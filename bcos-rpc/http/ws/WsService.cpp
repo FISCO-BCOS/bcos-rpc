@@ -391,7 +391,7 @@ void WsService::onRecvAMOPRequest(
         [_msg, _session, topic, seq, type](bcos::Error::Ptr _error, bcos::bytesConstRef _data) {
             if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
             {
-                _msg->setStauts(_error->errorCode());
+                _msg->setStatus(_error->errorCode());
                 _msg->data()->clear();
 
                 WEBSOCKET_SERVICE(ERROR)
@@ -485,7 +485,7 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
     if (clients.empty())
     {
         auto buffer = std::make_shared<bcos::bytes>();
-        message->setStauts(bcos::protocol::CommonError::NotFoundClientByTopicDispatchMsg);
+        message->setStatus(bcos::protocol::CommonError::NotFoundClientByTopicDispatchMsg);
         message->data()->clear();
         message->setType(WsMessageType::AMOP_RESPONSE);
         message->data()->clear();
@@ -545,7 +545,7 @@ void WsService::onRecvAMOPMessage(bytesConstRef _data, const std::string& nodeID
                     << LOG_KV("topic", m_topic) << LOG_KV("nodeID", m_nodeID);
 
                 auto buffer = std::make_shared<bcos::bytes>();
-                m_message->setStauts(bcos::protocol::CommonError::NotFoundClientByTopicDispatchMsg);
+                m_message->setStatus(bcos::protocol::CommonError::NotFoundClientByTopicDispatchMsg);
                 m_message->data()->clear();
                 m_message->setType(WsMessageType::AMOP_RESPONSE);
                 m_message->encode(*buffer);
