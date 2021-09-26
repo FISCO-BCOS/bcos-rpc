@@ -87,16 +87,14 @@ void WsService::doLoop()
         auto ss = service->sessions();
         for (auto const& session : ss)
         {
-            auto queueSize = session->queueSize();
-            // TODO: if the session send queue is not empty, print the size, it should find a
-            // suitable
-            // threshold for early warning
-            if (!queueSize)
+            auto qs = session->queueSize();
+            // NOTE: if the session send queue is not empty, print the size, it should find a
+            // suitable threshold for warning
+            if (!qs)
             {
                 WEBSOCKET_SERVICE(INFO)
-                    << LOG_BADGE("doLoop") << LOG_DESC("session send queue size is not empty")
-                    << LOG_KV("endpoint", session->remoteEndPoint())
-                    << LOG_KV("queue size", queueSize);
+                    << LOG_BADGE("doLoop") << LOG_DESC("session message queue is not empty")
+                    << LOG_KV("endpoint", session->remoteEndPoint()) << LOG_KV("queue size", qs);
             }
         }
         WEBSOCKET_SERVICE(INFO) << LOG_BADGE("doLoop") << LOG_KV("connected sdk count", ss.size());
