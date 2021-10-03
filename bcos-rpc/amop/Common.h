@@ -31,6 +31,18 @@ namespace bcos
 {
 namespace amop
 {
+enum MessageType
+{
+    // ------------AMOP begin ---------
+
+    AMOP_SUBTOPIC = 0x110,   // 272
+    AMOP_REQUEST = 0x111,    // 273
+    AMOP_BROADCAST = 0x112,  // 274
+    AMOP_RESPONSE = 0x113    // 275
+
+    // ------------AMOP end ---------
+
+};
 class TopicItem
 {
 public:

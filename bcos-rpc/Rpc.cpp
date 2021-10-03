@@ -19,6 +19,7 @@
  * @date 2021-07-15
  */
 
+#include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <bcos-rpc/Rpc.h>
 using namespace bcos;
@@ -30,40 +31,11 @@ void Rpc::start()
     m_AMOP->start();
     // start websocket service
     m_wsService->start();
-    // start jsonhttp service
-    m_httpServer->startListen();
-    // start thread for io
-    startThread();
     BCOS_LOG(INFO) << LOG_DESC("[RPC][RPC][start]") << LOG_DESC("start amop successfully");
 }
 
 void Rpc::stop()
 {
-    // stop io
-    if (m_ioc && !m_ioc->stopped())
-    {
-        m_ioc->stop();
-    }
-
-    // stop thread
-    if (m_threads && !m_threads->empty())
-    {
-        for (auto& t : *m_threads)
-        {
-            if (t.joinable())
-            {
-                t.join();
-            }
-        }
-        m_threads->clear();
-    }
-
-    // stop http server
-    if (m_httpServer)
-    {
-        m_httpServer->stop();
-    }
-
     // stop ws service
     if (m_wsService)
     {
@@ -88,11 +60,16 @@ void Rpc::stop()
 void Rpc::asyncNotifyBlockNumber(
     bcos::protocol::BlockNumber _blockNumber, std::function<void(Error::Ptr)> _callback)
 {
+    // TODO: notify blockNumber
+    /*
     m_wsService->notifyBlockNumberToClient(_blockNumber);
     if (_callback)
     {
         _callback(nullptr);
     }
+    */
+    (void)_blockNumber;
+    (void)_callback;
 }
 
 /**

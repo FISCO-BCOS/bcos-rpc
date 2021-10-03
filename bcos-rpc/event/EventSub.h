@@ -30,6 +30,15 @@
 
 namespace bcos
 {
+namespace boostssl
+{
+namespace ws
+{
+class WsSession;
+class WsMessage;
+}  // namespace ws
+}  // namespace boostssl
+
 namespace event
 {
 class EventSub : public std::enable_shared_from_this<EventSub>
@@ -51,10 +60,10 @@ public:
     bool notifyBlockNumber(const std::string& _group, bcos::protocol::BlockNumber _blockNumber);
 
 public:
-    virtual void onRecvSubscribeEvent(
-        std::shared_ptr<ws::WsMessage> _msg, std::shared_ptr<ws::WsSession> _session);
-    virtual void onRecvUnsubscribeEvent(
-        std::shared_ptr<ws::WsMessage> _msg, std::shared_ptr<ws::WsSession> _session);
+    virtual void onRecvSubscribeEvent(std::shared_ptr<bcos::boostssl::ws::WsMessage> _msg,
+        std::shared_ptr<bcos::boostssl::ws::WsSession> _session);
+    virtual void onRecvUnsubscribeEvent(std::shared_ptr<bcos::boostssl::ws::WsMessage> _msg,
+        std::shared_ptr<bcos::boostssl::ws::WsSession> _session);
 
 public:
     /**
@@ -65,8 +74,9 @@ public:
      * @param _status: the response status
      * @return bool: if _session is inactive, false will be return
      */
-    bool sendResponse(std::shared_ptr<ws::WsSession> _session, std::shared_ptr<ws::WsMessage> _msg,
-        const std::string& _id, int32_t _status);
+    bool sendResponse(std::shared_ptr<bcos::boostssl::ws::WsSession> _session,
+        std::shared_ptr<bcos::boostssl::ws::WsMessage> _msg, const std::string& _id,
+        int32_t _status);
 
     /**
      * @brief: send event log list to client
@@ -75,12 +85,15 @@ public:
      * @param _result:
      * @return bool: if _session is inactive, false will be return
      */
-    bool sendEvents(std::shared_ptr<ws::WsSession> _session, const std::string& _id,
+    bool sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _session, const std::string& _id,
         const Json::Value& _result);
 
 public:
-    std::shared_ptr<ws::WsMessageFactory> messageFactory() const { return m_messageFactory; }
-    void setMessageFactory(std::shared_ptr<ws::WsMessageFactory> _messageFactory)
+    std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> messageFactory() const
+    {
+        return m_messageFactory;
+    }
+    void setMessageFactory(std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> _messageFactory)
     {
         m_messageFactory = _messageFactory;
     }
@@ -92,7 +105,7 @@ private:
     mutable std::shared_mutex x_groups;
     std::unordered_map<std::string, EventSubGroup::Ptr> m_groups;
 
-    std::shared_ptr<ws::WsMessageFactory> m_messageFactory;
+    std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> m_messageFactory;
 };
 
 }  // namespace event

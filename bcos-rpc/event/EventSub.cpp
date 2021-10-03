@@ -17,12 +17,14 @@
  * @author: octopus
  * @date 2021-09-26
  */
+#include <bcos-boostssl/websocket/WsSession.h>
 #include <bcos-framework/libutilities/Common.h>
 #include <bcos-rpc/event/Common.h>
 #include <bcos-rpc/event/EventSub.h>
 #include <bcos-rpc/event/EventSubMatcher.h>
 #include <bcos-rpc/event/EventSubRequest.h>
 #include <bcos-rpc/event/EventSubResponse.h>
+#include <memory>
 #include <shared_mutex>
 
 using namespace bcos;
@@ -136,8 +138,8 @@ bool EventSub::notifyBlockNumber(
     }
 }
 
-void EventSub::onRecvSubscribeEvent(
-    std::shared_ptr<ws::WsMessage> _msg, std::shared_ptr<ws::WsSession> _session)
+void EventSub::onRecvSubscribeEvent(std::shared_ptr<bcos::boostssl::ws::WsMessage> _msg,
+    std::shared_ptr<bcos::boostssl::ws::WsSession> _session)
 {
     std::string request = std::string(_msg->data()->begin(), _msg->data()->end());
 
@@ -180,8 +182,8 @@ void EventSub::onRecvSubscribeEvent(
     return;
 }
 
-void EventSub::onRecvUnsubscribeEvent(
-    std::shared_ptr<ws::WsMessage> _msg, std::shared_ptr<ws::WsSession> _session)
+void EventSub::onRecvUnsubscribeEvent(std::shared_ptr<bcos::boostssl::ws::WsMessage> _msg,
+    std::shared_ptr<bcos::boostssl::ws::WsSession> _session)
 {
     std::string request = std::string(_msg->data()->begin(), _msg->data()->end());
     EVENT_PUSH(TRACE) << LOG_BADGE("onRecvUnsubscribeEvent") << LOG_KV("request", request)
@@ -214,8 +216,8 @@ void EventSub::onRecvUnsubscribeEvent(
  * @param _status: the response status
  * @return bool: if _session is inactive, false will be return
  */
-bool EventSub::sendResponse(std::shared_ptr<ws::WsSession> _session,
-    std::shared_ptr<ws::WsMessage> _msg, const std::string& _id, int32_t _status)
+bool EventSub::sendResponse(std::shared_ptr<bcos::boostssl::ws::WsSession> _session,
+    std::shared_ptr<bcos::boostssl::ws::WsMessage> _msg, const std::string& _id, int32_t _status)
 {
     if (!_session->isConnected())
     {
@@ -244,8 +246,8 @@ bool EventSub::sendResponse(std::shared_ptr<ws::WsSession> _session,
  * @param _result:
  * @return bool: if _session is inactive, false will be return
  */
-bool EventSub::sendEvents(
-    std::shared_ptr<ws::WsSession> _session, const std::string& _id, const Json::Value& _result)
+bool EventSub::sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _session,
+    const std::string& _id, const Json::Value& _result)
 {
     if (!_session->isConnected())
     {

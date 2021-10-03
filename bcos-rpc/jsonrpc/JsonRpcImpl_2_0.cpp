@@ -25,7 +25,6 @@
 #include <bcos-framework/libprotocol/LogEntry.h>
 #include <bcos-framework/libutilities/Base64.h>
 #include <bcos-framework/libutilities/Log.h>
-#include <bcos-rpc/http/ws/WsVersion.h>
 #include <bcos-rpc/jsonrpc/Common.h>
 #include <bcos-rpc/jsonrpc/JsonRpcImpl_2_0.h>
 #include <boost/archive/iterators/base64_from_binary.hpp>
@@ -1137,7 +1136,8 @@ void JsonRpcImpl_2_0::getNodeInfo(RespFunc _respFunc)
     jResp["buildTime"] = m_nodeInfo.buildTime;
     jResp["gitCommit"] = m_nodeInfo.gitCommitHash;
     jResp["supportedVersion"] = m_nodeInfo.supportedVersion;
-    jResp["wsProtocolVersion"] = bcos::ws::WsProtocolVersion::current;
+    // TODO:
+    jResp["wsProtocolVersion"] = 1;
 
     _respFunc(nullptr, jResp);
 }

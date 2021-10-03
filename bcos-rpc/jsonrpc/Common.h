@@ -28,6 +28,12 @@ namespace bcos
 {
 namespace rpc
 {
+enum MessageType
+{
+    HANDESHAKE = 0x100,    // 256
+    BLOCK_NOTIFY = 0x101,  // 257
+    RPC_REQUEST = 0x102,   // 258
+};
 struct NodeInfo
 {
     std::string version;

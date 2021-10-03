@@ -20,6 +20,7 @@
  */
 
 #pragma once
+#include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-framework/interfaces/consensus/ConsensusInterface.h>
 #include <bcos-framework/interfaces/crypto/KeyFactory.h>
 #include <bcos-framework/interfaces/executor/ExecutorInterface.h>
@@ -30,41 +31,43 @@
 #include <bcos-framework/interfaces/txpool/TxPoolInterface.h>
 #include <bcos-rpc/Rpc.h>
 #include <bcos-rpc/amop/AMOP.h>
+#include <bcos-rpc/event/EventSub.h>
 #include <bcos-rpc/jsonrpc/JsonRpcImpl_2_0.h>
-#include <bcos-rpc/http/ws/WsService.h>
-#include <bcos-rpc/http/ws/WsSession.h>
 
 namespace bcos
 {
+namespace boostssl
+{
+namespace ws
+{
+class WsService;
+class WsSession;
+}  // namespace ws
+}  // namespace boostssl
+
 namespace rpc
 {
-// rpc config
-struct RpcConfig
-{
-    std::string m_listenIP;
-    uint16_t m_listenPort;
-    std::size_t m_threadCount;
-
-    void initConfig(const std::string& _configPath);
-};
-
 class RpcFactory : public std::enable_shared_from_this<RpcFactory>
 {
 public:
     using Ptr = std::shared_ptr<RpcFactory>;
 
 public:
-    bcos::amop::AMOP::Ptr buildAMOP();
-    JsonRpcInterface::Ptr buildJsonRpc(const NodeInfo& _nodeInfo);
-    ws::WsSession::Ptr buildWsSession(boost::asio::ip::tcp::socket&& _socket, std::weak_ptr<ws::WsService> _wsService);
+    std::shared_ptr<boostssl::ws::WsConfig> initConfig(const std::string& _configPath);
+    std::shared_ptr<boostssl::ws::WsService> buildWsService(
+        bcos::boostssl::ws::WsConfig::Ptr _config);
+    bcos::amop::AMOP::Ptr buildAMOP(std::shared_ptr<boostssl::ws::WsService> _wsService);
+    bcos::rpc::JsonRpcImpl_2_0::Ptr buildJsonRpc(
+        const NodeInfo& _nodeInfo, std::shared_ptr<boostssl::ws::WsService> _wsService);
+    bcos::event::EventSub::Ptr buildEventSub(std::shared_ptr<boostssl::ws::WsService> _wsService);
 
     /**
      * @brief: Rpc
-     * @param _rpcConfig: rpc config
-     * @param _nodeInfo: node config
+     * @param _config: WsConfig
+     * @param _nodeInfo: node info
      * @return Rpc::Ptr:
      */
-    Rpc::Ptr buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _nodeInfo);
+    Rpc::Ptr buildRpc(bcos::boostssl::ws::WsConfig::Ptr _config, const NodeInfo& _nodeInfo);
 
     /**
      * @brief: Rpc
@@ -75,6 +78,9 @@ public:
     Rpc::Ptr buildRpc(const std::string& _configPath, const NodeInfo& _nodeInfo);
 
 public:
+    bcos::boostssl::ws::WsConfig::Ptr config() const { return m_config; }
+    void setConfig(bcos::boostssl::ws::WsConfig::Ptr _config) { m_config = _config; }
+
     bcos::ledger::LedgerInterface::Ptr ledger() const { return m_ledgerInterface; }
     void setLedger(bcos::ledger::LedgerInterface::Ptr _ledgerInterface)
     {
@@ -154,6 +160,7 @@ private:
     bcos::front::FrontServiceInterface::Ptr m_frontServiceInterface;
     bcos::gateway::GatewayInterface::Ptr m_gatewayInterface;
     bcos::protocol::TransactionFactory::Ptr m_transactionFactory;
+    bcos::boostssl::ws::WsConfig::Ptr m_config;
 };
 }  // namespace rpc
 }  // namespace bcos

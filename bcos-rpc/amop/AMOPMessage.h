@@ -24,17 +24,18 @@ namespace bcos
 {
 namespace amop
 {
-enum AMOPMessageType : uint16_t
-{
-    TopicSeq = 0x1,
-    RequestTopic = 0x2,
-    ResponseTopic = 0x3,
-    AMOPRequest = 0x4,
-    AMOPBroadcast = 0x5
-};
-
 class AMOPMessage
 {
+public:
+    enum Type : uint16_t
+    {
+        TopicSeq = 0x1,
+        RequestTopic = 0x2,
+        ResponseTopic = 0x3,
+        AMOPRequest = 0x4,
+        AMOPBroadcast = 0x5
+    };
+
 public:
     using Ptr = std::shared_ptr<AMOPMessage>;
 

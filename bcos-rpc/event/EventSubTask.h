@@ -19,9 +19,9 @@
  */
 
 #pragma once
+#include <bcos-boostssl/websocket/WsSession.h>
 #include <bcos-rpc/event/Common.h>
 #include <bcos-rpc/event/EventSubParams.h>
-#include <bcos-rpc/http/ws/WsSession.h>
 #include <json/json.h>
 #include <json/value.h>
 #include <functional>
@@ -56,8 +56,11 @@ public:
     ~EventSubTask() { EVENT_TASK(DEBUG) << LOG_KV("[DELOBJ][EventSubTask]", this); }
 
 public:
-    void setSession(std::shared_ptr<ws::WsSession> _session) { m_session = _session; }
-    std::shared_ptr<ws::WsSession> session() const { return m_session; }
+    void setSession(std::shared_ptr<bcos::boostssl::ws::WsSession> _session)
+    {
+        m_session = _session;
+    }
+    std::shared_ptr<bcos::boostssl::ws::WsSession> session() const { return m_session; }
 
     void setId(const std::string& _id) { m_id = _id; }
     std::string id() const { return m_id; }
@@ -93,7 +96,7 @@ private:
     std::string m_id;
     std::string m_group;
 
-    std::shared_ptr<ws::WsSession> m_session;
+    std::shared_ptr<bcos::boostssl::ws::WsSession> m_session;
     std::shared_ptr<EventSubParams> m_params;
     std::shared_ptr<EventSubTaskState> m_state;
 
