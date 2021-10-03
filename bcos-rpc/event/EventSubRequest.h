@@ -19,19 +19,19 @@
  */
 
 #pragma once
-#include <bcos-rpc/event/EventPushParams.h>
+#include <bcos-rpc/event/EventSubParams.h>
 
 namespace bcos
 {
 namespace event
 {
-class EventPushTaskState;
-class EventPushUnsubRequest
+class EventSubTaskState;
+class EventSubUnsubRequest
 {
 public:
-    using Ptr = std::shared_ptr<EventPushUnsubRequest>;
+    using Ptr = std::shared_ptr<EventSubUnsubRequest>;
 
-    virtual ~EventPushUnsubRequest() {}
+    virtual ~EventSubUnsubRequest() {}
 
 public:
     void setId(const std::string& _id) { m_id = _id; }
@@ -48,25 +48,25 @@ private:
     std::string m_group;
 };
 
-class EventPushSubRequest : public EventPushUnsubRequest
+class EventSubSubRequest : public EventSubUnsubRequest
 {
 public:
-    using Ptr = std::shared_ptr<EventPushSubRequest>;
+    using Ptr = std::shared_ptr<EventSubSubRequest>;
 
-    virtual ~EventPushSubRequest() {}
+    virtual ~EventSubSubRequest() {}
 
 public:
-    void setParams(std::shared_ptr<EventPushParams> _params) { m_params = _params; }
-    std::shared_ptr<EventPushParams> params() const { return m_params; }
+    void setParams(std::shared_ptr<EventSubParams> _params) { m_params = _params; }
+    std::shared_ptr<EventSubParams> params() const { return m_params; }
 
-    void setState(std::shared_ptr<EventPushTaskState> _state) { m_state = _state; }
-    std::shared_ptr<EventPushTaskState> state() const { return m_state; }
+    void setState(std::shared_ptr<EventSubTaskState> _state) { m_state = _state; }
+    std::shared_ptr<EventSubTaskState> state() const { return m_state; }
     std::string generateJson() const override;
     bool fromJson(const std::string& _request) override;
 
 private:
-    std::shared_ptr<EventPushParams> m_params;
-    std::shared_ptr<EventPushTaskState> m_state;
+    std::shared_ptr<EventSubParams> m_params;
+    std::shared_ptr<EventSubTaskState> m_state;
 };
 
 }  // namespace event

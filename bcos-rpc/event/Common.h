@@ -51,16 +51,5 @@ enum EP_STATUS_CODE
     NONEXISTENT_EVENT = -41007,
 };
 
-enum filter_status
-{
-    GROUP_ID_NOT_EXIST,
-    CALLBACK_FAILED,
-    ERROR_STATUS,
-    STATUS_PUSH_COMPLETED,
-    WAIT_FOR_MORE_BLOCK,
-    WAIT_FOR_NEXT_LOOP,
-    REMOTE_PEERS_ACCESS_DENIED,
-    CHECK_VALID = 5000,
-};
 }  // namespace event
 }  // namespace bcos

@@ -21,7 +21,7 @@
 #pragma once
 
 #include <bcos-framework/interfaces/ledger/LedgerInterface.h>
-#include <bcos-rpc/event/EventPushGroup.h>
+#include <bcos-rpc/event/EventSubGroup.h>
 #include <json/value.h>
 #include <atomic>
 #include <memory>
@@ -32,19 +32,19 @@ namespace bcos
 {
 namespace event
 {
-class EventPush : public std::enable_shared_from_this<EventPush>
+class EventSub : public std::enable_shared_from_this<EventSub>
 {
 public:
-    using Ptr = std::shared_ptr<EventPush>;
+    using Ptr = std::shared_ptr<EventSub>;
 
-    virtual ~EventPush() { stop(); }
+    virtual ~EventSub() { stop(); }
 
 public:
     virtual void start();
     virtual void stop();
 
 public:
-    EventPushGroup::Ptr getGroup(const std::string& _group);
+    EventSubGroup::Ptr getGroup(const std::string& _group);
     bool addGroup(const std::string& _group, bcos::ledger::LedgerInterface::Ptr _ledgerInterface);
     bool removeGroup(const std::string& _group);
 
@@ -61,7 +61,7 @@ public:
      * @brief: send response
      * @param _session: the peer
      * @param _msg: the msg
-     * @param _id: the eventpush id
+     * @param _id: the EventSub id
      * @param _status: the response status
      * @return bool: if _session is inactive, false will be return
      */
@@ -71,7 +71,7 @@ public:
     /**
      * @brief: send event log list to client
      * @param _session: the peer
-     * @param _id: the eventpush id
+     * @param _id: the EventSub id
      * @param _result:
      * @return bool: if _session is inactive, false will be return
      */
@@ -90,7 +90,7 @@ private:
 
     // lock for m_groups
     mutable std::shared_mutex x_groups;
-    std::unordered_map<std::string, EventPushGroup::Ptr> m_groups;
+    std::unordered_map<std::string, EventSubGroup::Ptr> m_groups;
 
     std::shared_ptr<ws::WsMessageFactory> m_messageFactory;
 };

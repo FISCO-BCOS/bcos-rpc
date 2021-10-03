@@ -23,7 +23,7 @@
 #include <bcos-framework/interfaces/ledger/LedgerInterface.h>
 #include <bcos-framework/interfaces/protocol/ProtocolTypeDef.h>
 #include <bcos-framework/libutilities/Worker.h>
-#include <bcos-rpc/event/EventPushTask.h>
+#include <bcos-rpc/event/EventSubTask.h>
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -36,14 +36,14 @@ namespace bcos
 {
 namespace event
 {
-class EventPushMatcher;
-class EventPushGroup : bcos::Worker, public std::enable_shared_from_this<EventPushGroup>
+class EventSubMatcher;
+class EventSubGroup : bcos::Worker, public std::enable_shared_from_this<EventSubGroup>
 {
 public:
-    using Ptr = std::shared_ptr<EventPushGroup>;
-    using ConstPtr = std::shared_ptr<const EventPushGroup>;
-    EventPushGroup(const std::string& _group) : bcos::Worker("t_event_" + _group) {}
-    virtual ~EventPushGroup() { stop(); }
+    using Ptr = std::shared_ptr<EventSubGroup>;
+    using ConstPtr = std::shared_ptr<const EventSubGroup>;
+    EventSubGroup(const std::string& _group) : bcos::Worker("t_event_" + _group) {}
+    virtual ~EventSubGroup() { stop(); }
 
 public:
     virtual void start();
@@ -54,24 +54,24 @@ public:
 public:
     void executeAddTasks();
     void executeCancelTasks();
-    void executeEventPushTasks();
+    void executeEventSubTasks();
 
 public:
-    void subEventPushTask(EventPushTask::Ptr _task);
-    void unsubEventPushTask(const std::string& _id);
-    int64_t executeEventPushTask(EventPushTask::Ptr _task);
+    void subEventSubTask(EventSubTask::Ptr _task);
+    void unsubEventSubTask(const std::string& _id);
+    int64_t executeEventSubTask(EventSubTask::Ptr _task);
 
 public:
-    bool checkConnAvailable(EventPushTask::Ptr _task);
-    void processBlock(int64_t _blockNumber, EventPushTask::Ptr _task,
+    bool checkConnAvailable(EventSubTask::Ptr _task);
+    void processBlock(int64_t _blockNumber, EventSubTask::Ptr _task,
         std::function<void(Error::Ptr _error)> _callback);
 
 public:
     std::string group() const { return m_group; }
     void setGroup(const std::string& _group) { m_group = _group; }
 
-    std::shared_ptr<EventPushMatcher> matcher() const { return m_matcher; }
-    void setMatcher(std::shared_ptr<EventPushMatcher> _matcher) { m_matcher = _matcher; }
+    std::shared_ptr<EventSubMatcher> matcher() const { return m_matcher; }
+    void setMatcher(std::shared_ptr<EventSubMatcher> _matcher) { m_matcher = _matcher; }
 
     bcos::protocol::BlockNumber latestBlockNumber() { return m_latestBlockNumber.load(); }
     void setLatestBlockNumber(bcos::protocol::BlockNumber _latestBlockNumber)
@@ -93,12 +93,12 @@ private:
     // the latest block number
     std::atomic<bcos::protocol::BlockNumber> m_latestBlockNumber{-1};
 
-    std::shared_ptr<EventPushMatcher> m_matcher;
+    std::shared_ptr<EventSubMatcher> m_matcher;
 
     // lock for m_addTasks
     mutable std::shared_mutex x_addTasks;
     // tasks to be add
-    std::vector<EventPushTask::Ptr> m_addTasks;
+    std::vector<EventSubTask::Ptr> m_addTasks;
     // the number of tasks to be add
     std::atomic<uint32_t> m_addTaskCount{0};
 
@@ -109,8 +109,8 @@ private:
     // the number of tasks to be cancel
     std::atomic<uint32_t> m_cancelTaskCount{0};
 
-    // all subscribe event push tasks
-    std::unordered_map<std::string, EventPushTask::Ptr> m_tasks;
+    // all subscribe event sub tasks
+    std::unordered_map<std::string, EventSubTask::Ptr> m_tasks;
 
     // ledger interfaces, for get tx && tx receipt of block
     bcos::ledger::LedgerInterface::Ptr m_ledgerInterface;

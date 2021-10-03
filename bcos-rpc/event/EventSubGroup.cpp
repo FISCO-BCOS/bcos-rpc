@@ -21,8 +21,8 @@
 #include <bcos-framework/interfaces/protocol/CommonError.h>
 #include <bcos-framework/interfaces/protocol/ProtocolTypeDef.h>
 #include <bcos-framework/libutilities/Log.h>
-#include <bcos-rpc/event/EventPushGroup.h>
-#include <bcos-rpc/event/EventPushMatcher.h>
+#include <bcos-rpc/event/EventSubGroup.h>
+#include <bcos-rpc/event/EventSubMatcher.h>
 #include <chrono>
 #include <memory>
 #include <thread>
@@ -32,11 +32,11 @@
 using namespace bcos;
 using namespace bcos::event;
 
-void EventPushGroup::start()
+void EventSubGroup::start()
 {
     if (m_running.load())
     {
-        EVENT_GROUP(INFO) << LOG_BADGE("start") << LOG_DESC("event push group is running")
+        EVENT_GROUP(INFO) << LOG_BADGE("start") << LOG_DESC("event sub group is running")
                           << LOG_KV("group", m_group);
         return;
     }
@@ -46,7 +46,7 @@ void EventPushGroup::start()
     if (1)
     {
         auto group = m_group;
-        auto self = std::weak_ptr<EventPushGroup>(shared_from_this());
+        auto self = std::weak_ptr<EventSubGroup>(shared_from_this());
         // latest block number
         m_ledgerInterface->asyncGetBlockNumber(
             [group, self](Error::Ptr _error, protocol::BlockNumber _blockNumber) {
@@ -59,27 +59,27 @@ void EventPushGroup::start()
                     return;
                 }
 
-                auto epGroup = self.lock();
-                if (!epGroup)
+                auto esGroup = self.lock();
+                if (!esGroup)
                 {
                     return;
                 }
 
-                epGroup->setLatestBlockNumber(_blockNumber);
+                esGroup->setLatestBlockNumber(_blockNumber);
                 EVENT_GROUP(INFO) << LOG_BADGE("start") << LOG_DESC("asyncGetBlockNumber")
                                   << LOG_KV("group", group) << LOG_KV("blockNumber", _blockNumber);
             });
     }
 
-    EVENT_GROUP(INFO) << LOG_BADGE("start") << LOG_DESC("start event push group successfully")
+    EVENT_GROUP(INFO) << LOG_BADGE("start") << LOG_DESC("start event sub group successfully")
                       << LOG_KV("group", m_group);
 }
 
-void EventPushGroup::stop()
+void EventSubGroup::stop()
 {
     if (!m_running.load())
     {
-        EVENT_GROUP(INFO) << LOG_BADGE("stop") << LOG_DESC("event push group is not running")
+        EVENT_GROUP(INFO) << LOG_BADGE("stop") << LOG_DESC("event sub group is not running")
                           << LOG_KV("group", m_group);
         return;
     }
@@ -89,34 +89,34 @@ void EventPushGroup::stop()
     // will not restart worker, so terminate it
     terminate();
 
-    EVENT_GROUP(INFO) << LOG_BADGE("stop") << LOG_DESC("stop event push group successfully")
+    EVENT_GROUP(INFO) << LOG_BADGE("stop") << LOG_DESC("stop event sub group successfully")
                       << LOG_KV("group", m_group);
 }
 
-void EventPushGroup::subEventPushTask(EventPushTask::Ptr _task)
+void EventSubGroup::subEventSubTask(EventSubTask::Ptr _task)
 {
-    EVENT_GROUP(INFO) << LOG_BADGE("subEventPushTask") << LOG_KV("id", _task->id());
+    EVENT_GROUP(INFO) << LOG_BADGE("subEventSubTask") << LOG_KV("id", _task->id());
     std::unique_lock lock(x_addTasks);
     m_addTasks.push_back(_task);
     m_addTaskCount++;
 }
 
-void EventPushGroup::unsubEventPushTask(const std::string& _id)
+void EventSubGroup::unsubEventSubTask(const std::string& _id)
 {
-    EVENT_GROUP(INFO) << LOG_BADGE("unsubEventPushTask") << LOG_KV("id", _id);
+    EVENT_GROUP(INFO) << LOG_BADGE("unsubEventSubTask") << LOG_KV("id", _id);
     std::unique_lock lock(x_cancelTasks);
     m_cancelTasks.push_back(_id);
     m_cancelTaskCount++;
 }
 
-void EventPushGroup::executeWorker()
+void EventSubGroup::executeWorker()
 {
     executeCancelTasks();
     executeAddTasks();
-    executeEventPushTasks();
+    executeEventSubTasks();
 }
 
-void EventPushGroup::executeAddTasks()
+void EventSubGroup::executeAddTasks()
 {
     if (m_addTaskCount.load() == 0)
     {
@@ -135,7 +135,7 @@ void EventPushGroup::executeAddTasks()
         else
         {
             EVENT_GROUP(ERROR) << LOG_BADGE("executeAddTasks")
-                               << LOG_DESC("event push task already exist")
+                               << LOG_DESC("event sub task already exist")
                                << LOG_KV("id", task->id());
         }
     }
@@ -143,7 +143,7 @@ void EventPushGroup::executeAddTasks()
     m_addTasks.clear();
 }
 
-void EventPushGroup::executeCancelTasks()
+void EventSubGroup::executeCancelTasks()
 {
     if (m_cancelTaskCount.load() == 0)
     {
@@ -162,7 +162,7 @@ void EventPushGroup::executeCancelTasks()
         else
         {
             EVENT_GROUP(WARNING) << LOG_BADGE("executeAddTasks")
-                                 << LOG_DESC("event push task not exist") << LOG_KV("id", id)
+                                 << LOG_DESC("event sub task not exist") << LOG_KV("id", id)
                                  << LOG_KV("result", r);
         }
     }
@@ -170,19 +170,19 @@ void EventPushGroup::executeCancelTasks()
     m_cancelTasks.clear();
 }
 
-bool EventPushGroup::checkConnAvailable(EventPushTask::Ptr _task)
+bool EventSubGroup::checkConnAvailable(EventSubTask::Ptr _task)
 {
     Json::Value jResp(Json::arrayValue);
     return _task->callback()(_task->id(), jResp);
 }
 
-int64_t EventPushGroup::executeEventPushTask(EventPushTask::Ptr _task)
+int64_t EventSubGroup::executeEventSubTask(EventSubTask::Ptr _task)
 {
     // tests whether the connection of the session is available first
     auto connAvailable = checkConnAvailable(_task);
     if (!connAvailable)
     {
-        unsubEventPushTask(_task->id());
+        unsubEventSubTask(_task->id());
         return -1;
     }
 
@@ -237,8 +237,8 @@ int64_t EventPushGroup::executeEventPushTask(EventPushTask::Ptr _task)
 
     public:
         bcos::protocol::BlockNumber m_endBlockNumber;
-        std::shared_ptr<EventPushGroup> m_group;
-        EventPushTask::Ptr m_task;
+        std::shared_ptr<EventSubGroup> m_group;
+        EventSubTask::Ptr m_task;
     };
 
     auto p = std::make_shared<BlockProcess>();
@@ -251,10 +251,10 @@ int64_t EventPushGroup::executeEventPushTask(EventPushTask::Ptr _task)
     return blockCanProcess;
 }
 
-void EventPushGroup::processBlock(int64_t _blockNumber, EventPushTask::Ptr _task,
-    std::function<void(Error::Ptr _error)> _callback)
+void EventSubGroup::processBlock(
+    int64_t _blockNumber, EventSubTask::Ptr _task, std::function<void(Error::Ptr _error)> _callback)
 {
-    auto self = std::weak_ptr<EventPushGroup>(shared_from_this());
+    auto self = std::weak_ptr<EventSubGroup>(shared_from_this());
     auto matcher = m_matcher;
     m_ledgerInterface->asyncGetBlockDataByNumber(_blockNumber,
         bcos::ledger::RECEIPTS | bcos::ledger::TRANSACTIONS,
@@ -288,11 +288,11 @@ void EventPushGroup::processBlock(int64_t _blockNumber, EventPushTask::Ptr _task
         });
 }
 
-void EventPushGroup::executeEventPushTasks()
+void EventSubGroup::executeEventSubTasks()
 {
     for (const auto& taskEntry : m_tasks)
     {
-        executeEventPushTask(taskEntry.second);
+        executeEventSubTask(taskEntry.second);
     }
 
     // limiting speed

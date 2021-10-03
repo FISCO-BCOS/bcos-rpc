@@ -18,13 +18,13 @@
  * @date 2021-09-09
  */
 #include <bcos-rpc/event/Common.h>
-#include <bcos-rpc/event/EventPushResponse.h>
+#include <bcos-rpc/event/EventSubResponse.h>
 #include <json/json.h>
 
 using namespace bcos;
 using namespace bcos::event;
 
-std::string EventPushResponse::generateJson()
+std::string EventSubResponse::generateJson()
 {
     /*
         {
@@ -49,7 +49,7 @@ std::string EventPushResponse::generateJson()
     return result;
 }
 
-bool EventPushResponse::fromJson(const std::string& _response)
+bool EventSubResponse::fromJson(const std::string& _response)
 {
     std::string id;
     int status;
@@ -87,14 +87,14 @@ bool EventPushResponse::fromJson(const std::string& _response)
             m_jResp = root;
 
             EVENT_RESPONSE(INFO) << LOG_BADGE("fromJson")
-                                 << LOG_DESC("parse event push response success")
+                                 << LOG_DESC("parse event sub response success")
                                  << LOG_KV("id", m_id) << LOG_KV("status", m_status);
 
             return true;
 
         } while (0);
 
-        EVENT_RESPONSE(ERROR) << LOG_BADGE("fromJson") << LOG_DESC("invalid event push reponse")
+        EVENT_RESPONSE(ERROR) << LOG_BADGE("fromJson") << LOG_DESC("invalid event sub reponse")
                               << LOG_KV("response", _response) << LOG_KV("error", errorMessage);
     }
     catch (const std::exception& e)

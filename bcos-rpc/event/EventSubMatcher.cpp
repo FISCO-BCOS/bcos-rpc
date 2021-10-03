@@ -18,13 +18,13 @@
  * @date 2021-09-10
  */
 
-#include <bcos-rpc/event/EventPushMatcher.h>
+#include <bcos-rpc/event/EventSubMatcher.h>
 
 using namespace bcos;
 using namespace bcos::event;
 
-uint32_t EventPushMatcher::matches(
-    EventPushParams::ConstPtr _params, bcos::protocol::Block::ConstPtr _block, Json::Value& _result)
+uint32_t EventSubMatcher::matches(
+    EventSubParams::ConstPtr _params, bcos::protocol::Block::ConstPtr _block, Json::Value& _result)
 {
     uint32_t matchCount = 0;
     for (std::size_t index = 0; index < _block->transactionsSize(); index++)
@@ -36,7 +36,7 @@ uint32_t EventPushMatcher::matches(
     return matchCount;
 }
 
-uint32_t EventPushMatcher::matches(EventPushParams::ConstPtr _params,
+uint32_t EventSubMatcher::matches(EventSubParams::ConstPtr _params,
     bcos::protocol::TransactionReceipt::ConstPtr _receipt,
     bcos::protocol::Transaction::ConstPtr _tx, std::size_t _txIndex, Json::Value& _result)
 {
@@ -71,8 +71,8 @@ uint32_t EventPushMatcher::matches(EventPushParams::ConstPtr _params,
     return matchCount;
 }
 
-bool EventPushMatcher::matches(
-    EventPushParams::ConstPtr _params, const bcos::protocol::LogEntry& _logEntry)
+bool EventSubMatcher::matches(
+    EventSubParams::ConstPtr _params, const bcos::protocol::LogEntry& _logEntry)
 {
     const auto& addresses = _params->addresses();
     const auto& topics = _params->topics();

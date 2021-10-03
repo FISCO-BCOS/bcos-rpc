@@ -20,7 +20,7 @@
 
 #pragma once
 #include <bcos-rpc/event/Common.h>
-#include <bcos-rpc/event/EventPushParams.h>
+#include <bcos-rpc/event/EventSubParams.h>
 #include <bcos-rpc/http/ws/WsSession.h>
 #include <json/json.h>
 #include <json/value.h>
@@ -32,10 +32,10 @@ namespace event
 {
 using Callback = std::function<bool(const std::string&, const Json::Value&)>;
 
-class EventPushTaskState
+class EventSubTaskState
 {
 public:
-    using Ptr = std::shared_ptr<EventPushTaskState>;
+    using Ptr = std::shared_ptr<EventSubTaskState>;
 
 public:
     int64_t currentBlockNumber() const { return m_currentBlockNumber.load(); }
@@ -48,12 +48,12 @@ private:
     std::atomic<int64_t> m_currentBlockNumber = -1;
 };
 
-class EventPushTask
+class EventSubTask
 {
 public:
-    using Ptr = std::shared_ptr<EventPushTask>;
-    EventPushTask() { EVENT_TASK(DEBUG) << LOG_KV("[NEWOBJ][EventPushTask]", this); }
-    ~EventPushTask() { EVENT_TASK(DEBUG) << LOG_KV("[DELOBJ][EventPushTask]", this); }
+    using Ptr = std::shared_ptr<EventSubTask>;
+    EventSubTask() { EVENT_TASK(DEBUG) << LOG_KV("[NEWOBJ][EventSubTask]", this); }
+    ~EventSubTask() { EVENT_TASK(DEBUG) << LOG_KV("[DELOBJ][EventSubTask]", this); }
 
 public:
     void setSession(std::shared_ptr<ws::WsSession> _session) { m_session = _session; }
@@ -65,11 +65,11 @@ public:
     void setGroup(const std::string& _group) { m_group = _group; }
     std::string group() const { return m_group; }
 
-    void setParams(std::shared_ptr<EventPushParams> _params) { m_params = _params; }
-    std::shared_ptr<EventPushParams> params() const { return m_params; }
+    void setParams(std::shared_ptr<EventSubParams> _params) { m_params = _params; }
+    std::shared_ptr<EventSubParams> params() const { return m_params; }
 
-    void setState(std::shared_ptr<EventPushTaskState> _state) { m_state = _state; }
-    std::shared_ptr<EventPushTaskState> state() const { return m_state; }
+    void setState(std::shared_ptr<EventSubTaskState> _state) { m_state = _state; }
+    std::shared_ptr<EventSubTaskState> state() const { return m_state; }
 
     void setCallback(Callback _callback) { m_callback = _callback; }
     Callback callback() const { return m_callback; }
@@ -94,13 +94,13 @@ private:
     std::string m_group;
 
     std::shared_ptr<ws::WsSession> m_session;
-    std::shared_ptr<EventPushParams> m_params;
-    std::shared_ptr<EventPushTaskState> m_state;
+    std::shared_ptr<EventSubParams> m_params;
+    std::shared_ptr<EventSubTaskState> m_state;
 
 private:
     Callback m_callback;
 };
 
-using EventPushTaskPtrs = std::vector<EventPushTask::Ptr>;
+using EventSubTaskPtrs = std::vector<EventSubTask::Ptr>;
 }  // namespace event
 }  // namespace bcos

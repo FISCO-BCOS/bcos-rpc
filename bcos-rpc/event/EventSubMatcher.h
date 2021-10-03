@@ -22,30 +22,30 @@
 #include <bcos-framework/interfaces/protocol/ProtocolTypeDef.h>
 #include <bcos-framework/interfaces/protocol/TransactionReceipt.h>
 #include <bcos-framework/libprotocol/LogEntry.h>
-#include <bcos-rpc/event/EventPushParams.h>
+#include <bcos-rpc/event/EventSubParams.h>
 #include <json/json.h>
 
 namespace bcos
 {
 namespace event
 {
-class EventPushMatcher
+class EventSubMatcher
 {
 public:
-    using Ptr = std::shared_ptr<EventPushMatcher>;
-    using ConstPtr = std::shared_ptr<const EventPushMatcher>;
+    using Ptr = std::shared_ptr<EventSubMatcher>;
+    using ConstPtr = std::shared_ptr<const EventSubMatcher>;
 
-    virtual ~EventPushMatcher() {}
+    virtual ~EventSubMatcher() {}
 
 public:
     virtual bool matches(
-        EventPushParams::ConstPtr _params, const bcos::protocol::LogEntry& _logEntry);
+        EventSubParams::ConstPtr _params, const bcos::protocol::LogEntry& _logEntry);
 
 public:
-    uint32_t matches(EventPushParams::ConstPtr _params,
+    uint32_t matches(EventSubParams::ConstPtr _params,
         bcos::protocol::TransactionReceipt::ConstPtr _receipt,
         bcos::protocol::Transaction::ConstPtr _tx, std::size_t _txIndex, Json::Value& _result);
-    uint32_t matches(EventPushParams::ConstPtr _params, bcos::protocol::Block::ConstPtr _block,
+    uint32_t matches(EventSubParams::ConstPtr _params, bcos::protocol::Block::ConstPtr _block,
         Json::Value& _result);
 };
 

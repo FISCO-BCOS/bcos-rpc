@@ -13,24 +13,22 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- * @file EventPush.cpp
+ * @file EventSub.cpp
  * @author: octopus
  * @date 2021-09-26
  */
 #include <bcos-framework/libutilities/Common.h>
 #include <bcos-rpc/event/Common.h>
-#include <bcos-rpc/event/EventPush.h>
-#include <bcos-rpc/event/EventPushMatcher.h>
-#include <bcos-rpc/event/EventPushRequest.h>
-#include <bcos-rpc/event/EventPushResponse.h>
-#include <bcos-rpc/http/ws/WsMessageType.h>
-#include <memory>
+#include <bcos-rpc/event/EventSub.h>
+#include <bcos-rpc/event/EventSubMatcher.h>
+#include <bcos-rpc/event/EventSubRequest.h>
+#include <bcos-rpc/event/EventSubResponse.h>
 #include <shared_mutex>
 
 using namespace bcos;
 using namespace bcos::event;
 
-void EventPush::start()
+void EventSub::start()
 {
     if (m_running.load())
     {
@@ -40,69 +38,73 @@ void EventPush::start()
 
     m_running.store(true);
 
-    EVENT_PUSH(INFO) << LOG_BADGE("start") << LOG_DESC("start event push successfully");
+    EVENT_PUSH(INFO) << LOG_BADGE("start") << LOG_DESC("start event sub successfully");
 }
 
-void EventPush::stop()
+void EventSub::stop()
 {
     if (!m_running.load())
     {
-        EVENT_PUSH(INFO) << LOG_BADGE("stop") << LOG_DESC("event push is not running");
+        EVENT_PUSH(INFO) << LOG_BADGE("stop") << LOG_DESC("event sub is not running");
         return;
     }
 
+    for (auto esp : m_groups)
+    {
+        esp.second->stop();
+    }
 
-    EVENT_PUSH(INFO) << LOG_BADGE("stop") << LOG_DESC("stop event push successfully");
+    EVENT_PUSH(INFO) << LOG_BADGE("stop") << LOG_DESC("stop event sub successfully");
 }
 
-bool EventPush::addGroup(
+bool EventSub::addGroup(
     const std::string& _group, bcos::ledger::LedgerInterface::Ptr _ledgerInterface)
 {
     std::unique_lock lock(x_groups);
     auto it = m_groups.find(_group);
     if (it != m_groups.end())
     {
-        EVENT_PUSH(WARNING) << LOG_BADGE("addGroup") << LOG_DESC("event push group has been exist")
+        EVENT_PUSH(WARNING) << LOG_BADGE("addGroup") << LOG_DESC("event sub group has been exist")
                             << LOG_KV("group", _group);
         return false;
     }
 
-    auto matcher = std::make_shared<EventPushMatcher>();
-    auto epGroup = std::make_shared<EventPushGroup>(_group);
+    auto matcher = std::make_shared<EventSubMatcher>();
+    auto esGroup = std::make_shared<EventSubGroup>(_group);
 
-    epGroup->setGroup(_group);
-    epGroup->setLedger(_ledgerInterface);
-    epGroup->setMatcher(matcher);
-    epGroup->start();
+    esGroup->setGroup(_group);
+    esGroup->setLedger(_ledgerInterface);
+    esGroup->setMatcher(matcher);
+    esGroup->start();
 
-    m_groups[_group] = epGroup;
+    m_groups[_group] = esGroup;
 
-    EVENT_PUSH(INFO) << LOG_BADGE("addGroup") << LOG_DESC("add event push group successfully")
+    EVENT_PUSH(INFO) << LOG_BADGE("addGroup") << LOG_DESC("add event sub group successfully")
                      << LOG_KV("group", _group);
     return true;
 }
 
-bool EventPush::removeGroup(const std::string& _group)
+bool EventSub::removeGroup(const std::string& _group)
 {
     std::unique_lock lock(x_groups);
     auto it = m_groups.find(_group);
     if (it == m_groups.end())
     {
-        EVENT_PUSH(WARNING) << LOG_BADGE("removeGroup") << LOG_DESC("event push group is not exist")
+        EVENT_PUSH(WARNING) << LOG_BADGE("removeGroup") << LOG_DESC("event sub group is not exist")
                             << LOG_KV("group", _group);
         return false;
     }
 
-    auto epGroup = it->second;
+    auto esGroup = it->second;
     m_groups.erase(it);
-    epGroup->stop();
+    esGroup->stop();
 
-    EVENT_PUSH(INFO) << LOG_BADGE("removeGroup") << LOG_DESC("remove event push group successfully")
+    EVENT_PUSH(INFO) << LOG_BADGE("removeGroup") << LOG_DESC("remove event sub group successfully")
                      << LOG_KV("group", _group);
     return true;
 }
 
-EventPushGroup::Ptr EventPush::getGroup(const std::string& _group)
+EventSubGroup::Ptr EventSub::getGroup(const std::string& _group)
 {
     std::shared_lock lock(x_groups);
     auto it = m_groups.find(_group);
@@ -115,13 +117,13 @@ EventPushGroup::Ptr EventPush::getGroup(const std::string& _group)
 }
 
 // register this function to blockNumber notify
-bool EventPush::notifyBlockNumber(
+bool EventSub::notifyBlockNumber(
     const std::string& _group, bcos::protocol::BlockNumber _blockNumber)
 {
-    auto epGroup = getGroup(_group);
-    if (epGroup)
+    auto esGroup = getGroup(_group);
+    if (esGroup)
     {
-        epGroup->setLatestBlockNumber(_blockNumber);
+        esGroup->setLatestBlockNumber(_blockNumber);
         EVENT_PUSH(DEBUG) << LOG_BADGE("notifyBlockNumber") << LOG_KV("group", _group)
                           << LOG_KV("blockNumber", _blockNumber);
         return true;
@@ -134,7 +136,7 @@ bool EventPush::notifyBlockNumber(
     }
 }
 
-void EventPush::onRecvSubscribeEvent(
+void EventSub::onRecvSubscribeEvent(
     std::shared_ptr<ws::WsMessage> _msg, std::shared_ptr<ws::WsSession> _session)
 {
     std::string request = std::string(_msg->data()->begin(), _msg->data()->end());
@@ -142,42 +144,43 @@ void EventPush::onRecvSubscribeEvent(
     EVENT_PUSH(TRACE) << LOG_BADGE("onRecvSubscribeEvent") << LOG_KV("request", request)
                       << LOG_KV("endpoint", _session->endPoint());
 
-    auto epReq = std::make_shared<EventPushSubRequest>();
-    if (!epReq->fromJson(request))
+    auto esRes = std::make_shared<EventSubSubRequest>();
+    if (!esRes->fromJson(request))
     {
-        sendResponse(_session, _msg, epReq->id(), EP_STATUS_CODE::INVALID_PARAMS);
+        sendResponse(_session, _msg, esRes->id(), EP_STATUS_CODE::INVALID_PARAMS);
         return;
     }
 
-    auto epGroup = getGroup(epReq->group());
-    if (!epGroup)
+    auto esGroup = getGroup(esRes->group());
+    if (!esGroup)
     {
-        sendResponse(_session, _msg, epReq->id(), EP_STATUS_CODE::GROUP_NOT_EXIST);
+        sendResponse(_session, _msg, esRes->id(), EP_STATUS_CODE::GROUP_NOT_EXIST);
         return;
     }
-    auto task = std::make_shared<EventPushTask>();
-    task->setGroup(epReq->group());
-    task->setId(epReq->id());
-    task->setParams(epReq->params());
+
+    auto task = std::make_shared<EventSubTask>();
+    task->setGroup(esRes->group());
+    task->setId(esRes->id());
+    task->setParams(esRes->params());
 
     // TODO: check request parameters
-    auto self = std::weak_ptr<EventPush>(shared_from_this());
+    auto self = std::weak_ptr<EventSub>(shared_from_this());
     task->setCallback([self, _session](const std::string& _id, const Json::Value& _result) -> bool {
-        auto ep = self.lock();
-        if (!ep)
+        auto es = self.lock();
+        if (!es)
         {
             return false;
         }
 
-        return ep->sendEvents(_session, _id, _result);
+        return es->sendEvents(_session, _id, _result);
     });
 
-    epGroup->subEventPushTask(task);
-    sendResponse(_session, _msg, epReq->id(), EP_STATUS_CODE::SUCCESS);
+    esGroup->subEventSubTask(task);
+    sendResponse(_session, _msg, esRes->id(), EP_STATUS_CODE::SUCCESS);
     return;
 }
 
-void EventPush::onRecvUnsubscribeEvent(
+void EventSub::onRecvUnsubscribeEvent(
     std::shared_ptr<ws::WsMessage> _msg, std::shared_ptr<ws::WsSession> _session)
 {
     std::string request = std::string(_msg->data()->begin(), _msg->data()->end());
@@ -185,22 +188,22 @@ void EventPush::onRecvUnsubscribeEvent(
                       << LOG_KV("endpoint", _session->endPoint());
 
 
-    auto epReq = std::make_shared<EventPushUnsubRequest>();
-    if (!epReq->fromJson(request))
+    auto esRes = std::make_shared<EventSubUnsubRequest>();
+    if (!esRes->fromJson(request))
     {
-        sendResponse(_session, _msg, epReq->id(), EP_STATUS_CODE::INVALID_PARAMS);
+        sendResponse(_session, _msg, esRes->id(), EP_STATUS_CODE::INVALID_PARAMS);
         return;
     }
 
-    auto epGroup = getGroup(epReq->group());
-    if (!epGroup)
+    auto esGroup = getGroup(esRes->group());
+    if (!esGroup)
     {
-        sendResponse(_session, _msg, epReq->id(), EP_STATUS_CODE::GROUP_NOT_EXIST);
+        sendResponse(_session, _msg, esRes->id(), EP_STATUS_CODE::GROUP_NOT_EXIST);
         return;
     }
 
-    epGroup->unsubEventPushTask(epReq->id());
-    sendResponse(_session, _msg, epReq->id(), EP_STATUS_CODE::SUCCESS);
+    esGroup->unsubEventSubTask(esRes->id());
+    sendResponse(_session, _msg, esRes->id(), EP_STATUS_CODE::SUCCESS);
     return;
 }
 
@@ -211,7 +214,7 @@ void EventPush::onRecvUnsubscribeEvent(
  * @param _status: the response status
  * @return bool: if _session is inactive, false will be return
  */
-bool EventPush::sendResponse(std::shared_ptr<ws::WsSession> _session,
+bool EventSub::sendResponse(std::shared_ptr<ws::WsSession> _session,
     std::shared_ptr<ws::WsMessage> _msg, const std::string& _id, int32_t _status)
 {
     if (!_session->isConnected())
@@ -222,10 +225,10 @@ bool EventPush::sendResponse(std::shared_ptr<ws::WsSession> _session,
         return false;
     }
 
-    auto epResp = std::make_shared<EventPushResponse>();
-    epResp->setId(_id);
-    epResp->setStatus(_status);
-    auto result = epResp->generateJson();
+    auto esResp = std::make_shared<EventSubResponse>();
+    esResp->setId(_id);
+    esResp->setStatus(_status);
+    auto result = esResp->generateJson();
 
     auto data = std::make_shared<bcos::bytes>(result.begin(), result.end());
     _msg->setData(data);
@@ -237,11 +240,11 @@ bool EventPush::sendResponse(std::shared_ptr<ws::WsSession> _session,
 /**
  * @brief: send event log list to client
  * @param _session: the peer
- * @param _id: the eventpush id
+ * @param _id: the EventSub id
  * @param _result:
  * @return bool: if _session is inactive, false will be return
  */
-bool EventPush::sendEvents(
+bool EventSub::sendEvents(
     std::shared_ptr<ws::WsSession> _session, const std::string& _id, const Json::Value& _result)
 {
     if (!_session->isConnected())
@@ -251,29 +254,32 @@ bool EventPush::sendEvents(
         return false;
     }
 
-    if (0 != _result.size())
-    {  // if result is not null, send the events to client
-        auto epResp = std::make_shared<EventPushResponse>();
-        epResp->setId(_id);
-        epResp->setStatus(EP_STATUS_CODE::SUCCESS);
-        epResp->generateJson();
-
-        auto jResp = epResp->jResp();
-        jResp["result"] = _result;
-
-        Json::FastWriter writer;
-        std::string s = writer.write(jResp);
-        auto data = std::make_shared<bcos::bytes>(s.begin(), s.end());
-
-        auto msg = m_messageFactory->buildMessage();
-        msg->setType(ws::WsMessageType::EVENT_LOG_PUSH);
-        msg->setData(data);
-        _session->asyncSendMessage(msg);
-
-        EVENT_PUSH(TRACE) << LOG_BADGE("sendEvents") << LOG_DESC("send events to client")
-                          << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("id", _id)
-                          << LOG_KV("events", s);
+    if (0 == _result.size())
+    {
+        return true;
     }
+
+
+    auto esResp = std::make_shared<EventSubResponse>();
+    esResp->setId(_id);
+    esResp->setStatus(EP_STATUS_CODE::SUCCESS);
+    esResp->generateJson();
+
+    auto jResp = esResp->jResp();
+    jResp["result"] = _result;
+
+    Json::FastWriter writer;
+    std::string s = writer.write(jResp);
+    auto data = std::make_shared<bcos::bytes>(s.begin(), s.end());
+
+    auto msg = m_messageFactory->buildMessage();
+    msg->setType(bcos::event::MessageType::EVENT_LOG_PUSH);
+    msg->setData(data);
+    _session->asyncSendMessage(msg);
+
+    EVENT_PUSH(TRACE) << LOG_BADGE("sendEvents") << LOG_DESC("send events to client")
+                      << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("id", _id)
+                      << LOG_KV("events", s);
 
     return true;
 }

@@ -27,10 +27,10 @@ namespace bcos
 {
 namespace event
 {
-class EventPushResponse
+class EventSubResponse
 {
 public:
-    using Ptr = std::shared_ptr<EventPushResponse>;
+    using Ptr = std::shared_ptr<EventSubResponse>;
 
 public:
     std::string id() const { return m_id; }
