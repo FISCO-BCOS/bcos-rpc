@@ -261,7 +261,6 @@ bool EventSub::sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _sessio
         return true;
     }
 
-
     auto esResp = std::make_shared<EventSubResponse>();
     esResp->setId(_id);
     esResp->setStatus(EP_STATUS_CODE::SUCCESS);
