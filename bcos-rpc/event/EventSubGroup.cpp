@@ -23,11 +23,9 @@
 #include <bcos-framework/libutilities/Log.h>
 #include <bcos-rpc/event/EventSubGroup.h>
 #include <bcos-rpc/event/EventSubMatcher.h>
+#include <boost/core/ignore_unused.hpp>
 #include <chrono>
-#include <memory>
 #include <thread>
-
-#define MAX_BLOCK_PROCESS_PER_LOOP (10)
 
 using namespace bcos;
 using namespace bcos::event;
@@ -173,7 +171,19 @@ void EventSubGroup::executeCancelTasks()
 bool EventSubGroup::checkConnAvailable(EventSubTask::Ptr _task)
 {
     Json::Value jResp(Json::arrayValue);
-    return _task->callback()(_task->id(), jResp);
+    return _task->callback()(_task->id(), false, jResp);
+}
+
+void EventSubGroup::onTaskComplete(EventSubTask::Ptr _task)
+{
+    Json::Value jResp(Json::arrayValue);
+    _task->callback()(_task->id(), true, jResp);
+
+    EVENT_GROUP(INFO) << LOG_BADGE("onTaskComplete") << LOG_DESC("task completed")
+                      << LOG_KV("id", _task->id())
+                      << LOG_KV("fromBlock", _task->params()->fromBlock())
+                      << LOG_KV("toBlock", _task->params()->toBlock())
+                      << LOG_KV("currentBlock", _task->state()->currentBlockNumber());
 }
 
 int64_t EventSubGroup::executeEventSubTask(EventSubTask::Ptr _task)
@@ -186,15 +196,16 @@ int64_t EventSubGroup::executeEventSubTask(EventSubTask::Ptr _task)
         return -1;
     }
 
-    // task is working, waiting for the end
-    if (_task->work())
+    if (_task->isCompleted())
     {
+        onTaskComplete(_task);
+        unsubEventSubTask(_task->id());
         return 0;
     }
 
-    if (_task->isCompleted())
+    // task is working, waiting for the action done
+    if (_task->work())
     {
-        // TODO: check if the task is completed
         return 0;
     }
 
@@ -209,7 +220,7 @@ int64_t EventSubGroup::executeEventSubTask(EventSubTask::Ptr _task)
     _task->setWork(true);
 
     int64_t blockCanProcess = blockNumber - nextBlockNumber + 1;
-    int64_t maxBlockProcessPerLoop = MAX_BLOCK_PROCESS_PER_LOOP;
+    int64_t maxBlockProcessPerLoop = m_maxBlockProcessPerLoop;
     blockCanProcess =
         (blockCanProcess > maxBlockProcessPerLoop ? maxBlockProcessPerLoop : blockCanProcess);
 
@@ -228,7 +239,7 @@ int64_t EventSubGroup::executeEventSubTask(EventSubTask::Ptr _task)
             auto group = m_group;
             auto task = m_task;
             auto pro = shared_from_this();
-            m_group->processBlock(
+            m_group->processNextBlock(
                 _blockNumber, task, [_blockNumber, group, pro](Error::Ptr _error) {
                     (void)_error;
                     pro->process(_blockNumber + 1);
@@ -251,7 +262,7 @@ int64_t EventSubGroup::executeEventSubTask(EventSubTask::Ptr _task)
     return blockCanProcess;
 }
 
-void EventSubGroup::processBlock(
+void EventSubGroup::processNextBlock(
     int64_t _blockNumber, EventSubTask::Ptr _task, std::function<void(Error::Ptr _error)> _callback)
 {
     auto self = std::weak_ptr<EventSubGroup>(shared_from_this());
@@ -263,7 +274,7 @@ void EventSubGroup::processBlock(
             if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
             {
                 EVENT_GROUP(ERROR)
-                    << LOG_BADGE("processBlock") << LOG_DESC("asyncGetBlockDataByNumber")
+                    << LOG_BADGE("processNextBlock") << LOG_DESC("asyncGetBlockDataByNumber")
                     << LOG_KV("id", _task->id()) << LOG_KV("blockNumber", _blockNumber)
                     << LOG_KV("errorCode", _error->errorCode())
                     << LOG_KV("errorMessage", _error->errorMessage());
@@ -273,26 +284,25 @@ void EventSubGroup::processBlock(
 
             Json::Value jResp(Json::arrayValue);
             auto count = matcher->matches(_task->params(), _block, jResp);
-            if (!count)
+            if (count)
             {
-                _callback(nullptr);
-                return;
+                EVENT_GROUP(TRACE)
+                    << LOG_BADGE("processNextBlock") << LOG_DESC("asyncGetBlockDataByNumber")
+                    << LOG_KV("blockNumber", _blockNumber) << LOG_KV("id", _task->id())
+                    << LOG_KV("count", count);
+
+                _task->callback()(_task->id(), false, jResp);
             }
 
-            EVENT_GROUP(TRACE) << LOG_BADGE("processBlock") << LOG_DESC("asyncGetBlockDataByNumber")
-                               << LOG_KV("blockNumber", _blockNumber) << LOG_KV("id", _task->id())
-                               << LOG_KV("count", count);
-
-            _task->callback()(_task->id(), jResp);
             _callback(nullptr);
         });
 }
 
 void EventSubGroup::executeEventSubTasks()
 {
-    for (const auto& taskEntry : m_tasks)
+    for (auto& task : m_tasks)
     {
-        executeEventSubTask(taskEntry.second);
+        executeEventSubTask(task.second);
     }
 
     // limiting speed

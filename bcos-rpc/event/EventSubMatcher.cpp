@@ -26,21 +26,21 @@ using namespace bcos::event;
 uint32_t EventSubMatcher::matches(
     EventSubParams::ConstPtr _params, bcos::protocol::Block::ConstPtr _block, Json::Value& _result)
 {
-    uint32_t matchCount = 0;
+    uint32_t count = 0;
     for (std::size_t index = 0; index < _block->transactionsSize(); index++)
     {
-        matchCount +=
+        count +=
             matches(_params, _block->receipt(index), _block->transaction(index), index, _result);
     }
 
-    return matchCount;
+    return count;
 }
 
 uint32_t EventSubMatcher::matches(EventSubParams::ConstPtr _params,
     bcos::protocol::TransactionReceipt::ConstPtr _receipt,
     bcos::protocol::Transaction::ConstPtr _tx, std::size_t _txIndex, Json::Value& _result)
 {
-    uint32_t matchCount = 0;
+    uint32_t count = 0;
     const auto& logEntries = _receipt->logEntries();
     std::size_t logIndex = 0;
     for (const auto& logEntry : logEntries)
@@ -50,25 +50,25 @@ uint32_t EventSubMatcher::matches(EventSubParams::ConstPtr _params,
         {
             continue;
         }
-        matchCount++;
+        count++;
 
         Json::Value jResp;
         jResp["blockNumber"] = _receipt->blockNumber();
         jResp["address"] = std::string(logEntry.address());
         jResp["data"] = toHexStringWithPrefix(logEntry.data());
         jResp["logIndex"] = (uint64_t)logIndex;
-        jResp["transactionHash"] = toHexStringWithPrefix(_tx->hash());
+        jResp["transactionHash"] = _tx->hash().hexPrefixed();
         jResp["transactionIndex"] = (uint64_t)_txIndex;
         jResp["topics"] = Json::Value(Json::arrayValue);
         for (const auto& topic : logEntry.topics())
         {
-            jResp["topics"].append(toHexStringWithPrefix(topic));
+            jResp["topics"].append(topic.hexPrefixed());
         }
 
         _result.append(jResp);
     }
 
-    return matchCount;
+    return count;
 }
 
 bool EventSubMatcher::matches(

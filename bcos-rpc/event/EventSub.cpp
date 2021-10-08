@@ -167,14 +167,15 @@ void EventSub::onRecvSubscribeEvent(std::shared_ptr<bcos::boostssl::ws::WsMessag
 
     // TODO: check request parameters
     auto self = std::weak_ptr<EventSub>(shared_from_this());
-    task->setCallback([self, _session](const std::string& _id, const Json::Value& _result) -> bool {
+    task->setCallback([self, _session](const std::string& _id, bool _complete,
+                          const Json::Value& _result) -> bool {
         auto es = self.lock();
         if (!es)
         {
             return false;
         }
 
-        return es->sendEvents(_session, _id, _result);
+        return es->sendEvents(_session, _complete, _id, _result);
     });
 
     esGroup->subEventSubTask(task);
@@ -242,13 +243,15 @@ bool EventSub::sendResponse(std::shared_ptr<bcos::boostssl::ws::WsSession> _sess
 /**
  * @brief: send event log list to client
  * @param _session: the peer
+ * @param _complete: if task _completed
  * @param _id: the EventSub id
  * @param _result:
  * @return bool: if _session is inactive, false will be return
  */
-bool EventSub::sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _session,
+bool EventSub::sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _session, bool _complete,
     const std::string& _id, const Json::Value& _result)
 {
+    // session disconnected
     if (!_session->isConnected())
     {
         EVENT_PUSH(WARNING) << LOG_BADGE("sendEvents") << LOG_DESC("session has been inactive")
@@ -256,6 +259,16 @@ bool EventSub::sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _sessio
         return false;
     }
 
+    // task completed
+    if (_complete)
+    {
+        auto msg = m_messageFactory->buildMessage();
+        msg->setType(bcos::event::MessageType::EVENT_LOG_PUSH);
+        sendResponse(_session, msg, _id, EP_STATUS_CODE::PUSH_COMPLETED);
+        return true;
+    }
+
+    // null
     if (0 == _result.size())
     {
         return true;

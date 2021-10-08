@@ -30,7 +30,7 @@ namespace bcos
 {
 namespace event
 {
-using Callback = std::function<bool(const std::string&, const Json::Value&)>;
+using Callback = std::function<bool(const std::string&, bool, const Json::Value&)>;
 
 class EventSubTaskState
 {
@@ -41,7 +41,10 @@ public:
     int64_t currentBlockNumber() const { return m_currentBlockNumber.load(); }
     void setCurrentBlockNumber(int64_t _currentBlockNumber)
     {
-        m_currentBlockNumber.store(_currentBlockNumber);
+        if (_currentBlockNumber > m_currentBlockNumber.load())
+        {
+            m_currentBlockNumber.store(_currentBlockNumber);
+        }
     }
 
 private:

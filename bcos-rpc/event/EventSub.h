@@ -81,12 +81,13 @@ public:
     /**
      * @brief: send event log list to client
      * @param _session: the peer
+     * @param _complete: if task _completed
      * @param _id: the EventSub id
      * @param _result:
      * @return bool: if _session is inactive, false will be return
      */
-    bool sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _session, const std::string& _id,
-        const Json::Value& _result);
+    bool sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _session, bool _complete,
+        const std::string& _id, const Json::Value& _result);
 
 public:
     std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> messageFactory() const

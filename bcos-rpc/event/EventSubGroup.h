@@ -62,8 +62,9 @@ public:
     int64_t executeEventSubTask(EventSubTask::Ptr _task);
 
 public:
+    void onTaskComplete(EventSubTask::Ptr _task);
     bool checkConnAvailable(EventSubTask::Ptr _task);
-    void processBlock(int64_t _blockNumber, EventSubTask::Ptr _task,
+    void processNextBlock(int64_t _blockNumber, EventSubTask::Ptr _task,
         std::function<void(Error::Ptr _error)> _callback);
 
 public:
@@ -83,6 +84,12 @@ public:
     void setLedger(bcos::ledger::LedgerInterface::Ptr _ledgerInterface)
     {
         m_ledgerInterface = _ledgerInterface;
+    }
+
+    int64_t maxBlockProcessPerLoop() const { return m_maxBlockProcessPerLoop; }
+    void setMaxBlockProcessPerLoop(int64_t _maxBlockProcessPerLoop)
+    {
+        m_maxBlockProcessPerLoop = _maxBlockProcessPerLoop;
     }
 
 private:
@@ -114,6 +121,9 @@ private:
 
     // ledger interfaces, for get tx && tx receipt of block
     bcos::ledger::LedgerInterface::Ptr m_ledgerInterface;
+
+    //
+    int64_t m_maxBlockProcessPerLoop = 10;
 };
 
 }  // namespace event
