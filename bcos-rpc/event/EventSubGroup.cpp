@@ -41,6 +41,18 @@ void EventSubGroup::start()
     m_running.store(true);
     startWorking();
 
+    m_timer = std::make_shared<boost::asio::deadline_timer>(
+        boost::asio::make_strand(*m_ioc), boost::posix_time::milliseconds(30000));
+    auto self = std::weak_ptr<EventSubGroup>(shared_from_this());
+    m_timer->async_wait([self](const boost::system::error_code&) {
+        auto es = self.lock();
+        if (!es)
+        {
+            return;
+        }
+        es->reportTasks();
+    });
+
     if (1)
     {
         auto group = m_group;
@@ -82,6 +94,12 @@ void EventSubGroup::stop()
         return;
     }
     m_running.store(false);
+
+    if (m_timer)
+    {
+        m_timer->cancel();
+    }
+
     finishWorker();
     stopWorking();
     // will not restart worker, so terminate it
@@ -105,6 +123,13 @@ void EventSubGroup::unsubEventSubTask(const std::string& _id)
     std::unique_lock lock(x_cancelTasks);
     m_cancelTasks.push_back(_id);
     m_cancelTaskCount++;
+}
+
+void EventSubGroup::reportTasks()
+{
+    auto taskCount = m_tasks.size();
+    EVENT_GROUP(INFO) << LOG_BADGE("reportTasks") << LOG_KV("group", m_group)
+                      << LOG_KV("task count", taskCount);
 }
 
 void EventSubGroup::executeWorker()

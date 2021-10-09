@@ -52,6 +52,7 @@ public:
     virtual void executeWorker() override;
 
 public:
+    void reportTasks();
     void executeAddTasks();
     void executeCancelTasks();
     void executeEventSubTasks();
@@ -79,6 +80,9 @@ public:
     {
         m_latestBlockNumber.store(_latestBlockNumber);
     }
+
+    void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
+    std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
 
     bcos::ledger::LedgerInterface::Ptr ledger() const { return m_ledgerInterface; }
     void setLedger(bcos::ledger::LedgerInterface::Ptr _ledgerInterface)
@@ -121,6 +125,11 @@ private:
 
     // ledger interfaces, for get tx && tx receipt of block
     bcos::ledger::LedgerInterface::Ptr m_ledgerInterface;
+
+    // timer
+    std::shared_ptr<boost::asio::deadline_timer> m_timer;
+    // io context
+    std::shared_ptr<boost::asio::io_context> m_ioc;
 
     //
     int64_t m_maxBlockProcessPerLoop = 10;
