@@ -53,11 +53,13 @@ public:
     virtual void stop();
 
 public:
-    EventSubGroup::Ptr getGroup(const std::string& _group);
-    bool addGroup(const std::string& _group, bcos::ledger::LedgerInterface::Ptr _ledgerInterface);
-    bool removeGroup(const std::string& _group);
+    virtual EventSubGroup::Ptr getGroup(const std::string& _group);
+    virtual bool addGroup(
+        const std::string& _group, bcos::ledger::LedgerInterface::Ptr _ledgerInterface);
+    virtual bool removeGroup(const std::string& _group);
 
-    bool notifyBlockNumber(const std::string& _group, bcos::protocol::BlockNumber _blockNumber);
+    virtual bool notifyBlockNumber(
+        const std::string& _group, bcos::protocol::BlockNumber _blockNumber);
 
 public:
     virtual void onRecvSubscribeEvent(std::shared_ptr<bcos::boostssl::ws::WsMessage> _msg,

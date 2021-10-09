@@ -142,32 +142,42 @@ bcos::amop::AMOP::Ptr RpcFactory::buildAMOP(std::shared_ptr<boostssl::ws::WsServ
     auto topicManager = std::make_shared<amop::TopicManager>();
     auto messageFactory = std::make_shared<bcos::amop::MessageFactory>();
     auto amop = std::make_shared<bcos::amop::AMOP>();
+    auto amopWeak = std::weak_ptr<bcos::amop::AMOP>(amop);
     amop->setFrontServiceInterface(m_frontServiceInterface);
     amop->setKeyFactory(m_keyFactory);
     amop->setMessageFactory(messageFactory);
     amop->setTopicManager(topicManager);
     amop->setIoc(_wsService->ioc());
 
-    // TODO: register
-    /*
-    _wsService->registerMsgHandler(bcos::amop::AMOPMessageType::AMOP_SUBTOPIC,
-        [](std::shared_ptr<boostssl::ws::WsMessage> _msg,
+    _wsService->registerMsgHandler(bcos::amop::MessageType::AMOP_SUBTOPIC,
+        [amopWeak](std::shared_ptr<boostssl::ws::WsMessage> _msg,
             std::shared_ptr<boostssl::ws::WsSession> _session) {
-            boost::ignore_unused(_msg, _session);
+            auto amop = amopWeak.lock();
+            if (amop)
+            {
+                amop->onRecvSubTopics(_msg, _session);
+            }
         });
 
-    _wsService->registerMsgHandler(bcos::amop::AMOPMessageType::AMOP_REQUEST,
-        [](std::shared_ptr<boostssl::ws::WsMessage> _msg,
+    _wsService->registerMsgHandler(bcos::amop::MessageType::AMOP_REQUEST,
+        [amopWeak](std::shared_ptr<boostssl::ws::WsMessage> _msg,
             std::shared_ptr<boostssl::ws::WsSession> _session) {
-            boost::ignore_unused(_msg, _session);
+            auto amop = amopWeak.lock();
+            if (amop)
+            {
+                amop->onRecvAMOPRequest(_msg, _session);
+            }
         });
 
-    _wsService->registerMsgHandler(bcos::amop::AMOPMessageType::AMOP_BROADCAST,
-        [](std::shared_ptr<boostssl::ws::WsMessage> _msg,
+    _wsService->registerMsgHandler(bcos::amop::MessageType::AMOP_BROADCAST,
+        [amopWeak](std::shared_ptr<boostssl::ws::WsMessage> _msg,
             std::shared_ptr<boostssl::ws::WsSession> _session) {
-            boost::ignore_unused(_msg, _session);
+            auto amop = amopWeak.lock();
+            if (amop)
+            {
+                amop->onRecvAMOPBroadcast(_msg, _session);
+            }
         });
-    */
 
     return amop;
 }
