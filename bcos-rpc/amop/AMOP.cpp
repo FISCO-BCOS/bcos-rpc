@@ -89,7 +89,7 @@ void AMOP::initMsgHandler()
         };
 
     AMOP_LOG(INFO) << LOG_BADGE("initMsgHandler")
-                   << LOG_KV("message handler size", m_messageHandler.size());
+                   << LOG_KV("front service message handler size", m_messageHandler.size());
 }
 
 void AMOP::start()
@@ -155,7 +155,7 @@ void AMOP::broadcastTopicSeq()
     m_frontServiceInterface->asyncSendBroadcastMessage(
         bcos::protocol::ModuleID::AMOP, bytesConstRef(buffer->data(), buffer->size()));
 
-    AMOP_LOG(DEBUG) << LOG_BADGE("broadcastTopicSeq") << LOG_KV("topicSeq", topicSeq);
+    AMOP_LOG(TRACE) << LOG_BADGE("broadcastTopicSeq") << LOG_KV("topicSeq", topicSeq);
 
     auto self = std::weak_ptr<AMOP>(shared_from_this());
     m_timer = std::make_shared<boost::asio::deadline_timer>(

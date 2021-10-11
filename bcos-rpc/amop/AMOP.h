@@ -104,6 +104,9 @@ public:
      * @return void
      */
     void broadcastTopicSeq();
+
+    //----------------------------------------------------------------------------------------
+    //-------------- front service message begin----------------------------------------------
     /**
      * @brief: receive topicSeq from other nodes
      * @param _nodeID: the sender nodeID
@@ -149,6 +152,9 @@ public:
      */
     void onReceiveAMOPBroadcastMessage(
         bcos::crypto::NodeIDPtr _nodeID, const std::string& _id, AMOPMessage::Ptr _msg);
+
+    //-------------- front service message end----------------------------------------------
+    //----------------------------------------------------------------------------------------
 
 
     //----------------------------------------------------------------------------------------
