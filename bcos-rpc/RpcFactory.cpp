@@ -109,7 +109,8 @@ std::shared_ptr<bcos::boostssl::ws::WsConfig> RpcFactory::initConfig(const std::
         config->setThreadPoolSize(threadCount);
 
         BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][initConfig]") << LOG_KV("listenIP", listenIP)
-                       << LOG_KV("listenPort", listenPort) << LOG_KV("threadCount", threadCount);
+                       << LOG_KV("listenPort", listenPort) << LOG_KV("threadCount", threadCount)
+                       << LOG_KV("asServer", config->asServer());
 
         return config;
     }
@@ -142,12 +143,19 @@ bcos::amop::AMOP::Ptr RpcFactory::buildAMOP(std::shared_ptr<boostssl::ws::WsServ
     auto topicManager = std::make_shared<amop::TopicManager>();
     auto messageFactory = std::make_shared<bcos::amop::MessageFactory>();
     auto amop = std::make_shared<bcos::amop::AMOP>();
+    auto requestFactory = std::make_shared<AMOPRequestFactory>();
+
     auto amopWeak = std::weak_ptr<bcos::amop::AMOP>(amop);
+    auto wsServiceWeak = std::weak_ptr<boostssl::ws::WsService>(_wsService);
+
     amop->setFrontServiceInterface(m_frontServiceInterface);
     amop->setKeyFactory(m_keyFactory);
     amop->setMessageFactory(messageFactory);
+    amop->setWsMessageFactory(_wsService->messageFactory());
     amop->setTopicManager(topicManager);
     amop->setIoc(_wsService->ioc());
+    amop->setWsService(wsServiceWeak);
+    amop->setRequestFactory(requestFactory);
 
     _wsService->registerMsgHandler(bcos::amop::MessageType::AMOP_SUBTOPIC,
         [amopWeak](std::shared_ptr<boostssl::ws::WsMessage> _msg,
