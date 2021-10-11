@@ -20,12 +20,7 @@
  */
 
 #pragma once
-#include <bcos-framework/interfaces/consensus/ConsensusInterface.h>
-#include <bcos-framework/interfaces/executor/ExecutorInterface.h>
-#include <bcos-framework/interfaces/gateway/GatewayInterface.h>
-#include <bcos-framework/interfaces/ledger/LedgerInterface.h>
-#include <bcos-framework/interfaces/sync/BlockSyncInterface.h>
-#include <bcos-framework/interfaces/txpool/TxPoolInterface.h>
+#include "groupmgr/GroupManager.h"
 #include <bcos-rpc/jsonrpc/JsonRpcInterface.h>
 #include <json/json.h>
 #include <boost/core/ignore_unused.hpp>
@@ -40,9 +35,10 @@ class JsonRpcImpl_2_0 : public JsonRpcInterface,
 {
 public:
     using Ptr = std::shared_ptr<JsonRpcImpl_2_0>;
-
-public:
-    JsonRpcImpl_2_0() { initMethod(); }
+    JsonRpcImpl_2_0(GroupManager::Ptr _groupManager) : m_groupManager(_groupManager)
+    {
+        initMethod();
+    }
     ~JsonRpcImpl_2_0() {}
 
     void initMethod();
@@ -400,49 +396,6 @@ public:
     {
         m_methodToFunc[_method] = _callback;
     }
-
-    bcos::ledger::LedgerInterface::Ptr ledger() const { return m_ledgerInterface; }
-    void setLedger(bcos::ledger::LedgerInterface::Ptr _ledgerInterface)
-    {
-        m_ledgerInterface = _ledgerInterface;
-    }
-
-    std::shared_ptr<bcos::executor::ExecutorInterface> executorInterface() const
-    {
-        return m_executorInterface;
-    }
-    void setExecutorInterface(std::shared_ptr<bcos::executor::ExecutorInterface> _executorInterface)
-    {
-        m_executorInterface = _executorInterface;
-    }
-
-    bcos::txpool::TxPoolInterface::Ptr txPoolInterface() const { return m_txPoolInterface; }
-    void setTxPoolInterface(bcos::txpool::TxPoolInterface::Ptr _txPoolInterface)
-    {
-        m_txPoolInterface = _txPoolInterface;
-    }
-
-    bcos::consensus::ConsensusInterface::Ptr consensusInterface() const
-    {
-        return m_consensusInterface;
-    }
-    void setConsensusInterface(bcos::consensus::ConsensusInterface::Ptr _consensusInterface)
-    {
-        m_consensusInterface = _consensusInterface;
-    }
-
-    bcos::sync::BlockSyncInterface::Ptr blockSyncInterface() const { return m_blockSyncInterface; }
-    void setBlockSyncInterface(bcos::sync::BlockSyncInterface::Ptr _blockSyncInterface)
-    {
-        m_blockSyncInterface = _blockSyncInterface;
-    }
-
-    bcos::gateway::GatewayInterface::Ptr gatewayInterface() const { return m_gatewayInterface; }
-    void setGatewayInterface(bcos::gateway::GatewayInterface::Ptr _gatewayInterface)
-    {
-        m_gatewayInterface = _gatewayInterface;
-    }
-
     bcos::protocol::TransactionFactory::Ptr transactionFactory() const
     {
         return m_transactionFactory;
@@ -456,16 +409,20 @@ public:
     void setNodeInfo(const NodeInfo& _nodeInfo) { m_nodeInfo = _nodeInfo; }
     NodeInfo nodeInfo() const { return m_nodeInfo; }
 
+    void updateGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo) override;
+
+    GroupManager::Ptr groupManager() { return m_groupManager; }
+
+private:
+    // TODO: check perf influence
+    NodeService::Ptr getNodeService(
+        std::string const& _groupID, std::string const& _nodeName, std::string const& _command);
+
 private:
     std::unordered_map<std::string, std::function<void(Json::Value, RespFunc _respFunc)>>
         m_methodToFunc;
 
-    bcos::ledger::LedgerInterface::Ptr m_ledgerInterface;
-    std::shared_ptr<bcos::executor::ExecutorInterface> m_executorInterface;
-    bcos::txpool::TxPoolInterface::Ptr m_txPoolInterface;
-    bcos::consensus::ConsensusInterface::Ptr m_consensusInterface;
-    bcos::sync::BlockSyncInterface::Ptr m_blockSyncInterface;
-    bcos::gateway::GatewayInterface::Ptr m_gatewayInterface;
+    GroupManager::Ptr m_groupManager;
     bcos::protocol::TransactionFactory::Ptr m_transactionFactory;
     NodeInfo m_nodeInfo;
 };

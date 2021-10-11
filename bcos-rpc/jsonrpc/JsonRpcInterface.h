@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <bcos-framework/interfaces/multigroup/GroupInfo.h>
 #include <bcos-framework/interfaces/protocol/CommonError.h>
 #include <bcos-framework/libutilities/Error.h>
 #include <bcos-rpc/jsonrpc/Common.h>
@@ -143,6 +144,8 @@ public:
 
     // TODO: update this interface and add new interfaces to provide group list information
     virtual void getNodeInfo(RespFunc _respFunc) = 0;
+
+    virtual void updateGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo) = 0;
 };
 
 }  // namespace rpc

@@ -20,19 +20,15 @@
  */
 
 #pragma once
-#include <bcos-framework/interfaces/consensus/ConsensusInterface.h>
+#include "bcos-rpc/jsonrpc/groupmgr/GroupManager.h"
 #include <bcos-framework/interfaces/crypto/KeyFactory.h>
-#include <bcos-framework/interfaces/executor/ExecutorInterface.h>
 #include <bcos-framework/interfaces/front/FrontServiceInterface.h>
 #include <bcos-framework/interfaces/gateway/GatewayInterface.h>
-#include <bcos-framework/interfaces/ledger/LedgerInterface.h>
-#include <bcos-framework/interfaces/sync/BlockSyncInterface.h>
-#include <bcos-framework/interfaces/txpool/TxPoolInterface.h>
 #include <bcos-rpc/Rpc.h>
 #include <bcos-rpc/amop/AMOP.h>
-#include <bcos-rpc/jsonrpc/JsonRpcImpl_2_0.h>
 #include <bcos-rpc/http/ws/WsService.h>
 #include <bcos-rpc/http/ws/WsSession.h>
+#include <bcos-rpc/jsonrpc/JsonRpcImpl_2_0.h>
 
 namespace bcos
 {
@@ -52,11 +48,13 @@ class RpcFactory : public std::enable_shared_from_this<RpcFactory>
 {
 public:
     using Ptr = std::shared_ptr<RpcFactory>;
+    RpcFactory(std::string const& _chainID);
+    virtual ~RpcFactory() {}
 
-public:
     bcos::amop::AMOP::Ptr buildAMOP();
-    JsonRpcInterface::Ptr buildJsonRpc(const NodeInfo& _nodeInfo);
-    ws::WsSession::Ptr buildWsSession(boost::asio::ip::tcp::socket&& _socket, std::weak_ptr<ws::WsService> _wsService);
+    JsonRpcInterface::Ptr buildJsonRpc();
+    ws::WsSession::Ptr buildWsSession(
+        boost::asio::ip::tcp::socket&& _socket, std::weak_ptr<ws::WsService> _wsService);
 
     /**
      * @brief: Rpc
@@ -64,7 +62,7 @@ public:
      * @param _nodeInfo: node config
      * @return Rpc::Ptr:
      */
-    Rpc::Ptr buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _nodeInfo);
+    Rpc::Ptr buildRpc(const RpcConfig& _rpcConfig);
 
     /**
      * @brief: Rpc
@@ -72,45 +70,9 @@ public:
      * @param _nodeInfo: node config
      * @return Rpc::Ptr:
      */
-    Rpc::Ptr buildRpc(const std::string& _configPath, const NodeInfo& _nodeInfo);
+    Rpc::Ptr buildRpc(const std::string& _configPath);
 
 public:
-    bcos::ledger::LedgerInterface::Ptr ledger() const { return m_ledgerInterface; }
-    void setLedger(bcos::ledger::LedgerInterface::Ptr _ledgerInterface)
-    {
-        m_ledgerInterface = _ledgerInterface;
-    }
-
-    std::shared_ptr<bcos::executor::ExecutorInterface> executorInterface() const
-    {
-        return m_executorInterface;
-    }
-    void setExecutorInterface(std::shared_ptr<bcos::executor::ExecutorInterface> _executorInterface)
-    {
-        m_executorInterface = _executorInterface;
-    }
-
-    bcos::txpool::TxPoolInterface::Ptr txPoolInterface() const { return m_txPoolInterface; }
-    void setTxPoolInterface(bcos::txpool::TxPoolInterface::Ptr _txPoolInterface)
-    {
-        m_txPoolInterface = _txPoolInterface;
-    }
-
-    bcos::consensus::ConsensusInterface::Ptr consensusInterface() const
-    {
-        return m_consensusInterface;
-    }
-    void setConsensusInterface(bcos::consensus::ConsensusInterface::Ptr _consensusInterface)
-    {
-        m_consensusInterface = _consensusInterface;
-    }
-
-    bcos::sync::BlockSyncInterface::Ptr blockSyncInterface() const { return m_blockSyncInterface; }
-    void setBlockSyncInterface(bcos::sync::BlockSyncInterface::Ptr _blockSyncInterface)
-    {
-        m_blockSyncInterface = _blockSyncInterface;
-    }
-
     bcos::gateway::GatewayInterface::Ptr gatewayInterface() const { return m_gatewayInterface; }
     void setGatewayInterface(bcos::gateway::GatewayInterface::Ptr _gatewayInterface)
     {
@@ -146,14 +108,10 @@ public:
 
 private:
     std::shared_ptr<bcos::crypto::KeyFactory> m_keyFactory;
-    bcos::ledger::LedgerInterface::Ptr m_ledgerInterface;
-    std::shared_ptr<bcos::executor::ExecutorInterface> m_executorInterface;
-    bcos::txpool::TxPoolInterface::Ptr m_txPoolInterface;
-    bcos::consensus::ConsensusInterface::Ptr m_consensusInterface;
-    bcos::sync::BlockSyncInterface::Ptr m_blockSyncInterface;
     bcos::front::FrontServiceInterface::Ptr m_frontServiceInterface;
     bcos::gateway::GatewayInterface::Ptr m_gatewayInterface;
     bcos::protocol::TransactionFactory::Ptr m_transactionFactory;
+    GroupManager::Ptr m_groupManager;
 };
 }  // namespace rpc
 }  // namespace bcos

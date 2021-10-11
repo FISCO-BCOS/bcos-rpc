@@ -308,6 +308,7 @@ void AMOP::onReceiveAMOPMessage(
     AMOP_LOG(TRACE) << LOG_BADGE("onReceiveAMOPMessage") << LOG_KV("nodeID", _nodeID->hex())
                     << LOG_KV("id", _id);
 
+    // TODO: select the FrontService
     auto frontService = m_frontServiceInterface;
     wsService->onRecvAMOPMessage(
         _msg->data(), _nodeID->hex(), [_id, _nodeID, frontService](bytesConstRef _data) {

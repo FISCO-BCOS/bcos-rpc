@@ -89,10 +89,17 @@ public:
     virtual void asyncNotifyAmopNodeIDs(std::shared_ptr<const bcos::crypto::NodeIDs> _nodeIDs,
         std::function<void(bcos::Error::Ptr _error)> _callback) override;
 
-    // TODO: implement asyncNotifyGroupInfo
-    void asyncNotifyGroupInfo(
-        bcos::group::GroupInfo::Ptr, std::function<void(Error::Ptr&&)>) override
-    {}
+    void asyncNotifyGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo,
+        std::function<void(Error::Ptr&&)> _callback) override
+    {
+        m_wsService->jsonRpcInterface()->updateGroupInfo(_groupInfo);
+        BCOS_LOG(INFO) << LOG_DESC("asyncNotifyGroupInfo: update the groupInfo")
+                       << printGroupInfo(_groupInfo);
+        if (_callback)
+        {
+            _callback(nullptr);
+        }
+    }
 
 public:
     bcos::http::HttpServer::Ptr httpServer() const { return m_httpServer; }

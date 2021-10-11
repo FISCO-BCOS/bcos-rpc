@@ -40,6 +40,12 @@ using namespace bcos;
 using namespace bcos::rpc;
 using namespace bcos::http;
 
+RpcFactory::RpcFactory(std::string const& _chainID)
+{
+    auto nodeServiceFactory = std::make_shared<NodeServiceFactory>();
+    m_groupManager = std::make_shared<GroupManager>(_chainID, nodeServiceFactory);
+}
+
 void RpcConfig::initConfig(const std::string& _configPath)
 {
     try
@@ -92,37 +98,6 @@ void RpcFactory::checkParams()
             InvalidParameter() << errinfo_comment(
                 "RpcFactory::checkParams frontServiceInterface is uninitialized"));
     }
-
-    if (!m_ledgerInterface)
-    {
-        BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
-                                  "RpcFactory::checkParams ledgerInterface is uninitialized"));
-    }
-
-    if (!m_executorInterface)
-    {
-        BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
-                                  "RpcFactory::checkParams executorInterface is uninitialized"));
-    }
-
-    if (!m_txPoolInterface)
-    {
-        BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
-                                  "RpcFactory::checkParams txPoolInterface is uninitialized"));
-    }
-
-    if (!m_consensusInterface)
-    {
-        BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
-                                  "RpcFactory::checkParams consensusInterface is uninitialized"));
-    }
-
-    if (!m_blockSyncInterface)
-    {
-        BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
-                                  "RpcFactory::checkParams blockSyncInterface is uninitialized"));
-    }
-
     if (!m_transactionFactory)
     {
         BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
@@ -141,18 +116,11 @@ bcos::amop::AMOP::Ptr RpcFactory::buildAMOP()
     return amop;
 }
 
-JsonRpcInterface::Ptr RpcFactory::buildJsonRpc(const NodeInfo& _nodeInfo)
+JsonRpcInterface::Ptr RpcFactory::buildJsonRpc()
 {
+    assert(m_groupManager);
     // JsonRpcImpl_2_0
-    auto jsonRpcInterface = std::make_shared<bcos::rpc::JsonRpcImpl_2_0>();
-    jsonRpcInterface->setNodeInfo(_nodeInfo);
-    jsonRpcInterface->setLedger(m_ledgerInterface);
-    jsonRpcInterface->setTxPoolInterface(m_txPoolInterface);
-    jsonRpcInterface->setExecutorInterface(m_executorInterface);
-    jsonRpcInterface->setConsensusInterface(m_consensusInterface);
-    jsonRpcInterface->setBlockSyncInterface(m_blockSyncInterface);
-    jsonRpcInterface->setTransactionFactory(m_transactionFactory);
-    jsonRpcInterface->setGatewayInterface(m_gatewayInterface);
+    auto jsonRpcInterface = std::make_shared<bcos::rpc::JsonRpcImpl_2_0>(m_groupManager);
     return jsonRpcInterface;
 }
 
@@ -161,11 +129,11 @@ JsonRpcInterface::Ptr RpcFactory::buildJsonRpc(const NodeInfo& _nodeInfo)
  * @param _configPath: rpc config path
  * @return Rpc::Ptr:
  */
-Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath, const NodeInfo& _nodeInfo)
+Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath)
 {
     RpcConfig rpcConfig;
     rpcConfig.initConfig(_configPath);
-    return buildRpc(rpcConfig, _nodeInfo);
+    return buildRpc(rpcConfig);
 }
 
 ws::WsSession::Ptr RpcFactory::buildWsSession(
@@ -206,7 +174,7 @@ ws::WsSession::Ptr RpcFactory::buildWsSession(
  * @param _rpcConfig: rpc config
  * @return Rpc::Ptr:
  */
-Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _nodeInfo)
+Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig)
 {
     const std::string _listenIP = _rpcConfig.m_listenIP;
     uint16_t _listenPort = _rpcConfig.m_listenPort;
@@ -219,7 +187,7 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig, const NodeInfo& _node
     auto threads = std::make_shared<std::vector<std::thread>>();
 
     // JsonRpcImpl_2_0
-    auto jsonRpcInterface = buildJsonRpc(_nodeInfo);
+    auto jsonRpcInterface = buildJsonRpc();
 
     // HttpServer
     auto httpServerFactory = std::make_shared<bcos::http::HttpServerFactory>();

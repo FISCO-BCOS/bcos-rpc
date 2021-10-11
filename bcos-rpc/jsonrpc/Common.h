@@ -63,8 +63,9 @@ enum JsonRpcError : int32_t
     InvalidRequest = -32600,
     MethodNotFound = -32601,
     InvalidParams = -32602,
-    InternalError = -32603
+    InternalError = -32603,
     // -32000 to -32099: Server error	Reserved for implementation-defined server-errors.
+    NodeNotExistOrNotStarted = -32000,
 };
 
 struct JsonRequest

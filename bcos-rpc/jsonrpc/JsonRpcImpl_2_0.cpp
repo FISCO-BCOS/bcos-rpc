@@ -512,7 +512,8 @@ void JsonRpcImpl_2_0::call(std::string const& _groupID, std::string const& _node
     auto transaction =
         m_transactionFactory->createTransaction(0, _to, *decodeData(_data), u256(0), 0, "", "", 0);
 
-    m_executorInterface->asyncExecuteTransaction(
+    auto nodeService = getNodeService(_groupID, _nodeName, "call");
+    nodeService->executor()->asyncExecuteTransaction(
         transaction, [_to, _respFunc](const Error::Ptr& _error,
                          const protocol::TransactionReceipt::ConstPtr& _transactionReceiptPtr) {
             Json::Value jResp;
@@ -542,7 +543,10 @@ void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string c
 
     auto self = std::weak_ptr<JsonRpcImpl_2_0>(shared_from_this());
     auto transactionDataPtr = decodeData(_data);
-    m_txPoolInterface->asyncSubmit(transactionDataPtr,
+
+    auto nodeService = getNodeService(_groupID, _nodeName, "sendTransaction");
+    auto txpool = nodeService->txpool();
+    txpool->asyncSubmit(transactionDataPtr,
         [_groupID, _nodeName, _requireProof, _data, _respFunc, self](Error::Ptr _error,
             bcos::protocol::TransactionSubmitResult::Ptr _transactionSubmitResult) {
             if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
@@ -660,7 +664,10 @@ void JsonRpcImpl_2_0::getTransaction(std::string const& _groupID, std::string co
 
     bcos::crypto::HashListPtr hashListPtr = std::make_shared<bcos::crypto::HashList>();
     hashListPtr->push_back(bcos::crypto::HashType(_txHash));
-    m_ledgerInterface->asyncGetBatchTxsByHashList(hashListPtr, _requireProof,
+
+    auto nodeService = getNodeService(_groupID, _nodeName, "getTransaction");
+    auto ledger = nodeService->ledger();
+    ledger->asyncGetBatchTxsByHashList(hashListPtr, _requireProof,
         [_txHash, _requireProof, _respFunc](Error::Ptr _error,
             bcos::protocol::TransactionsPtr _transactionsPtr,
             std::shared_ptr<std::map<std::string, ledger::MerkleProofPtr>> _transactionProofsPtr) {
@@ -709,8 +716,10 @@ void JsonRpcImpl_2_0::getTransactionReceipt(std::string const& _groupID,
 
     auto hash = bcos::crypto::HashType(_txHash);
 
+    auto nodeService = getNodeService(_groupID, _nodeName, "getTransactionReceipt");
+    auto ledger = nodeService->ledger();
     auto self = std::weak_ptr<JsonRpcImpl_2_0>(shared_from_this());
-    m_ledgerInterface->asyncGetTransactionReceiptByHash(hash, _requireProof,
+    ledger->asyncGetTransactionReceiptByHash(hash, _requireProof,
         [_groupID, _nodeName, _txHash, hash, _requireProof, _respFunc, self](Error::Ptr _error,
             protocol::TransactionReceipt::ConstPtr _transactionReceiptPtr,
             ledger::MerkleProofPtr _merkleProofPtr) {
@@ -773,8 +782,11 @@ void JsonRpcImpl_2_0::getBlockByHash(std::string const& _groupID, std::string co
                         << LOG_KV("onlyHeader", _onlyHeader) << LOG_KV("onlyTxHash", _onlyTxHash)
                         << LOG_KV("group", _groupID) << LOG_KV("node", _nodeName);
 
+    auto nodeService = getNodeService(_groupID, _nodeName, "getBlockByHash");
+    auto ledger = nodeService->ledger();
+
     auto self = std::weak_ptr<JsonRpcImpl_2_0>(shared_from_this());
-    m_ledgerInterface->asyncGetBlockNumberByHash(bcos::crypto::HashType(_blockHash),
+    ledger->asyncGetBlockNumberByHash(bcos::crypto::HashType(_blockHash),
         [_groupID, _nodeName, _blockHash, _onlyHeader, _onlyTxHash, _respFunc, self](
             Error::Ptr _error, protocol::BlockNumber blockNumber) {
             if (!_error || _error->errorCode() == bcos::protocol::CommonError::SUCCESS)
@@ -807,7 +819,9 @@ void JsonRpcImpl_2_0::getBlockByNumber(std::string const& _groupID, std::string 
                         << LOG_KV("onlyHeader", _onlyHeader) << LOG_KV("onlyTxHash", _onlyTxHash)
                         << LOG_KV("group", _groupID) << LOG_KV("node", _nodeName);
 
-    m_ledgerInterface->asyncGetBlockDataByNumber(_blockNumber,
+    auto nodeService = getNodeService(_groupID, _nodeName, "getBlockByNumber");
+    auto ledger = nodeService->ledger();
+    ledger->asyncGetBlockDataByNumber(_blockNumber,
         _onlyHeader ? bcos::ledger::HEADER : bcos::ledger::HEADER | bcos::ledger::TRANSACTIONS,
         [_blockNumber, _onlyHeader, _onlyTxHash, _respFunc](
             Error::Ptr _error, protocol::Block::Ptr _block) {
@@ -841,7 +855,9 @@ void JsonRpcImpl_2_0::getBlockHashByNumber(std::string const& _groupID,
     RPC_IMPL_LOG(TRACE) << LOG_DESC("getBlockHashByNumber") << LOG_KV("blockNumber", _blockNumber)
                         << LOG_KV("group", _groupID) << LOG_KV("node", _nodeName);
 
-    m_ledgerInterface->asyncGetBlockHashByNumber(
+    auto nodeService = getNodeService(_groupID, _nodeName, "getBlockHashByNumber");
+    auto ledger = nodeService->ledger();
+    ledger->asyncGetBlockHashByNumber(
         _blockNumber, [_respFunc](Error::Ptr _error, crypto::HashType const& _hashValue) {
             if (_error && (_error->errorCode() != bcos::protocol::CommonError::SUCCESS))
             {
@@ -862,20 +878,21 @@ void JsonRpcImpl_2_0::getBlockNumber(
     RPC_IMPL_LOG(TRACE) << LOG_BADGE("getBlockNumber") << LOG_KV("group", _groupID)
                         << LOG_KV("node", _nodeName);
 
-    m_ledgerInterface->asyncGetBlockNumber(
-        [_respFunc](Error::Ptr _error, protocol::BlockNumber _blockNumber) {
-            if (_error && (_error->errorCode() != bcos::protocol::CommonError::SUCCESS))
-            {
-                RPC_IMPL_LOG(ERROR)
-                    << LOG_BADGE("getBlockNumber")
-                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
-                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success")
-                    << LOG_KV("blockNumber", _blockNumber);
-            }
+    auto nodeService = getNodeService(_groupID, _nodeName, "getBlockNumber");
+    auto ledger = nodeService->ledger();
+    ledger->asyncGetBlockNumber([_respFunc](Error::Ptr _error, protocol::BlockNumber _blockNumber) {
+        if (_error && (_error->errorCode() != bcos::protocol::CommonError::SUCCESS))
+        {
+            RPC_IMPL_LOG(ERROR) << LOG_BADGE("getBlockNumber")
+                                << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                                << LOG_KV(
+                                       "errorMessage", _error ? _error->errorMessage() : "success")
+                                << LOG_KV("blockNumber", _blockNumber);
+        }
 
-            Json::Value jResp = _blockNumber;
-            _respFunc(_error, jResp);
-        });
+        Json::Value jResp = _blockNumber;
+        _respFunc(_error, jResp);
+    });
 }
 
 void JsonRpcImpl_2_0::getCode(std::string const& _groupID, std::string const& _nodeName,
@@ -884,7 +901,9 @@ void JsonRpcImpl_2_0::getCode(std::string const& _groupID, std::string const& _n
     RPC_IMPL_LOG(TRACE) << LOG_BADGE("getCode") << LOG_KV("contractAddress", _contractAddress)
                         << LOG_KV("group", _groupID) << LOG_KV("node", _nodeName);
 
-    m_executorInterface->asyncGetCode(
+    auto nodeService = getNodeService(_groupID, _nodeName, "getCode");
+    auto executor = nodeService->executor();
+    executor->asyncGetCode(
         std::string_view(_contractAddress), [_contractAddress, _respFunc](const Error::Ptr& _error,
                                                 const std::shared_ptr<bytes>& _codeData) {
             std::string code;
@@ -915,7 +934,10 @@ void JsonRpcImpl_2_0::getSealerList(
     RPC_IMPL_LOG(TRACE) << LOG_BADGE("getSealerList") << LOG_KV("group", _groupID)
                         << LOG_KV("node", _nodeName);
 
-    m_ledgerInterface->asyncGetNodeListByType(bcos::ledger::CONSENSUS_SEALER,
+
+    auto nodeService = getNodeService(_groupID, _nodeName, "getSealerList");
+    auto ledger = nodeService->ledger();
+    ledger->asyncGetNodeListByType(bcos::ledger::CONSENSUS_SEALER,
         [_respFunc](Error::Ptr _error, consensus::ConsensusNodeListPtr _consensusNodeListPtr) {
             Json::Value jResp = Json::Value(Json::arrayValue);
             if (!_error || (_error->errorCode() == bcos::protocol::CommonError::SUCCESS))
@@ -949,7 +971,9 @@ void JsonRpcImpl_2_0::getObserverList(
     RPC_IMPL_LOG(TRACE) << LOG_BADGE("getObserverList") << LOG_KV("group", _groupID)
                         << LOG_KV("group", _groupID) << LOG_KV("node", _nodeName);
 
-    m_ledgerInterface->asyncGetNodeListByType(bcos::ledger::CONSENSUS_OBSERVER,
+    auto nodeService = getNodeService(_groupID, _nodeName, "getObserverList");
+    auto ledger = nodeService->ledger();
+    ledger->asyncGetNodeListByType(bcos::ledger::CONSENSUS_OBSERVER,
         [_respFunc](Error::Ptr _error, consensus::ConsensusNodeListPtr _consensusNodeListPtr) {
             Json::Value jResp = Json::Value(Json::arrayValue);
             if (!_error || (_error->errorCode() == bcos::protocol::CommonError::SUCCESS))
@@ -980,7 +1004,9 @@ void JsonRpcImpl_2_0::getPbftView(
     RPC_IMPL_LOG(TRACE) << LOG_BADGE("getPbftView") << LOG_KV("group", _groupID)
                         << LOG_KV("node", _nodeName);
 
-    m_consensusInterface->asyncGetPBFTView(
+    auto nodeService = getNodeService(_groupID, _nodeName, "getPbftView");
+    auto consensus = nodeService->consensus();
+    consensus->asyncGetPBFTView(
         [_respFunc](Error::Ptr _error, bcos::consensus::ViewType _viewValue) {
             Json::Value jResp;
             if (!_error || (_error->errorCode() == bcos::protocol::CommonError::SUCCESS))
@@ -1005,23 +1031,24 @@ void JsonRpcImpl_2_0::getPendingTxSize(
     RPC_IMPL_LOG(TRACE) << LOG_BADGE("getPendingTxSize") << LOG_KV("group", _groupID)
                         << LOG_KV("node", _nodeName);
 
-    m_txPoolInterface->asyncGetPendingTransactionSize(
-        [_respFunc](Error::Ptr _error, size_t _pendingTxSize) {
-            Json::Value jResp;
-            if (!_error || (_error->errorCode() == bcos::protocol::CommonError::SUCCESS))
-            {
-                jResp = (int64_t)_pendingTxSize;
-            }
-            else
-            {
-                RPC_IMPL_LOG(ERROR)
-                    << LOG_BADGE("getPendingTxSize")
-                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
-                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
-            }
+    auto nodeService = getNodeService(_groupID, _nodeName, "getPendingTxSize");
+    auto txpool = nodeService->txpool();
+    txpool->asyncGetPendingTransactionSize([_respFunc](Error::Ptr _error, size_t _pendingTxSize) {
+        Json::Value jResp;
+        if (!_error || (_error->errorCode() == bcos::protocol::CommonError::SUCCESS))
+        {
+            jResp = (int64_t)_pendingTxSize;
+        }
+        else
+        {
+            RPC_IMPL_LOG(ERROR) << LOG_BADGE("getPendingTxSize")
+                                << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                                << LOG_KV(
+                                       "errorMessage", _error ? _error->errorMessage() : "success");
+        }
 
-            _respFunc(_error, jResp);
-        });
+        _respFunc(_error, jResp);
+    });
 }
 
 void JsonRpcImpl_2_0::getSyncStatus(
@@ -1030,7 +1057,9 @@ void JsonRpcImpl_2_0::getSyncStatus(
     RPC_IMPL_LOG(TRACE) << LOG_BADGE("getSyncStatus") << LOG_KV("group", _groupID)
                         << LOG_KV("node", _nodeName);
 
-    m_blockSyncInterface->asyncGetSyncInfo([_respFunc](Error::Ptr _error, std::string _syncStatus) {
+    auto nodeService = getNodeService(_groupID, _nodeName, "getSyncStatus");
+    auto sync = nodeService->sync();
+    sync->asyncGetSyncInfo([_respFunc](Error::Ptr _error, std::string _syncStatus) {
         Json::Value jResp;
         if (!_error || (_error->errorCode() == bcos::protocol::CommonError::SUCCESS))
         {
@@ -1053,7 +1082,9 @@ void JsonRpcImpl_2_0::getSystemConfigByKey(std::string const& _groupID,
     RPC_IMPL_LOG(TRACE) << LOG_DESC("getSystemConfigByKey") << LOG_KV("keyValue", _keyValue)
                         << LOG_KV("group", _groupID) << LOG_KV("node", _nodeName);
 
-    m_ledgerInterface->asyncGetSystemConfigByKey(_keyValue,
+    auto nodeService = getNodeService(_groupID, _nodeName, "getSystemConfigByKey");
+    auto ledger = nodeService->ledger();
+    ledger->asyncGetSystemConfigByKey(_keyValue,
         [_respFunc](Error::Ptr _error, std::string _value, protocol::BlockNumber _blockNumber) {
             Json::Value jResp;
             if (!_error || (_error->errorCode() == bcos::protocol::CommonError::SUCCESS))
@@ -1079,7 +1110,9 @@ void JsonRpcImpl_2_0::getTotalTransactionCount(
     RPC_IMPL_LOG(TRACE) << LOG_DESC("getTotalTransactionCount") << LOG_KV("group", _groupID)
                         << LOG_KV("node", _nodeName);
 
-    m_ledgerInterface->asyncGetTotalTransactionCount(
+    auto nodeService = getNodeService(_groupID, _nodeName, "getTotalTransactionCount");
+    auto ledger = nodeService->ledger();
+    ledger->asyncGetTotalTransactionCount(
         [_respFunc](Error::Ptr _error, int64_t _totalTxCount, int64_t _failedTxCount,
             protocol::BlockNumber _latestBlockNumber) {
             Json::Value jResp;
@@ -1101,9 +1134,11 @@ void JsonRpcImpl_2_0::getTotalTransactionCount(
         });
 }
 
-void JsonRpcImpl_2_0::getPeers(RespFunc _respFunc)
+// TODO: implement this
+void JsonRpcImpl_2_0::getPeers(RespFunc /*_respFunc*/)
 {
     RPC_IMPL_LOG(TRACE) << LOG_DESC("getPeers");
+#if 0
     m_gatewayInterface->asyncGetPeers(
         [_respFunc](Error::Ptr _error, const std::string& _peersInfo) {
             Json::Value jResp;
@@ -1121,6 +1156,7 @@ void JsonRpcImpl_2_0::getPeers(RespFunc _respFunc)
 
             _respFunc(_error, jResp);
         });
+#endif
 }
 
 // TODO: update getNodeInfo
@@ -1140,4 +1176,28 @@ void JsonRpcImpl_2_0::getNodeInfo(RespFunc _respFunc)
     jResp["wsProtocolVersion"] = bcos::ws::WsProtocolVersion::current;
 
     _respFunc(nullptr, jResp);
+}
+
+void JsonRpcImpl_2_0::updateGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo)
+{
+    m_groupManager->updateGroupInfo(_groupInfo);
+}
+
+NodeService::Ptr JsonRpcImpl_2_0::getNodeService(
+    std::string const& _groupID, std::string const& _nodeName, std::string const& _command)
+{
+    auto nodeService = m_groupManager->getNodeService(_groupID, _nodeName);
+    if (!nodeService)
+    {
+        std::stringstream errorMsg;
+        errorMsg
+            << LOG_DESC(
+                   "Invalid request for the specified node of doesn't exist or doesn't started!")
+            << LOG_KV("request", _command) << LOG_KV("chain", m_groupManager->chainID())
+            << LOG_KV("group", _groupID) << LOG_KV("node", _nodeName);
+        RPC_IMPL_LOG(WARNING) << errorMsg.str();
+        BOOST_THROW_EXCEPTION(
+            JsonRpcException(JsonRpcError::NodeNotExistOrNotStarted, errorMsg.str()));
+    }
+    return nodeService;
 }

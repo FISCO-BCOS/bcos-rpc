@@ -32,7 +32,7 @@ BOOST_FIXTURE_TEST_SUITE(JsonRpcImplTest, TestPromptFixture)
 
 BOOST_AUTO_TEST_CASE(test_initMethod)
 {
-    auto jsonRpcInterface = std::make_shared<JsonRpcImpl_2_0>();
+    auto jsonRpcInterface = std::make_shared<JsonRpcImpl_2_0>(nullptr);
     auto f = jsonRpcInterface->methodToFunc();
 
     bool flag = false;
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(test_initMethod)
 
 BOOST_AUTO_TEST_CASE(test_parseRpcRequestJson)
 {
-    auto jsonRpcInterface = std::make_shared<JsonRpcImpl_2_0>();
+    auto jsonRpcInterface = std::make_shared<JsonRpcImpl_2_0>(nullptr);
     {
         std::string json = R"({"jsonrpc":"2.0","method":"getNodeInfo","params":[],"id":123})";
         JsonRequest req;
@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE(test_parseRpcRequestJson)
 
 BOOST_AUTO_TEST_CASE(test_parseRpcResponseJson)
 {
-    auto jsonRpcInterface = std::make_shared<JsonRpcImpl_2_0>();
+    auto jsonRpcInterface = std::make_shared<JsonRpcImpl_2_0>(nullptr);
     {
         std::string json = R"({"jsonrpc":"2.0","result":[],"id":123})";
         JsonResponse resp;
@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE(test_parseRpcResponseJson)
 
 BOOST_AUTO_TEST_CASE(test_toStringResponse)
 {
-    auto jsonRpcInterface = std::make_shared<JsonRpcImpl_2_0>();
+    auto jsonRpcInterface = std::make_shared<JsonRpcImpl_2_0>(nullptr);
     {
         JsonResponse resp;
         resp.jsonrpc = "jsonrpc";
