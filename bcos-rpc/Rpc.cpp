@@ -30,7 +30,7 @@ void Rpc::start()
     // start amop
     m_AMOP->start();
     // start event sub
-    m_eventSub->start();
+    // m_eventSub->start();
     // start websocket service
     m_wsService->start();
     BCOS_LOG(INFO) << LOG_DESC("[RPC][RPC][start]") << LOG_DESC("start rpc successfully");
