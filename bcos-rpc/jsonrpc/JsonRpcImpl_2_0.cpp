@@ -40,6 +40,7 @@
 using namespace std;
 using namespace bcos;
 using namespace bcos::rpc;
+using namespace bcos::group;
 using namespace boost::iterators;
 using namespace boost::archive::iterators;
 
@@ -105,8 +106,6 @@ void JsonRpcImpl_2_0::initMethod()
         std::bind(&JsonRpcImpl_2_0::stopNodeI, this, std::placeholders::_1, std::placeholders::_2);
     m_methodToFunc["getGroupList"] = std::bind(
         &JsonRpcImpl_2_0::getGroupListI, this, std::placeholders::_1, std::placeholders::_2);
-    m_methodToFunc["getGroupInfoList"] = std::bind(
-        &JsonRpcImpl_2_0::getGroupInfoListI, this, std::placeholders::_1, std::placeholders::_2);
     m_methodToFunc["getGroupInfo"] = std::bind(
         &JsonRpcImpl_2_0::getGroupInfoI, this, std::placeholders::_1, std::placeholders::_2);
     m_methodToFunc["getGroupNodeInfo"] = std::bind(
@@ -1200,4 +1199,318 @@ NodeService::Ptr JsonRpcImpl_2_0::getNodeService(
             JsonRpcException(JsonRpcError::NodeNotExistOrNotStarted, errorMsg.str()));
     }
     return nodeService;
+}
+
+// create a new group
+void JsonRpcImpl_2_0::createGroup(std::string const& _groupInfoStr, RespFunc _respFunc)
+{
+    auto groupInfo = m_groupManager->groupInfoFactory()->createGroupInfo(
+        m_groupManager->chainNodeInfoFactory(), _groupInfoStr);
+    auto cachedGroupInfo = m_groupManager->getGroupInfo(groupInfo->groupID());
+    std::stringstream errorMsg;
+    if (cachedGroupInfo)
+    {
+        errorMsg << LOG_DESC("createGroup failed for the group already exists.")
+                 << LOG_DESC("existedGroupInfo:") << printGroupInfo(cachedGroupInfo);
+        RPC_IMPL_LOG(WARNING) << errorMsg.str();
+        BOOST_THROW_EXCEPTION(JsonRpcException(JsonRpcError::GroupAlreadExists, errorMsg.str()));
+    }
+    // check the chainID
+    if (groupInfo->chainID() != m_groupManager->chainID())
+    {
+        errorMsg << LOG_DESC("Not allow to send createGroup request to the chain")
+                 << LOG_KV("expectedChain", groupInfo->chainID())
+                 << LOG_KV("chainID", m_groupManager->chainID());
+        RPC_IMPL_LOG(WARNING) << errorMsg.str();
+        BOOST_THROW_EXCEPTION(JsonRpcException(JsonRpcError::OperationNotAllowed, errorMsg.str()));
+    }
+    m_groupManager->groupMgrClient()->asyncCreateGroup(
+        groupInfo, [groupInfo, _respFunc](Error::Ptr&& _error) {
+            Json::Value response = generateResponse(_error);
+
+            RPC_IMPL_LOG(WARNING) << LOG_DESC("createGroup")
+                                  << LOG_KV("code", _error ? _error->errorCode() : 0)
+                                  << LOG_KV("msg", _error ? _error->errorMessage() : "success")
+                                  << printGroupInfo(groupInfo);
+            _respFunc(_error, response);
+        });
+}
+
+// expand new node for the given group
+void JsonRpcImpl_2_0::expandGroupNode(
+    std::string const& _groupID, std::string const& _nodeInfoStr, RespFunc _respFunc)
+{
+    auto nodeInfo = m_groupManager->chainNodeInfoFactory()->createNodeInfo(_nodeInfoStr);
+    auto cachedNode = m_groupManager->getNodeInfo(_groupID, nodeInfo->nodeName());
+    if (cachedNode)
+    {
+        std::stringstream errorMsg;
+        errorMsg << LOG_DESC("expandGroupNode failed for the node already exists.")
+                 << LOG_DESC("existedNodeInfo:") << printNodeInfo(cachedNode);
+        RPC_IMPL_LOG(WARNING) << errorMsg.str();
+        BOOST_THROW_EXCEPTION(JsonRpcException(JsonRpcError::NodeAlreadyExists, errorMsg.str()));
+    }
+    auto const& chainID = m_groupManager->chainID();
+    m_groupManager->groupMgrClient()->asyncExpandGroupNode(
+        chainID, _groupID, nodeInfo, [nodeInfo, _respFunc](Error::Ptr _error) {
+            auto response = generateResponse(_error);
+            RPC_IMPL_LOG(INFO) << LOG_DESC("expandGroupNode")
+                               << LOG_KV("code", _error ? _error->errorCode() : 0)
+                               << LOG_KV("msg", _error ? _error->errorMessage() : "success")
+                               << printNodeInfo(nodeInfo);
+            _respFunc(_error, response);
+        });
+}
+
+void JsonRpcImpl_2_0::checkGroupStatus(std::string const& _command, GroupStatus const& _status,
+    std::set<GroupStatus> const& _statusSet, bool _allow)
+{
+    if ((!_allow && _statusSet.count(_status)) || (_allow && !_statusSet.count(_status)))
+    {
+        std::stringstream errorMsg;
+        errorMsg << LOG_DESC("not allow to " + _command + " when the node status is ") << _status;
+        BOOST_THROW_EXCEPTION(JsonRpcException(JsonRpcError::OperationNotAllowed, errorMsg.str()));
+    }
+}
+
+// remove the given group from the given chain
+void JsonRpcImpl_2_0::removeGroup(std::string const& _groupID, RespFunc _respFunc)
+{
+    auto groupInfo = m_groupManager->getGroupInfo(_groupID);
+    if (groupInfo)
+    {
+        checkGroupStatus(
+            "removeGroup", groupInfo->status(), {GroupStatus::Deleted, GroupStatus::Deleting});
+        groupInfo->setStatus((int32_t)(GroupStatus::Deleting));
+    }
+    auto const& chainID = m_groupManager->chainID();
+    m_groupManager->groupMgrClient()->asyncRemoveGroup(
+        chainID, _groupID, [_groupID, _respFunc](Error::Ptr _error) {
+            auto response = generateResponse(_error);
+            RPC_IMPL_LOG(INFO) << LOG_DESC("removeGroup") << LOG_KV("group", _groupID)
+                               << LOG_KV("code", _error ? _error->errorCode() : 0)
+                               << LOG_KV("msg", _error ? _error->errorMessage() : "success");
+            _respFunc(_error, response);
+        });
+}
+
+// remove the given node from the given group
+void JsonRpcImpl_2_0::removeGroupNode(
+    std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc)
+{
+    auto nodeInfo = m_groupManager->getNodeInfo(_groupID, _nodeName);
+    if (nodeInfo)
+    {
+        checkGroupStatus(
+            "removeGroupNode", nodeInfo->status(), {GroupStatus::Deleted, GroupStatus::Deleting});
+        nodeInfo->setStatus((int32_t)(GroupStatus::Deleting));
+    }
+    auto const& chainID = m_groupManager->chainID();
+    m_groupManager->groupMgrClient()->asyncRemoveGroupNode(
+        chainID, _groupID, _nodeName, [_groupID, _nodeName, _respFunc](Error::Ptr&& _error) {
+            auto response = generateResponse(_error);
+            RPC_IMPL_LOG(INFO) << LOG_DESC("removeGroupNode") << LOG_KV("group", _groupID)
+                               << LOG_KV("node", _nodeName)
+                               << LOG_KV("code", _error ? _error->errorCode() : 0)
+                               << LOG_KV("msg", _error ? _error->errorMessage() : "success");
+            _respFunc(_error, response);
+        });
+}
+
+// recover the given group
+void JsonRpcImpl_2_0::recoverGroup(std::string const& _groupID, RespFunc _respFunc)
+{
+    // get the groupInfo
+    auto groupInfo = m_groupManager->getGroupInfo(_groupID);
+    if (groupInfo)
+    {
+        // can only recover the deleted group
+        checkGroupStatus("recoverGroup", groupInfo->status(), {GroupStatus::Deleted}, true);
+        groupInfo->setStatus((int32_t)(GroupStatus::Recovering));
+    }
+    auto const& chainID = m_groupManager->chainID();
+    m_groupManager->groupMgrClient()->asyncRecoverGroup(
+        chainID, _groupID, [_groupID, _respFunc](Error::Ptr&& _error) {
+            auto response = generateResponse(_error);
+            RPC_IMPL_LOG(INFO) << LOG_DESC("recoverGroup") << LOG_KV("group", _groupID)
+                               << LOG_KV("code", _error ? _error->errorCode() : 0)
+                               << LOG_KV("msg", _error ? _error->errorMessage() : "success");
+            _respFunc(_error, response);
+        });
+}
+
+// recover the given node of the given group
+void JsonRpcImpl_2_0::recoverGroupNode(
+    std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc)
+{
+    // get the nodeInfo
+    auto nodeInfo = m_groupManager->getNodeInfo(_groupID, _nodeName);
+    if (nodeInfo)
+    {
+        // can only recover the deleted node
+        checkGroupStatus("recoverGroupNode", nodeInfo->status(), {GroupStatus::Deleted}, true);
+        nodeInfo->setStatus((int32_t)(GroupStatus::Recovering));
+    }
+    auto const& chainID = m_groupManager->chainID();
+    m_groupManager->groupMgrClient()->asyncRecoverGroupNode(
+        chainID, _groupID, _nodeName, [_groupID, _nodeName, _respFunc](Error::Ptr&& _error) {
+            auto response = generateResponse(_error);
+            RPC_IMPL_LOG(INFO) << LOG_DESC("recoverGroupNode") << LOG_KV("group", _groupID)
+                               << LOG_KV("node", _nodeName)
+                               << LOG_KV("code", _error ? _error->errorCode() : 0)
+                               << LOG_KV("msg", _error ? _error->errorMessage() : "success");
+            _respFunc(_error, response);
+        });
+}
+
+// start the given node
+void JsonRpcImpl_2_0::startNode(
+    std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc)
+{
+    // get the nodeInfo
+    auto nodeInfo = m_groupManager->getNodeInfo(_groupID, _nodeName);
+    if (nodeInfo)
+    {
+        // can only start the stopped node
+        checkGroupStatus("startNode", nodeInfo->status(), {GroupStatus::Stopped}, true);
+        nodeInfo->setStatus((int32_t)(GroupStatus::Starting));
+    }
+    auto const& chainID = m_groupManager->chainID();
+    m_groupManager->groupMgrClient()->asyncStartNode(
+        chainID, _groupID, _nodeName, [_groupID, _nodeName, _respFunc](Error::Ptr&& _error) {
+            auto response = generateResponse(_error);
+            RPC_IMPL_LOG(INFO) << LOG_DESC("startNode") << LOG_KV("group", _groupID)
+                               << LOG_KV("node", _nodeName)
+                               << LOG_KV("code", _error ? _error->errorCode() : 0)
+                               << LOG_KV("msg", _error ? _error->errorMessage() : "success");
+            _respFunc(_error, response);
+        });
+}
+
+// stop the given node
+void JsonRpcImpl_2_0::stopNode(
+    std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc)
+{
+    // get the nodeInfo
+    auto nodeInfo = m_groupManager->getNodeInfo(_groupID, _nodeName);
+    if (nodeInfo)
+    {
+        // can only stop the started node
+        checkGroupStatus("stopNode", nodeInfo->status(), {GroupStatus::Started}, true);
+        nodeInfo->setStatus((int32_t)(GroupStatus::Stopping));
+    }
+    auto const& chainID = m_groupManager->chainID();
+    m_groupManager->groupMgrClient()->asyncStopNode(
+        chainID, _groupID, _nodeName, [_groupID, _nodeName, _respFunc](Error::Ptr&& _error) {
+            auto response = generateResponse(_error);
+            RPC_IMPL_LOG(INFO) << LOG_DESC("stopNode") << LOG_KV("group", _groupID)
+                               << LOG_KV("node", _nodeName)
+                               << LOG_KV("code", _error ? _error->errorCode() : 0)
+                               << LOG_KV("msg", _error ? _error->errorMessage() : "success");
+            _respFunc(_error, response);
+        });
+}
+
+// get all the groupID list
+void JsonRpcImpl_2_0::getGroupList(RespFunc _respFunc)
+{
+    auto const& chainID = m_groupManager->chainID();
+    m_groupManager->groupMgrClient()->asyncGetGroupList(
+        chainID, [_respFunc](Error::Ptr&& _error, std::set<std::string>&& _groupList) {
+            RPC_IMPL_LOG(INFO) << LOG_DESC("getGroupList") << LOG_KV("groupNum", _groupList.size())
+                               << LOG_KV("code", _error ? _error->errorCode() : 0)
+                               << LOG_KV("msg", _error ? _error->errorMessage() : "success");
+            auto response = generateResponse(_error);
+            response["groupList"] = Json::Value(Json::arrayValue);
+            for (auto const& it : _groupList)
+            {
+                response["groupList"].append(it);
+            }
+            _respFunc(_error, response);
+        });
+}
+
+void JsonRpcImpl_2_0::groupInfoToJson(
+    Json::Value& _response, bcos::group::GroupInfo::Ptr _groupInfo)
+{
+    _response["chainID"] = _groupInfo->chainID();
+    _response["groupID"] = _groupInfo->groupID();
+    _response["gensisConfig"] = _groupInfo->genesisConfig();
+    _response["iniConfig"] = _groupInfo->iniConfig();
+    _response["status"] = (int32_t)_groupInfo->status();
+    _response["nodeList"] = Json::Value(Json::arrayValue);
+    auto nodeInfos = _groupInfo->nodeInfos();
+    for (auto const& it : nodeInfos)
+    {
+        Json::Value nodeInfoResponse;
+        nodeInfoToJson(nodeInfoResponse, it.second);
+        _response["nodeList"].append(nodeInfoResponse);
+    }
+}
+void JsonRpcImpl_2_0::nodeInfoToJson(
+    Json::Value& _response, bcos::group::ChainNodeInfo::Ptr _nodeInfo)
+{
+    _response["name"] = _nodeInfo->nodeName();
+    _response["type"] = _nodeInfo->nodeType();
+    _response["status"] = (int32_t)_nodeInfo->status();
+    _response["iniConfig"] = _nodeInfo->iniConfig();
+    // set deployInfo
+    _response["deployInfo"] = Json::Value(Json::arrayValue);
+    auto const& infos = _nodeInfo->deployInfo();
+    for (auto const& it : infos)
+    {
+        Json::Value item;
+        item["service"] = it.first;
+        item["ip"] = it.second;
+        _response["deployInfo"].append(item);
+    }
+}
+
+// get the group information of the given group
+void JsonRpcImpl_2_0::getGroupInfo(std::string const& _groupID, RespFunc _respFunc)
+{
+    auto groupInfo = m_groupManager->getGroupInfo(_groupID);
+    // hit the cache, response directly
+    if (groupInfo)
+    {
+        Json::Value response;
+        groupInfoToJson(response, groupInfo);
+        _respFunc(nullptr, response);
+        return;
+    }
+    auto const& chainID = m_groupManager->chainID();
+    m_groupManager->groupMgrClient()->asyncGetGroupInfo(
+        chainID, _groupID, [this, _respFunc](Error::Ptr&& _error, GroupInfo::Ptr&& _groupInfo) {
+            RPC_IMPL_LOG(INFO) << LOG_DESC("getGroupInfo") << printGroupInfo(_groupInfo)
+                               << LOG_KV("code", _error ? _error->errorCode() : 0)
+                               << LOG_KV("msg", _error ? _error->errorMessage() : "success");
+            auto response = generateResponse(_error);
+            groupInfoToJson(response, _groupInfo);
+            _respFunc(_error, response);
+        });
+}
+
+// get the information of a given node
+void JsonRpcImpl_2_0::getGroupNodeInfo(
+    std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc)
+{
+    auto nodeInfo = m_groupManager->getNodeInfo(_groupID, _nodeName);
+    // hit the cache, response directly
+    if (nodeInfo)
+    {
+        Json::Value response;
+        nodeInfoToJson(response, nodeInfo);
+        _respFunc(nullptr, response);
+        return;
+    }
+    auto const& chainID = m_groupManager->chainID();
+    m_groupManager->groupMgrClient()->asyncGetNodeInfo(chainID, _groupID, _nodeName,
+        [this, _respFunc](Error::Ptr&& _error, ChainNodeInfo::Ptr&& _nodeInfo) {
+            RPC_IMPL_LOG(INFO) << LOG_DESC("getGroupNodeInfo") << printNodeInfo(_nodeInfo)
+                               << LOG_KV("code", _error ? _error->errorCode() : 0)
+                               << LOG_KV("msg", _error ? _error->errorMessage() : "success");
+            auto response = generateResponse(_error);
+            nodeInfoToJson(response, _nodeInfo);
+            _respFunc(_error, response);
+        });
 }

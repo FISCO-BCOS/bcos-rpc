@@ -66,6 +66,9 @@ enum JsonRpcError : int32_t
     InternalError = -32603,
     // -32000 to -32099: Server error	Reserved for implementation-defined server-errors.
     NodeNotExistOrNotStarted = -32000,
+    GroupAlreadExists = -32001,
+    NodeAlreadyExists = -32002,
+    OperationNotAllowed = -32003,
 };
 
 struct JsonRequest
@@ -93,6 +96,14 @@ struct JsonResponse
     Error error;
     Json::Value result;
 };
+
+inline Json::Value generateResponse(Error::Ptr _error)
+{
+    Json::Value response;
+    response["code"] = _error ? _error->errorCode() : 0;
+    response["msg"] = _error ? _error->errorMessage() : "success";
+    return response;
+}
 
 }  // namespace rpc
 }  // namespace bcos

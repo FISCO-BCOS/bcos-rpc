@@ -124,84 +124,34 @@ public:
 
     void getPeers(RespFunc _respFunc) override;
 
-    // TODO: implement the group manager related interfaces
     // create a new group
-    void createGroup(std::string const& _groupInfo, RespFunc _respFunc) override
-    {
-        (void)_groupInfo;
-        (void)_respFunc;
-    }
+    void createGroup(std::string const& _groupInfo, RespFunc _respFunc) override;
     // expand new node for the given group
     void expandGroupNode(
-        std::string const& _groupID, std::string const& _nodeInfo, RespFunc _respFunc) override
-    {
-        (void)_groupID;
-        (void)_nodeInfo;
-        (void)_respFunc;
-    }
+        std::string const& _groupID, std::string const& _nodeInfo, RespFunc _respFunc) override;
     // remove the given group from the given chain
-    void removeGroup(std::string const& _groupID, RespFunc _respFunc) override
-    {
-        (void)_groupID;
-        (void)_respFunc;
-    }
+    void removeGroup(std::string const& _groupID, RespFunc _respFunc) override;
     // remove the given node from the given group
     void removeGroupNode(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override
-    {
-        (void)_groupID;
-        (void)_nodeName;
-        (void)_respFunc;
-    }
+        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override;
     // recover the given group
-    void recoverGroup(std::string const& _groupID, RespFunc _respFunc) override
-    {
-        (void)_groupID;
-        (void)_respFunc;
-    }
+    void recoverGroup(std::string const& _groupID, RespFunc _respFunc) override;
     // recover the given node of the given group
     void recoverGroupNode(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override
-    {
-        (void)_groupID;
-        (void)_nodeName;
-        (void)_respFunc;
-    }
+        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override;
     // start the given node
     void startNode(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override
-    {
-        (void)_groupID;
-        (void)_nodeName;
-        (void)_respFunc;
-    }
+        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override;
     // stop the given node
     void stopNode(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override
-    {
-        (void)_groupID;
-        (void)_nodeName;
-        (void)_respFunc;
-    }
+        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override;
     // get all the groupID list
-    void getGroupList(RespFunc _respFunc) override { (void)_respFunc; }
-    // get all the group informations
-    void getGroupInfoList(RespFunc _respFunc) override { (void)_respFunc; }
+    void getGroupList(RespFunc _respFunc) override;
     // get the group information of the given group
-    void getGroupInfo(std::string const& _groupID, RespFunc _respFunc) override
-    {
-        (void)_groupID;
-        (void)_respFunc;
-    }
+    void getGroupInfo(std::string const& _groupID, RespFunc _respFunc) override;
     // get the information of a given node
     void getGroupNodeInfo(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override
-    {
-        (void)_groupID;
-        (void)_nodeName;
-        (void)_respFunc;
-    }
-
+        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override;
 
     // TODO: update this interface and add new interfaces to provide group list information
     void getNodeInfo(RespFunc _respFunc) override;
@@ -360,12 +310,6 @@ public:
         (void)_req;
         getGroupList(_respFunc);
     }
-    // get all the group informations
-    void getGroupInfoListI(const Json::Value& _req, RespFunc _respFunc)
-    {
-        (void)_req;
-        getGroupInfoList(_respFunc);
-    }
     // get the group information of the given group
     void getGroupInfoI(const Json::Value& _req, RespFunc _respFunc)
     {
@@ -417,6 +361,11 @@ private:
     // TODO: check perf influence
     NodeService::Ptr getNodeService(
         std::string const& _groupID, std::string const& _nodeName, std::string const& _command);
+    void checkGroupStatus(std::string const& _command, bcos::group::GroupStatus const& _status,
+        std::set<bcos::group::GroupStatus> const& _statusSet, bool _allow = false);
+
+    void groupInfoToJson(Json::Value& _response, bcos::group::GroupInfo::Ptr _groupInfo);
+    void nodeInfoToJson(Json::Value& _response, bcos::group::ChainNodeInfo::Ptr _nodeInfo);
 
 private:
     std::unordered_map<std::string, std::function<void(Json::Value, RespFunc _respFunc)>>

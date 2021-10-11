@@ -20,7 +20,8 @@
  */
 #pragma once
 #include "NodeService.h"
-#include <bcos-framework/interfaces/multigroup/GroupInfo.h>
+#include <bcos-framework/interfaces/multigroup/GroupInfoFactory.h>
+#include <bcos-framework/interfaces/multigroup/GroupManagerInterface.h>
 namespace bcos
 {
 namespace rpc
@@ -41,6 +42,35 @@ public:
 
     std::string const& chainID() const { return m_chainID; }
 
+    bcos::group::GroupInfo::Ptr getGroupInfo(std::string const& _groupID)
+    {
+        ReadGuard l(x_nodeServiceList);
+        if (m_groupInfos.count(_groupID))
+        {
+            return m_groupInfos[_groupID];
+        }
+        return nullptr;
+    }
+
+    bcos::group::ChainNodeInfo::Ptr getNodeInfo(
+        std::string const& _groupID, std::string const& _nodeName)
+    {
+        ReadGuard l(x_nodeServiceList);
+        if (!m_groupInfos.count(_groupID))
+        {
+            return nullptr;
+        }
+        auto groupInfo = m_groupInfos[_groupID];
+        return groupInfo->nodeInfo(_nodeName);
+    }
+
+    bcos::group::GroupManagerInterface::Ptr groupMgrClient() { return m_groupMgrClient; }
+    bcos::group::GroupInfoFactory::Ptr groupInfoFactory() { return m_groupInfoFactory; };
+    bcos::group::ChainNodeInfoFactory::Ptr chainNodeInfoFactory()
+    {
+        return m_chainNodeInfoFactory;
+    };
+
 protected:
     void updateNodeServiceWithoutLock(
         std::string const& _groupID, bcos::group::ChainNodeInfo::Ptr _nodeInfo);
@@ -48,6 +78,14 @@ protected:
 private:
     std::string m_chainID;
     NodeServiceFactory::Ptr m_nodeServiceFactory;
+    // TODO: set m_groupMgrClient
+    bcos::group::GroupManagerInterface::Ptr m_groupMgrClient;
+    bcos::group::GroupInfoFactory::Ptr m_groupInfoFactory;
+    bcos::group::ChainNodeInfoFactory::Ptr m_chainNodeInfoFactory;
+
+    // map between groupID to groupInfo
+    std::map<std::string, bcos::group::GroupInfo::Ptr> m_groupInfos;
+
     // map between serviceName to NodeService
     std::map<std::string, NodeService::Ptr> m_nodeServiceList;
     mutable SharedMutex x_nodeServiceList;

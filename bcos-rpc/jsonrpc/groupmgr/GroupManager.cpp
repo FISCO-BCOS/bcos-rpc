@@ -28,6 +28,7 @@ using namespace bcos::protocol;
 void GroupManager::updateGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo)
 {
     WriteGuard l(x_nodeServiceList);
+    m_groupInfos[_groupInfo->groupID()] = _groupInfo;
     auto nodeInfos = _groupInfo->nodeInfos();
     auto const& groupID = _groupInfo->groupID();
     for (auto const& it : nodeInfos)
