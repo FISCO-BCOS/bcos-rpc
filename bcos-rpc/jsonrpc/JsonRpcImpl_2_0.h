@@ -21,6 +21,7 @@
 
 #pragma once
 #include "groupmgr/GroupManager.h"
+#include <bcos-framework/interfaces/gateway/GatewayInterface.h>
 #include <bcos-rpc/jsonrpc/JsonRpcInterface.h>
 #include <json/json.h>
 #include <boost/core/ignore_unused.hpp>
@@ -35,7 +36,9 @@ class JsonRpcImpl_2_0 : public JsonRpcInterface,
 {
 public:
     using Ptr = std::shared_ptr<JsonRpcImpl_2_0>;
-    JsonRpcImpl_2_0(GroupManager::Ptr _groupManager) : m_groupManager(_groupManager)
+    JsonRpcImpl_2_0(
+        GroupManager::Ptr _groupManager, bcos::gateway::GatewayInterface::Ptr _gatewayInterface)
+      : m_groupManager(_groupManager), m_gatewayInterface(_gatewayInterface)
     {
         initMethod();
     }
@@ -340,16 +343,6 @@ public:
     {
         m_methodToFunc[_method] = _callback;
     }
-    bcos::protocol::TransactionFactory::Ptr transactionFactory() const
-    {
-        return m_transactionFactory;
-    }
-
-    void setTransactionFactory(bcos::protocol::TransactionFactory::Ptr _transactionFactory)
-    {
-        m_transactionFactory = _transactionFactory;
-    }
-
     void setNodeInfo(const NodeInfo& _nodeInfo) { m_nodeInfo = _nodeInfo; }
     NodeInfo nodeInfo() const { return m_nodeInfo; }
 
@@ -372,7 +365,7 @@ private:
         m_methodToFunc;
 
     GroupManager::Ptr m_groupManager;
-    bcos::protocol::TransactionFactory::Ptr m_transactionFactory;
+    bcos::gateway::GatewayInterface::Ptr m_gatewayInterface;
     NodeInfo m_nodeInfo;
 };
 

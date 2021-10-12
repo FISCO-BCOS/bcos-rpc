@@ -25,6 +25,11 @@
 #include <bcos-crypto/hash/SM3.h>
 #include <bcos-crypto/signature/secp256k1/Secp256k1Crypto.h>
 #include <bcos-crypto/signature/sm2/SM2Crypto.h>
+
+#include <bcos-tars-protocol/protocol/BlockFactoryImpl.h>
+#include <bcos-tars-protocol/protocol/BlockHeaderFactoryImpl.h>
+#include <bcos-tars-protocol/protocol/TransactionFactoryImpl.h>
+#include <bcos-tars-protocol/protocol/TransactionReceiptFactoryImpl.h>
 namespace bcos
 {
 namespace rpc
@@ -43,6 +48,19 @@ inline bcos::crypto::CryptoSuite::Ptr createSMCryptoSuite()
     auto signatureImpl = std::make_shared<bcos::crypto::SM2Crypto>();
     auto encryptImpl = std::make_shared<bcos::crypto::SM4Crypto>();
     return std::make_shared<bcos::crypto::CryptoSuite>(hashImpl, signatureImpl, encryptImpl);
+}
+
+inline bcos::protocol::BlockFactory::Ptr createBlockFactory(
+    bcos::crypto::CryptoSuite::Ptr _cryptoSuite)
+{
+    auto blockHeaderFactory =
+        std::make_shared<bcostars::protocol::BlockHeaderFactoryImpl>(_cryptoSuite);
+    auto transactionFactory =
+        std::make_shared<bcostars::protocol::TransactionFactoryImpl>(_cryptoSuite);
+    auto receiptFactory =
+        std::make_shared<bcostars::protocol::TransactionReceiptFactoryImpl>(_cryptoSuite);
+    return std::make_shared<bcostars::protocol::BlockFactoryImpl>(
+        _cryptoSuite, blockHeaderFactory, transactionFactory, receiptFactory);
 }
 }  // namespace rpc
 }  // namespace bcos

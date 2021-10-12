@@ -508,10 +508,12 @@ void JsonRpcImpl_2_0::call(std::string const& _groupID, std::string const& _node
     RPC_IMPL_LOG(TRACE) << LOG_DESC("call") << LOG_KV("to", _to) << LOG_KV("group", _groupID)
                         << LOG_KV("node", _nodeName);
 
-    auto transaction =
-        m_transactionFactory->createTransaction(0, _to, *decodeData(_data), u256(0), 0, "", "", 0);
-
     auto nodeService = getNodeService(_groupID, _nodeName, "call");
+    auto transactionFactory = nodeService->blockFactory()->transactionFactory();
+    auto transaction =
+        transactionFactory->createTransaction(0, _to, *decodeData(_data), u256(0), 0, "", "", 0);
+
+
     nodeService->executor()->asyncExecuteTransaction(
         transaction, [_to, _respFunc](const Error::Ptr& _error,
                          const protocol::TransactionReceipt::ConstPtr& _transactionReceiptPtr) {
@@ -1133,11 +1135,9 @@ void JsonRpcImpl_2_0::getTotalTransactionCount(
         });
 }
 
-// TODO: implement this
-void JsonRpcImpl_2_0::getPeers(RespFunc /*_respFunc*/)
+void JsonRpcImpl_2_0::getPeers(RespFunc _respFunc)
 {
     RPC_IMPL_LOG(TRACE) << LOG_DESC("getPeers");
-#if 0
     m_gatewayInterface->asyncGetPeers(
         [_respFunc](Error::Ptr _error, const std::string& _peersInfo) {
             Json::Value jResp;
@@ -1155,7 +1155,6 @@ void JsonRpcImpl_2_0::getPeers(RespFunc /*_respFunc*/)
 
             _respFunc(_error, jResp);
         });
-#endif
 }
 
 // TODO: update getNodeInfo

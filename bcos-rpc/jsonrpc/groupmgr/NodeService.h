@@ -24,6 +24,7 @@
 #include <bcos-framework/interfaces/ledger/LedgerInterface.h>
 #include <bcos-framework/interfaces/multigroup/ChainNodeInfo.h>
 #include <bcos-framework/interfaces/multigroup/GroupInfo.h>
+#include <bcos-framework/interfaces/protocol/BlockFactory.h>
 #include <bcos-framework/interfaces/protocol/ServiceDesc.h>
 #include <bcos-framework/interfaces/sync/BlockSyncInterface.h>
 #include <bcos-framework/interfaces/txpool/TxPoolInterface.h>
@@ -40,12 +41,13 @@ public:
         std::shared_ptr<bcos::executor::ExecutorInterface> _executor,
         bcos::txpool::TxPoolInterface::Ptr _txpool,
         bcos::consensus::ConsensusInterface::Ptr _consensus,
-        bcos::sync::BlockSyncInterface::Ptr _sync)
+        bcos::sync::BlockSyncInterface::Ptr _sync, bcos::protocol::BlockFactory::Ptr _blockFactory)
       : m_ledger(_ledger),
         m_executor(_executor),
         m_txpool(_txpool),
         m_consensus(_consensus),
-        m_sync(_sync)
+        m_sync(_sync),
+        m_blockFactory(_blockFactory)
     {}
     virtual ~NodeService() {}
 
@@ -54,6 +56,7 @@ public:
     bcos::txpool::TxPoolInterface::Ptr txpool() { return m_txpool; }
     bcos::consensus::ConsensusInterface::Ptr consensus() { return m_consensus; }
     bcos::sync::BlockSyncInterface::Ptr sync() { return m_sync; }
+    bcos::protocol::BlockFactory::Ptr blockFactory() { return m_blockFactory; }
 
 private:
     bcos::ledger::LedgerInterface::Ptr m_ledger;
@@ -61,6 +64,7 @@ private:
     bcos::txpool::TxPoolInterface::Ptr m_txpool;
     bcos::consensus::ConsensusInterface::Ptr m_consensus;
     bcos::sync::BlockSyncInterface::Ptr m_sync;
+    bcos::protocol::BlockFactory::Ptr m_blockFactory;
 };
 
 class NodeServiceFactory

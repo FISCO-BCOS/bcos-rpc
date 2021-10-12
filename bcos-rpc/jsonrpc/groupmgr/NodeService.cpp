@@ -24,6 +24,7 @@
 #include <bcos-tars-protocol/client/ExecutorServiceClient.h>
 #include <bcos-tars-protocol/client/PBFTServiceClient.h>
 #include <bcos-tars-protocol/client/TxPoolServiceClient.h>
+//#include <bcos-ledger/libledger/Ledger.h>
 #include <tarscpp/servant/Application.h>
 using namespace bcos;
 using namespace bcos::rpc;
@@ -47,14 +48,22 @@ NodeService::Ptr NodeServiceFactory::buildNodeService(std::string const& _chainI
     {
         cryptoSuite = createCryptoSuite();
     }
+    auto blockFactory = createBlockFactory(cryptoSuite);
+#if 0
+    // TODO: create ledger 
+    auto storageClient =  createServiceClient<bcostars::StorageServiceClient, bcostars::StorageServicePrx>(
+            appName, STORAGE_SERVICE_NAME);
+    auto ledger =
+        std::make_shared<bcos::ledger::Ledger>(blockFactory, storageClient);
+#endif
     // create executor client
     auto executorClient =
         createServiceClient<bcostars::ExecutorServiceClient, bcostars::ExecutorServicePrx>(
             appName, EXECUTOR_SERVICE_NAME, cryptoSuite);
-    // create txpool client(TODO: BlockFactory)
+    // create txpool client
     auto txpoolClient =
         createServiceClient<bcostars::TxPoolServiceClient, bcostars::TxPoolServicePrx>(
-            appName, TXPOOL_SERVICE_NAME, cryptoSuite, nullptr);
+            appName, TXPOOL_SERVICE_NAME, cryptoSuite, blockFactory);
     // create consensus client
     auto consensusClient =
         createServiceClient<bcostars::PBFTServiceClient, bcostars::PBFTServicePrx>(
@@ -63,6 +72,7 @@ NodeService::Ptr NodeServiceFactory::buildNodeService(std::string const& _chainI
     auto syncClient =
         createServiceClient<bcostars::BlockSyncServiceClient, bcostars::PBFTServicePrx>(
             appName, CONSENSUS_SERVICE_NAME);
+    // TODO: create ledger
     return std::make_shared<NodeService>(
-        nullptr, executorClient, txpoolClient, consensusClient, syncClient);
+        nullptr, executorClient, txpoolClient, consensusClient, syncClient, blockFactory);
 }

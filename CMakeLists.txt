@@ -69,6 +69,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include(InstallBcosFrameworkDependencies)
 include(InstallBcosTarsProtocolDependencies)
 include(InstallBcosCryptoDependencies)
+# TODO: wait ledger adapt to the latest bcos-framework
+#include(InstallBcosLedgerDependencies)
 
 set(RPC_TARGET "rpc")
 set(AMOP_TARGET "amop")

@@ -22,7 +22,6 @@
 #pragma once
 #include "bcos-rpc/jsonrpc/groupmgr/GroupManager.h"
 #include <bcos-framework/interfaces/crypto/KeyFactory.h>
-#include <bcos-framework/interfaces/front/FrontServiceInterface.h>
 #include <bcos-framework/interfaces/gateway/GatewayInterface.h>
 #include <bcos-rpc/Rpc.h>
 #include <bcos-rpc/amop/AMOP.h>
@@ -48,7 +47,8 @@ class RpcFactory : public std::enable_shared_from_this<RpcFactory>
 {
 public:
     using Ptr = std::shared_ptr<RpcFactory>;
-    RpcFactory(std::string const& _chainID);
+    RpcFactory(std::string const& _chainID, bcos::gateway::GatewayInterface::Ptr _gatewayInterface,
+        bcos::crypto::KeyFactory::Ptr _keyFactory);
     virtual ~RpcFactory() {}
 
     bcos::amop::AMOP::Ptr buildAMOP();
@@ -72,45 +72,9 @@ public:
      */
     Rpc::Ptr buildRpc(const std::string& _configPath);
 
-public:
-    bcos::gateway::GatewayInterface::Ptr gatewayInterface() const { return m_gatewayInterface; }
-    void setGatewayInterface(bcos::gateway::GatewayInterface::Ptr _gatewayInterface)
-    {
-        m_gatewayInterface = _gatewayInterface;
-    }
-
-    bcos::front::FrontServiceInterface::Ptr frontServiceInterface() const
-    {
-        return m_frontServiceInterface;
-    }
-    void setFrontServiceInterface(bcos::front::FrontServiceInterface::Ptr _frontServiceInterface)
-    {
-        m_frontServiceInterface = _frontServiceInterface;
-    }
-
-    void setTransactionFactory(bcos::protocol::TransactionFactory::Ptr _transactionFactory)
-    {
-        m_transactionFactory = _transactionFactory;
-    }
-    bcos::protocol::TransactionFactory::Ptr transactionFactory() const
-    {
-        return m_transactionFactory;
-    }
-
-    std::shared_ptr<bcos::crypto::KeyFactory> keyFactory() { return m_keyFactory; }
-    void setKeyFactory(std::shared_ptr<bcos::crypto::KeyFactory> _keyFactory)
-    {
-        m_keyFactory = _keyFactory;
-    }
-
-public:
-    void checkParams();
-
 private:
-    std::shared_ptr<bcos::crypto::KeyFactory> m_keyFactory;
-    bcos::front::FrontServiceInterface::Ptr m_frontServiceInterface;
     bcos::gateway::GatewayInterface::Ptr m_gatewayInterface;
-    bcos::protocol::TransactionFactory::Ptr m_transactionFactory;
+    std::shared_ptr<bcos::crypto::KeyFactory> m_keyFactory;
     GroupManager::Ptr m_groupManager;
 };
 }  // namespace rpc

@@ -39,8 +39,13 @@
 using namespace bcos;
 using namespace bcos::rpc;
 using namespace bcos::http;
+using namespace bcos::protocol;
+using namespace bcos::crypto;
+using namespace bcos::gateway;
 
-RpcFactory::RpcFactory(std::string const& _chainID)
+RpcFactory::RpcFactory(std::string const& _chainID, GatewayInterface::Ptr _gatewayInterface,
+    KeyFactory::Ptr _keyFactory)
+  : m_gatewayInterface(_gatewayInterface), m_keyFactory(_keyFactory)
 {
     auto nodeServiceFactory = std::make_shared<NodeServiceFactory>();
     m_groupManager = std::make_shared<GroupManager>(_chainID, nodeServiceFactory);
@@ -90,27 +95,10 @@ void RpcConfig::initConfig(const std::string& _configPath)
     }
 }
 
-void RpcFactory::checkParams()
-{
-    if (!m_frontServiceInterface)
-    {
-        BOOST_THROW_EXCEPTION(
-            InvalidParameter() << errinfo_comment(
-                "RpcFactory::checkParams frontServiceInterface is uninitialized"));
-    }
-    if (!m_transactionFactory)
-    {
-        BOOST_THROW_EXCEPTION(InvalidParameter() << errinfo_comment(
-                                  "RpcFactory::checkParams transactionFactory is uninitialized"));
-    }
-    return;
-}
-
 bcos::amop::AMOP::Ptr RpcFactory::buildAMOP()
 {
     auto amop = std::make_shared<bcos::amop::AMOP>();
     auto messageFactory = std::make_shared<bcos::amop::MessageFactory>();
-    amop->setFrontServiceInterface(m_frontServiceInterface);
     amop->setKeyFactory(m_keyFactory);
     amop->setMessageFactory(messageFactory);
     return amop;
@@ -120,7 +108,8 @@ JsonRpcInterface::Ptr RpcFactory::buildJsonRpc()
 {
     assert(m_groupManager);
     // JsonRpcImpl_2_0
-    auto jsonRpcInterface = std::make_shared<bcos::rpc::JsonRpcImpl_2_0>(m_groupManager);
+    auto jsonRpcInterface =
+        std::make_shared<bcos::rpc::JsonRpcImpl_2_0>(m_groupManager, m_gatewayInterface);
     return jsonRpcInterface;
 }
 
@@ -179,8 +168,6 @@ Rpc::Ptr RpcFactory::buildRpc(const RpcConfig& _rpcConfig)
     const std::string _listenIP = _rpcConfig.m_listenIP;
     uint16_t _listenPort = _rpcConfig.m_listenPort;
     std::size_t _threadCount = _rpcConfig.m_threadCount;
-
-    // checkParams();
 
     // io_context
     auto ioc = std::make_shared<boost::asio::io_context>();
