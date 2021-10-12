@@ -33,6 +33,7 @@
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <memory>
+#include <string>
 #include <utility>
 
 using namespace bcos;
@@ -213,9 +214,37 @@ bcos::rpc::JsonRpcImpl_2_0::Ptr RpcFactory::buildJsonRpc(
     }
     else
     {
-        BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][buildJsonRpc]")
-                       << LOG_DESC("http server is null") << LOG_KV("model", m_config->model());
+        BCOS_LOG(ERROR) << LOG_DESC("[RPC][FACTORY][buildJsonRpc]")
+                        << LOG_DESC("http server is not created")
+                        << LOG_KV("model", m_config->model());
     }
+
+    _wsService->registerMsgHandler(bcos::rpc::MessageType::RPC_REQUEST,
+        [jsonRpcInterface](std::shared_ptr<boostssl::ws::WsMessage> _msg,
+            std::shared_ptr<boostssl::ws::WsSession> _session) {
+            if (!jsonRpcInterface)
+            {
+                return;
+            }
+            std::string req = std::string(_msg->data()->begin(), _msg->data()->end());
+            jsonRpcInterface->onRPCRequest(req, [req, _msg, _session](const std::string& _resp) {
+                if (_session && _session->isConnected())
+                {
+                    auto buffer = std::make_shared<bcos::bytes>(_resp.begin(), _resp.end());
+                    _msg->setData(buffer);
+                    _session->asyncSendMessage(_msg);
+                }
+                else
+                {
+                    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+                    BCOS_LOG(WARNING)
+                        << LOG_DESC("[RPC][FACTORY][buildJsonRpc]")
+                        << LOG_DESC("unable to send response for session has been inactive")
+                        << LOG_KV("req", req) << LOG_KV("resp", _resp) << LOG_KV("seq", seq)
+                        << LOG_KV("endpoint", _session ? _session->endPoint() : std::string(""));
+                }
+            });
+        });
 
     return jsonRpcInterface;
 }
