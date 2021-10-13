@@ -65,7 +65,7 @@ void Rpc::stop()
  * @param _callback: resp callback
  * @return void
  */
-void Rpc::asyncNotifyBlockNumber(
+void Rpc::asyncNotifyBlockNumber(std::string const& _groupID, std::string const& _nodeName,
     bcos::protocol::BlockNumber _blockNumber, std::function<void(Error::Ptr)> _callback)
 {
     auto ss = m_wsService->sessions();
@@ -74,10 +74,12 @@ void Rpc::asyncNotifyBlockNumber(
         if (s && s->isConnected())
         {
             std::string group;
-            // TODO: For multiple groups, there should be group params
             // eg: {"blockNumber": 11, "group": "group"}
-            std::string resp = "{\"group\":  " + group +
-                               " ,\"blockNumber\": " + std::to_string(_blockNumber) + "}";
+            Json::Value response;
+            response["group"] = _groupID;
+            response["nodeName"] = _nodeName;
+            response["blockNumber"] = _blockNumber;
+            auto resp = response.toStyledString();
             auto message =
                 m_wsService->messageFactory()->buildMessage(bcos::rpc::MessageType::BLOCK_NOTIFY,
                     std::make_shared<bcos::bytes>(resp.begin(), resp.end()));
@@ -117,4 +119,37 @@ void Rpc::asyncNotifyAmopNodeIDs(std::shared_ptr<const bcos::crypto::NodeIDs> _n
     std::function<void(bcos::Error::Ptr _error)> _callback)
 {
     m_AMOP->asyncNotifyAmopNodeIDs(_nodeIDs, _callback);
+}
+
+void Rpc::asyncNotifyGroupInfo(
+    bcos::group::GroupInfo::Ptr _groupInfo, std::function<void(Error::Ptr&&)> _callback)
+{
+    m_jsonRpcImpl->updateGroupInfo(_groupInfo);
+    BCOS_LOG(INFO) << LOG_DESC("asyncNotifyGroupInfo: update the groupInfo")
+                   << printGroupInfo(_groupInfo);
+    if (_callback)
+    {
+        _callback(nullptr);
+    }
+    notifyGroupInfo(_groupInfo);
+}
+
+void Rpc::notifyGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo)
+{
+    // notify the groupInfo to SDK
+    auto sdkSessions = m_wsService->sessions();
+    for (auto const& session : sdkSessions)
+    {
+        if (!session || !session->isConnected())
+        {
+            return;
+        }
+        Json::Value groupInfoJson;
+        groupInfoToJson(groupInfoJson, _groupInfo);
+        auto response = groupInfoJson.toStyledString();
+        auto message =
+            m_wsService->messageFactory()->buildMessage(bcos::rpc::MessageType::GROUP_NOTIFY,
+                std::make_shared<bcos::bytes>(response.begin(), response.end()));
+        session->asyncSendMessage(message);
+    }
 }

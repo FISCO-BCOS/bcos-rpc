@@ -82,8 +82,6 @@ void JsonRpcImpl_2_0::initMethod()
             std::placeholders::_2);
     m_methodToFunc["getPeers"] =
         std::bind(&JsonRpcImpl_2_0::getPeersI, this, std::placeholders::_1, std::placeholders::_2);
-    m_methodToFunc["getNodeInfo"] = std::bind(
-        &JsonRpcImpl_2_0::getNodeInfoI, this, std::placeholders::_1, std::placeholders::_2);
 
     // group manager related method
     m_methodToFunc["createGroup"] = std::bind(
@@ -1156,26 +1154,6 @@ void JsonRpcImpl_2_0::getPeers(RespFunc _respFunc)
         });
 }
 
-// TODO: update getNodeInfo
-void JsonRpcImpl_2_0::getNodeInfo(RespFunc _respFunc)
-{
-    Json::Value jResp;
-    jResp["version"] = m_nodeInfo.version;
-    jResp["wasm"] = m_nodeInfo.isWasm;
-    jResp["smCrypto"] = m_nodeInfo.isSM;
-    jResp["nodeID"] = m_nodeInfo.nodeID;
-    jResp["chainID"] = m_nodeInfo.chainID;
-    jResp["groupID"] = m_nodeInfo.groupID;
-    jResp["agency"] = m_nodeInfo.agency;
-    jResp["buildTime"] = m_nodeInfo.buildTime;
-    jResp["gitCommit"] = m_nodeInfo.gitCommitHash;
-    jResp["supportedVersion"] = m_nodeInfo.supportedVersion;
-    // TODO:
-    jResp["wsProtocolVersion"] = 1;
-
-    _respFunc(nullptr, jResp);
-}
-
 void JsonRpcImpl_2_0::updateGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo)
 {
     m_groupManager->updateGroupInfo(_groupInfo);
@@ -1429,42 +1407,6 @@ void JsonRpcImpl_2_0::getGroupList(RespFunc _respFunc)
         });
 }
 
-void JsonRpcImpl_2_0::groupInfoToJson(
-    Json::Value& _response, bcos::group::GroupInfo::Ptr _groupInfo)
-{
-    _response["chainID"] = _groupInfo->chainID();
-    _response["groupID"] = _groupInfo->groupID();
-    _response["gensisConfig"] = _groupInfo->genesisConfig();
-    _response["iniConfig"] = _groupInfo->iniConfig();
-    _response["status"] = (int32_t)_groupInfo->status();
-    _response["nodeList"] = Json::Value(Json::arrayValue);
-    auto nodeInfos = _groupInfo->nodeInfos();
-    for (auto const& it : nodeInfos)
-    {
-        Json::Value nodeInfoResponse;
-        nodeInfoToJson(nodeInfoResponse, it.second);
-        _response["nodeList"].append(nodeInfoResponse);
-    }
-}
-void JsonRpcImpl_2_0::nodeInfoToJson(
-    Json::Value& _response, bcos::group::ChainNodeInfo::Ptr _nodeInfo)
-{
-    _response["name"] = _nodeInfo->nodeName();
-    _response["type"] = _nodeInfo->nodeType();
-    _response["status"] = (int32_t)_nodeInfo->status();
-    _response["iniConfig"] = _nodeInfo->iniConfig();
-    // set deployInfo
-    _response["deployInfo"] = Json::Value(Json::arrayValue);
-    auto const& infos = _nodeInfo->deployInfo();
-    for (auto const& it : infos)
-    {
-        Json::Value item;
-        item["service"] = it.first;
-        item["ip"] = it.second;
-        _response["deployInfo"].append(item);
-    }
-}
-
 // get the group information of the given group
 void JsonRpcImpl_2_0::getGroupInfo(std::string const& _groupID, RespFunc _respFunc)
 {
@@ -1479,7 +1421,7 @@ void JsonRpcImpl_2_0::getGroupInfo(std::string const& _groupID, RespFunc _respFu
     }
     auto const& chainID = m_groupManager->chainID();
     m_groupManager->groupMgrClient()->asyncGetGroupInfo(
-        chainID, _groupID, [this, _respFunc](Error::Ptr&& _error, GroupInfo::Ptr&& _groupInfo) {
+        chainID, _groupID, [_respFunc](Error::Ptr&& _error, GroupInfo::Ptr&& _groupInfo) {
             RPC_IMPL_LOG(INFO) << LOG_DESC("getGroupInfo") << printGroupInfo(_groupInfo)
                                << LOG_KV("code", _error ? _error->errorCode() : 0)
                                << LOG_KV("msg", _error ? _error->errorMessage() : "success");
@@ -1504,7 +1446,7 @@ void JsonRpcImpl_2_0::getGroupNodeInfo(
     }
     auto const& chainID = m_groupManager->chainID();
     m_groupManager->groupMgrClient()->asyncGetNodeInfo(chainID, _groupID, _nodeName,
-        [this, _respFunc](Error::Ptr&& _error, ChainNodeInfo::Ptr&& _nodeInfo) {
+        [_respFunc](Error::Ptr&& _error, ChainNodeInfo::Ptr&& _nodeInfo) {
             RPC_IMPL_LOG(INFO) << LOG_DESC("getGroupNodeInfo") << printNodeInfo(_nodeInfo)
                                << LOG_KV("code", _error ? _error->errorCode() : 0)
                                << LOG_KV("msg", _error ? _error->errorMessage() : "success");

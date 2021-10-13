@@ -36,7 +36,6 @@ NodeService::Ptr NodeServiceFactory::buildNodeService(std::string const& _chainI
     std::string const& _groupID, bcos::group::ChainNodeInfo::Ptr _nodeInfo)
 {
     auto appName = getApplicationName(_chainID, _groupID, _nodeInfo->nodeName());
-    // TODO: create ledger
     // create cryptoSuite
     auto const& type = _nodeInfo->nodeType();
     CryptoSuite::Ptr cryptoSuite = nullptr;

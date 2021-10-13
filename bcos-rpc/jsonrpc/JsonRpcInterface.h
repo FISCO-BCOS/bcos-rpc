@@ -139,10 +139,6 @@ public:
     // get the information of a given node
     virtual void getGroupNodeInfo(
         std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) = 0;
-
-    // TODO: update this interface and add new interfaces to provide group list information
-    virtual void getNodeInfo(RespFunc _respFunc) = 0;
-
     virtual void updateGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo) = 0;
 };
 

@@ -19,6 +19,7 @@
  */
 #pragma once
 
+#include <bcos-framework/interfaces/multigroup/GroupInfo.h>
 #include <json/json.h>
 #include <exception>
 
@@ -33,6 +34,7 @@ enum MessageType
     HANDESHAKE = 0x100,    // 256
     BLOCK_NOTIFY = 0x101,  // 257
     RPC_REQUEST = 0x102,   // 258
+    GROUP_NOTIFY = 0x103,  // 259
 };
 struct NodeInfo
 {
@@ -111,5 +113,39 @@ inline Json::Value generateResponse(Error::Ptr _error)
     return response;
 }
 
+inline void nodeInfoToJson(Json::Value& _response, bcos::group::ChainNodeInfo::Ptr _nodeInfo)
+{
+    _response["name"] = _nodeInfo->nodeName();
+    _response["type"] = _nodeInfo->nodeType();
+    _response["status"] = (int32_t)_nodeInfo->status();
+    _response["iniConfig"] = _nodeInfo->iniConfig();
+    // set deployInfo
+    _response["deployInfo"] = Json::Value(Json::arrayValue);
+    auto const& infos = _nodeInfo->deployInfo();
+    for (auto const& it : infos)
+    {
+        Json::Value item;
+        item["service"] = it.first;
+        item["ip"] = it.second;
+        _response["deployInfo"].append(item);
+    }
+}
+
+inline void groupInfoToJson(Json::Value& _response, bcos::group::GroupInfo::Ptr _groupInfo)
+{
+    _response["chainID"] = _groupInfo->chainID();
+    _response["groupID"] = _groupInfo->groupID();
+    _response["gensisConfig"] = _groupInfo->genesisConfig();
+    _response["iniConfig"] = _groupInfo->iniConfig();
+    _response["status"] = (int32_t)_groupInfo->status();
+    _response["nodeList"] = Json::Value(Json::arrayValue);
+    auto nodeInfos = _groupInfo->nodeInfos();
+    for (auto const& it : nodeInfos)
+    {
+        Json::Value nodeInfoResponse;
+        nodeInfoToJson(nodeInfoResponse, it.second);
+        _response["nodeList"].append(nodeInfoResponse);
+    }
+}
 }  // namespace rpc
 }  // namespace bcos

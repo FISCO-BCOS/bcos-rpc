@@ -45,7 +45,12 @@ class Rpc : public RPCInterface,
 public:
     using Ptr = std::shared_ptr<Rpc>;
 
-    Rpc() = default;
+    Rpc(std::shared_ptr<boostssl::ws::WsService> _wsService,
+        bcos::rpc::JsonRpcImpl_2_0::Ptr _jsonRpcImpl, bcos::event::EventSub::Ptr _eventSub,
+        bcos::amop::AMOP::Ptr _AMOP)
+      : m_wsService(_wsService), m_jsonRpcImpl(_jsonRpcImpl), m_eventSub(_eventSub), m_AMOP(_AMOP)
+    {}
+
     virtual ~Rpc() { stop(); }
 
 public:
@@ -59,7 +64,8 @@ public:
      * @param _callback: resp callback
      * @return void
      */
-    virtual void asyncNotifyBlockNumber(bcos::protocol::BlockNumber _blockNumber,
+    virtual void asyncNotifyBlockNumber(std::string const& _groupID, std::string const& _nodeName,
+        bcos::protocol::BlockNumber _blockNumber,
         std::function<void(Error::Ptr)> _callback) override;
 
     /**
@@ -81,41 +87,21 @@ public:
         std::function<void(bcos::Error::Ptr _error)> _callback) override;
 
     void asyncNotifyGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo,
-        std::function<void(Error::Ptr&&)> _callback) override
-    {
-        m_jsonRpcImpl->updateGroupInfo(_groupInfo);
-        BCOS_LOG(INFO) << LOG_DESC("asyncNotifyGroupInfo: update the groupInfo")
-                       << printGroupInfo(_groupInfo);
-        if (_callback)
-        {
-            _callback(nullptr);
-        }
-    }
+        std::function<void(Error::Ptr&&)> _callback) override;
 
-public:
     std::shared_ptr<boostssl::ws::WsService> wsService() const { return m_wsService; }
-    void setWsService(std::shared_ptr<boostssl::ws::WsService> _wsService)
-    {
-        m_wsService = _wsService;
-    }
-
     bcos::amop::AMOP::Ptr AMOP() const { return m_AMOP; }
-    void setAMOP(bcos::amop::AMOP::Ptr _AMOP) { m_AMOP = _AMOP; }
-
     bcos::rpc::JsonRpcImpl_2_0::Ptr jsonRpcImpl() const { return m_jsonRpcImpl; }
-    void setJsonRpcImpl(bcos::rpc::JsonRpcImpl_2_0::Ptr _jsonRpcImpl)
-    {
-        m_jsonRpcImpl = _jsonRpcImpl;
-    }
-
     bcos::event::EventSub::Ptr eventSub() const { return m_eventSub; }
-    void setEventSub(bcos::event::EventSub::Ptr _eventSub) { m_eventSub = _eventSub; }
+
+protected:
+    virtual void notifyGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo);
 
 private:
     std::shared_ptr<boostssl::ws::WsService> m_wsService;
-    bcos::amop::AMOP::Ptr m_AMOP;
     bcos::rpc::JsonRpcImpl_2_0::Ptr m_jsonRpcImpl;
     bcos::event::EventSub::Ptr m_eventSub;
+    bcos::amop::AMOP::Ptr m_AMOP;
 };
 
 }  // namespace rpc

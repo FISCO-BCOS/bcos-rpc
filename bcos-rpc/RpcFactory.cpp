@@ -109,23 +109,13 @@ bcos::boostssl::ws::WsService::Ptr RpcFactory::buildWsService(
 
 bcos::amop::AMOP::Ptr RpcFactory::buildAMOP(std::shared_ptr<boostssl::ws::WsService> _wsService)
 {
-    auto topicManager = std::make_shared<amop::TopicManager>();
     auto messageFactory = std::make_shared<bcos::amop::MessageFactory>();
-    auto amop = std::make_shared<bcos::amop::AMOP>();
+    auto topicManager = std::make_shared<amop::TopicManager>();
     auto requestFactory = std::make_shared<AMOPRequestFactory>();
-
-    auto amopWeak = std::weak_ptr<bcos::amop::AMOP>(amop);
-    auto wsServiceWeak = std::weak_ptr<boostssl::ws::WsService>(_wsService);
-
-    amop->setKeyFactory(m_keyFactory);
-    amop->setMessageFactory(messageFactory);
-    amop->setWsMessageFactory(_wsService->messageFactory());
-    amop->setTopicManager(topicManager);
-    amop->setIoc(_wsService->ioc());
-    amop->setWsService(wsServiceWeak);
-    amop->setRequestFactory(requestFactory);
+    auto amop = std::make_shared<bcos::amop::AMOP>(
+        _wsService, messageFactory, topicManager, requestFactory, m_keyFactory);
     amop->setThreadPool(_wsService->threadPool());
-
+    auto amopWeak = std::weak_ptr<bcos::amop::AMOP>(amop);
     _wsService->registerMsgHandler(bcos::amop::MessageType::AMOP_SUBTOPIC,
         [amopWeak](std::shared_ptr<boostssl::ws::WsMessage> _msg,
             std::shared_ptr<boostssl::ws::WsSession> _session) {
@@ -219,12 +209,7 @@ Rpc::Ptr RpcFactory::buildRpc(bcos::boostssl::ws::WsConfig::Ptr _config)
     // EventSub
     auto es = buildEventSub(wsService);
 
-    auto rpc = std::make_shared<Rpc>();
-    rpc->setWsService(wsService);
-    rpc->setAMOP(amop);
-    rpc->setEventSub(es);
-    rpc->setJsonRpcImpl(jsonRpc);
-
+    auto rpc = std::make_shared<Rpc>(wsService, jsonRpc, es, amop);
     BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][buildRpc]")
                    << LOG_KV("listenIP", _config->listenIP())
                    << LOG_KV("listenPort", _config->listenPort())

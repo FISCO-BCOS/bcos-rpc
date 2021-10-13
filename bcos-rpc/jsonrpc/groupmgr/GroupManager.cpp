@@ -35,7 +35,6 @@ void GroupManager::updateGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo)
     {
         updateNodeServiceWithoutLock(groupID, it.second);
     }
-    // TODO: notify the groupInfo to SDK
 }
 
 void GroupManager::updateNodeServiceWithoutLock(

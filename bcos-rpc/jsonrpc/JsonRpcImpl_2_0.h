@@ -156,9 +156,6 @@ public:
     void getGroupNodeInfo(
         std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override;
 
-    // TODO: update this interface and add new interfaces to provide group list information
-    void getNodeInfo(RespFunc _respFunc) override;
-
 public:
     void callI(const Json::Value& req, RespFunc _respFunc)
     {
@@ -325,12 +322,6 @@ public:
         getGroupNodeInfo(_req[0u].asString(), _req[1u].asString(), _respFunc);
     }
 
-    void getNodeInfoI(const Json::Value& req, RespFunc _respFunc)
-    {
-        boost::ignore_unused(req);
-        getNodeInfo(_respFunc);
-    }
-
 public:
     const std::unordered_map<std::string, std::function<void(Json::Value, RespFunc _respFunc)>>&
     methodToFunc() const
@@ -356,9 +347,6 @@ private:
         std::string const& _groupID, std::string const& _nodeName, std::string const& _command);
     void checkGroupStatus(std::string const& _command, bcos::group::GroupStatus const& _status,
         std::set<bcos::group::GroupStatus> const& _statusSet, bool _allow = false);
-
-    void groupInfoToJson(Json::Value& _response, bcos::group::GroupInfo::Ptr _groupInfo);
-    void nodeInfoToJson(Json::Value& _response, bcos::group::ChainNodeInfo::Ptr _nodeInfo);
 
 private:
     std::unordered_map<std::string, std::function<void(Json::Value, RespFunc _respFunc)>>

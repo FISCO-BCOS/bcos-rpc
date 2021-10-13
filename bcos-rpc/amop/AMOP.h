@@ -47,7 +47,22 @@ public:
     using Ptr = std::shared_ptr<AMOP>;
 
 public:
-    AMOP() = default;
+    AMOP(std::shared_ptr<bcos::boostssl::ws::WsService> _wsService,
+        std::shared_ptr<bcos::amop::MessageFactory> _messageFactory,
+        std::shared_ptr<amop::TopicManager> _topicManager,
+        std::shared_ptr<AMOPRequestFactory> _requestFactory,
+        bcos::crypto::KeyFactory::Ptr _keyFactory)
+      : m_messageFactory(_messageFactory),
+        m_topicManager(_topicManager),
+        m_requestFactory(_requestFactory),
+        m_keyFactory(_keyFactory)
+    {
+        m_wsService = std::weak_ptr<boostssl::ws::WsService>(_wsService);
+        m_wsMessageFactory = _wsService->messageFactory();
+        m_ioc = _wsService->ioc();
+        m_wsService = _wsService;
+    }
+
     virtual ~AMOP() { stop(); }
 
     void initMsgHandler();
@@ -183,25 +198,11 @@ public:
     std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
     void setIoc(const std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
     std::shared_ptr<MessageFactory> messageFactory() const { return m_messageFactory; }
-    void setMessageFactory(std::shared_ptr<MessageFactory> _messageFactory)
-    {
-        m_messageFactory = _messageFactory;
-    }
     std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> wsMessageFactory() const
     {
         return m_wsMessageFactory;
     }
-    void setWsMessageFactory(
-        std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> _wsMessageFactory)
-    {
-        m_wsMessageFactory = _wsMessageFactory;
-    }
     std::shared_ptr<TopicManager> topicManager() const { return m_topicManager; }
-    void setTopicManager(std::shared_ptr<TopicManager> _topicManager)
-    {
-        m_topicManager = _topicManager;
-    }
-
     std::shared_ptr<bcos::front::FrontServiceInterface> frontServiceInterface() const
     {
         return m_frontServiceInterface;
@@ -213,23 +214,9 @@ public:
     }
 
     std::weak_ptr<bcos::boostssl::ws::WsService> wsService() { return m_wsService; }
-    void setWsService(std::weak_ptr<bcos::boostssl::ws::WsService> _wsService)
-    {
-        m_wsService = _wsService;
-    }
-
     std::shared_ptr<bcos::crypto::KeyFactory> keyFactory() { return m_keyFactory; }
-    void setKeyFactory(std::shared_ptr<bcos::crypto::KeyFactory> _keyFactory)
-    {
-        m_keyFactory = _keyFactory;
-    }
 
     std::shared_ptr<AMOPRequestFactory> requestFactory() const { return m_requestFactory; }
-    void setRequestFactory(std::shared_ptr<AMOPRequestFactory> _requestFactory)
-    {
-        m_requestFactory = _requestFactory;
-    }
-
     std::shared_ptr<bcos::ThreadPool> threadPool() const { return m_threadPool; }
     void setThreadPool(std::shared_ptr<bcos::ThreadPool> _threadPool)
     {
@@ -238,15 +225,14 @@ public:
 
 private:
     bool m_run = false;
-    //
-    std::shared_ptr<bcos::crypto::KeyFactory> m_keyFactory;
     std::weak_ptr<bcos::boostssl::ws::WsService> m_wsService;
-    std::shared_ptr<bcos::front::FrontServiceInterface> m_frontServiceInterface;
     std::shared_ptr<MessageFactory> m_messageFactory;
     std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> m_wsMessageFactory;
     std::shared_ptr<TopicManager> m_topicManager;
     std::shared_ptr<AMOPRequestFactory> m_requestFactory;
+    std::shared_ptr<bcos::crypto::KeyFactory> m_keyFactory;
     std::shared_ptr<bcos::ThreadPool> m_threadPool;
+    std::shared_ptr<bcos::front::FrontServiceInterface> m_frontServiceInterface;
 
     std::shared_ptr<boost::asio::deadline_timer> m_timer;
     std::shared_ptr<boost::asio::io_context> m_ioc;
