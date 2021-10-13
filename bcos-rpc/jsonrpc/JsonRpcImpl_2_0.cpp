@@ -1212,7 +1212,7 @@ void JsonRpcImpl_2_0::createGroup(std::string const& _groupInfoStr, RespFunc _re
         errorMsg << LOG_DESC("createGroup failed for the group already exists.")
                  << LOG_DESC("existedGroupInfo:") << printGroupInfo(cachedGroupInfo);
         RPC_IMPL_LOG(WARNING) << errorMsg.str();
-        BOOST_THROW_EXCEPTION(JsonRpcException(JsonRpcError::GroupAlreadExists, errorMsg.str()));
+        BOOST_THROW_EXCEPTION(JsonRpcException(JsonRpcError::GroupAlreadyExists, errorMsg.str()));
     }
     // check the chainID
     if (groupInfo->chainID() != m_groupManager->chainID())

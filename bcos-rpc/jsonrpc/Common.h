@@ -72,7 +72,7 @@ enum JsonRpcError : int32_t
     InternalError = -32603,
     // -32000 to -32099: Server error	Reserved for implementation-defined server-errors.
     NodeNotExistOrNotStarted = -32000,
-    GroupAlreadExists = -32001,
+    GroupAlreadyExists = -32001,
     NodeAlreadyExists = -32002,
     OperationNotAllowed = -32003,
 };
