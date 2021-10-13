@@ -30,8 +30,15 @@ class GroupManager
 {
 public:
     using Ptr = std::shared_ptr<GroupManager>;
-    GroupManager(std::string const& _chainID, NodeServiceFactory::Ptr _nodeServiceFactory)
-      : m_chainID(_chainID), m_nodeServiceFactory(_nodeServiceFactory)
+    GroupManager(std::string const& _chainID, NodeServiceFactory::Ptr _nodeServiceFactory,
+        bcos::group::GroupManagerInterface::Ptr _groupMgr,
+        bcos::group::GroupInfoFactory::Ptr _groupInfoFactory,
+        bcos::group::ChainNodeInfoFactory::Ptr _chainNodeInfoFactory)
+      : m_chainID(_chainID),
+        m_nodeServiceFactory(_nodeServiceFactory),
+        m_groupMgrClient(_groupMgr),
+        m_groupInfoFactory(_groupInfoFactory),
+        m_chainNodeInfoFactory(_chainNodeInfoFactory)
     {}
     virtual ~GroupManager() {}
 
@@ -78,7 +85,6 @@ protected:
 private:
     std::string m_chainID;
     NodeServiceFactory::Ptr m_nodeServiceFactory;
-    // TODO: set m_groupMgrClient
     bcos::group::GroupManagerInterface::Ptr m_groupMgrClient;
     bcos::group::GroupInfoFactory::Ptr m_groupInfoFactory;
     bcos::group::ChainNodeInfoFactory::Ptr m_chainNodeInfoFactory;

@@ -22,6 +22,8 @@
 #include <bcos-boostssl/websocket/WsInitializer.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsService.h>
+#include <bcos-framework/interfaces/multigroup/ChainNodeInfoFactory.h>
+#include <bcos-framework/interfaces/multigroup/GroupInfoFactory.h>
 #include <bcos-framework/libutilities/Exceptions.h>
 #include <bcos-framework/libutilities/FileUtility.h>
 #include <bcos-framework/libutilities/Log.h>
@@ -41,13 +43,16 @@ using namespace bcos::protocol;
 using namespace bcos::crypto;
 using namespace bcos::gateway;
 using namespace bcos::amop;
+using namespace bcos::group;
 
 RpcFactory::RpcFactory(std::string const& _chainID, GatewayInterface::Ptr _gatewayInterface,
-    KeyFactory::Ptr _keyFactory)
+    GroupManagerInterface::Ptr _groupMgr, GroupInfoFactory::Ptr _groupInfoFactory,
+    ChainNodeInfoFactory::Ptr _chainNodeInfoFactory, KeyFactory::Ptr _keyFactory)
   : m_gatewayInterface(_gatewayInterface), m_keyFactory(_keyFactory)
 {
     auto nodeServiceFactory = std::make_shared<NodeServiceFactory>();
-    m_groupManager = std::make_shared<GroupManager>(_chainID, nodeServiceFactory);
+    m_groupManager = std::make_shared<GroupManager>(
+        _chainID, nodeServiceFactory, _groupMgr, _groupInfoFactory, _chainNodeInfoFactory);
 }
 
 std::shared_ptr<bcos::boostssl::ws::WsConfig> RpcFactory::initConfig(const std::string& _configPath)
