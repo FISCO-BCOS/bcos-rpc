@@ -336,9 +336,6 @@ public:
     }
     void setNodeInfo(const NodeInfo& _nodeInfo) { m_nodeInfo = _nodeInfo; }
     NodeInfo nodeInfo() const { return m_nodeInfo; }
-
-    void updateGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo) override;
-
     GroupManager::Ptr groupManager() { return m_groupManager; }
 
 private:

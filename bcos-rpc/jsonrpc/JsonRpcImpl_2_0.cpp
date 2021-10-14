@@ -1154,11 +1154,6 @@ void JsonRpcImpl_2_0::getPeers(RespFunc _respFunc)
         });
 }
 
-void JsonRpcImpl_2_0::updateGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo)
-{
-    m_groupManager->updateGroupInfo(_groupInfo);
-}
-
 NodeService::Ptr JsonRpcImpl_2_0::getNodeService(
     std::string const& _groupID, std::string const& _nodeName, std::string const& _command)
 {

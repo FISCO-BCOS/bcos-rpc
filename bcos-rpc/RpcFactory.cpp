@@ -162,12 +162,6 @@ bcos::rpc::JsonRpcImpl_2_0::Ptr RpcFactory::buildJsonRpc(
         httpServer->setHttpReqHandler(std::bind(&bcos::rpc::JsonRpcInterface::onRPCRequest,
             jsonRpcInterface, std::placeholders::_1, std::placeholders::_2));
     }
-    else
-    {
-        BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][buildJsonRpc]")
-                       << LOG_DESC("http server is null") << LOG_KV("model", m_config->model());
-    }
-
     return jsonRpcInterface;
 }
 

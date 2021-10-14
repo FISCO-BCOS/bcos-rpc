@@ -36,6 +36,7 @@ class WsSession;
 class WsService;
 }  // namespace ws
 }  // namespace boostssl
+DERIVE_BCOS_EXCEPTION(RpcInitError);
 namespace rpc
 {
 class Rpc : public RPCInterface,
@@ -53,11 +54,11 @@ public:
 
     virtual ~Rpc() { stop(); }
 
-public:
     virtual void start() override;
     virtual void stop() override;
 
-public:
+    virtual void init();
+
     /**
      * @brief: notify blockNumber to rpc
      * @param _blockNumber: blockNumber

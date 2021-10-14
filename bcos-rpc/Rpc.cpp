@@ -22,8 +22,11 @@
 #include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <bcos-rpc/Rpc.h>
+#include <future>
+
 using namespace bcos;
 using namespace bcos::rpc;
+using namespace bcos::group;
 
 void Rpc::start()
 {
@@ -57,6 +60,57 @@ void Rpc::stop()
     }
 
     BCOS_LOG(INFO) << LOG_DESC("[RPC][RPC][stop]") << LOG_DESC("stop rpc successfully");
+}
+
+void Rpc::init()
+{
+    BCOS_LOG(INFO) << LOG_DESC("init Rpc");
+    auto initRet = std::make_shared<std::promise<Error::Ptr>>();
+    auto future = initRet->get_future();
+    auto chainID = m_jsonRpcImpl->groupManager()->chainID();
+    auto groupMgrClient = m_jsonRpcImpl->groupManager()->groupMgrClient();
+    groupMgrClient->asyncGetGroupList(chainID, [this, chainID, initRet, groupMgrClient](
+                                                   Error::Ptr&& _error,
+                                                   std::set<std::string>&& _groupList) {
+        if (_error)
+        {
+            BCOS_LOG(ERROR) << LOG_DESC("Rpc init failed for getGroupList from GroupManager failed")
+                            << LOG_KV("code", _error->errorCode())
+                            << LOG_KV("msg", _error->errorMessage());
+            initRet->set_value(std::move(_error));
+            return;
+        }
+        // get and update all groupInfos
+        BCOS_LOG(INFO) << LOG_DESC("Rpc init: fetch groupList success, fetch group information now")
+                       << LOG_KV("groupSize", _groupList.size());
+        std::vector<std::string> groupList(_groupList.begin(), _groupList.end());
+        groupMgrClient->asyncGetGroupInfos(chainID, groupList,
+            [this, initRet](Error::Ptr&& _error, std::vector<GroupInfo::Ptr>&& _groupInfos) {
+                if (_error)
+                {
+                    BCOS_LOG(ERROR) << LOG_DESC("Rpc init failed for get group informations failed")
+                                    << LOG_KV("code", _error->errorCode())
+                                    << LOG_KV("msg", _error->errorMessage());
+                    initRet->set_value(std::move(_error));
+                    return;
+                }
+                BCOS_LOG(INFO) << LOG_DESC("Rpc init: fetch group information succcess");
+                for (auto const& groupInfo : _groupInfos)
+                {
+                    m_jsonRpcImpl->groupManager()->updateGroupInfo(groupInfo);
+                }
+                initRet->set_value(nullptr);
+            });
+    });
+    auto error = future.get();
+    if (error)
+    {
+        BOOST_THROW_EXCEPTION(
+            RpcInitError() << errinfo_comment(
+                "Rpc init error for get group informations failed, code: " +
+                std::to_string(error->errorCode()) + ", message:" + error->errorMessage()));
+    }
+    BCOS_LOG(INFO) << LOG_DESC("Rpc init success");
 }
 
 /**
@@ -124,7 +178,7 @@ void Rpc::asyncNotifyAmopNodeIDs(std::shared_ptr<const bcos::crypto::NodeIDs> _n
 void Rpc::asyncNotifyGroupInfo(
     bcos::group::GroupInfo::Ptr _groupInfo, std::function<void(Error::Ptr&&)> _callback)
 {
-    m_jsonRpcImpl->updateGroupInfo(_groupInfo);
+    m_jsonRpcImpl->groupManager()->updateGroupInfo(_groupInfo);
     BCOS_LOG(INFO) << LOG_DESC("asyncNotifyGroupInfo: update the groupInfo")
                    << printGroupInfo(_groupInfo);
     if (_callback)
@@ -142,7 +196,7 @@ void Rpc::notifyGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo)
     {
         if (!session || !session->isConnected())
         {
-            return;
+            continue;
         }
         Json::Value groupInfoJson;
         groupInfoToJson(groupInfoJson, _groupInfo);

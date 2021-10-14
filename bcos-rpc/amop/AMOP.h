@@ -18,7 +18,7 @@
  * @date 2021-06-21
  */
 #pragma once
-
+#include <bcos-boostssl/websocket/WsService.h>
 #include <bcos-framework/interfaces/amop/AMOPInterface.h>
 #include <bcos-framework/interfaces/crypto/KeyFactory.h>
 #include <bcos-framework/libutilities/ThreadPool.h>
