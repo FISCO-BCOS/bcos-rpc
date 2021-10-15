@@ -754,11 +754,10 @@ void JsonRpcImpl_2_0::getTransactionReceipt(std::string const& _groupID,
                             << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
                             << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
                     }
-
-                    if (_jTx.isMember("input"))
-                    {
-                        jRespCopy["input"] = _jTx["input"];
-                    }
+                    jRespCopy["input"] = _jTx["input"];
+                    jRespCopy["from"] = _jTx["from"];
+                    jRespCopy["to"] = _jTx["to"];
+                    jRespCopy["transactionProof"] = _jTx["transactionProof"];
 
                     _respFunc(nullptr, jRespCopy);
                 });
