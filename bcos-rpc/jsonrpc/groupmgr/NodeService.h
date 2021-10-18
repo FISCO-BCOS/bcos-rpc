@@ -20,7 +20,7 @@
  */
 #pragma once
 #include <bcos-framework/interfaces/consensus/ConsensusInterface.h>
-#include <bcos-framework/interfaces/executor/ExecutorInterface.h>
+#include <bcos-framework/interfaces/dispatcher/SchedulerInterface.h>
 #include <bcos-framework/interfaces/ledger/LedgerInterface.h>
 #include <bcos-framework/interfaces/multigroup/ChainNodeInfo.h>
 #include <bcos-framework/interfaces/multigroup/GroupInfo.h>
@@ -38,12 +38,12 @@ class NodeService
 public:
     using Ptr = std::shared_ptr<NodeService>;
     NodeService(bcos::ledger::LedgerInterface::Ptr _ledger,
-        std::shared_ptr<bcos::executor::ExecutorInterface> _executor,
+        std::shared_ptr<bcos::scheduler::SchedulerInterface> _scheduler,
         bcos::txpool::TxPoolInterface::Ptr _txpool,
         bcos::consensus::ConsensusInterface::Ptr _consensus,
         bcos::sync::BlockSyncInterface::Ptr _sync, bcos::protocol::BlockFactory::Ptr _blockFactory)
       : m_ledger(_ledger),
-        m_executor(_executor),
+        m_scheduler(_scheduler),
         m_txpool(_txpool),
         m_consensus(_consensus),
         m_sync(_sync),
@@ -52,7 +52,7 @@ public:
     virtual ~NodeService() {}
 
     bcos::ledger::LedgerInterface::Ptr ledger() { return m_ledger; }
-    std::shared_ptr<bcos::executor::ExecutorInterface> executor() { return m_executor; }
+    std::shared_ptr<bcos::scheduler::SchedulerInterface> scheduler() { return m_scheduler; }
     bcos::txpool::TxPoolInterface::Ptr txpool() { return m_txpool; }
     bcos::consensus::ConsensusInterface::Ptr consensus() { return m_consensus; }
     bcos::sync::BlockSyncInterface::Ptr sync() { return m_sync; }
@@ -60,7 +60,7 @@ public:
 
 private:
     bcos::ledger::LedgerInterface::Ptr m_ledger;
-    std::shared_ptr<bcos::executor::ExecutorInterface> m_executor;
+    std::shared_ptr<bcos::scheduler::SchedulerInterface> m_scheduler;
     bcos::txpool::TxPoolInterface::Ptr m_txpool;
     bcos::consensus::ConsensusInterface::Ptr m_consensus;
     bcos::sync::BlockSyncInterface::Ptr m_sync;

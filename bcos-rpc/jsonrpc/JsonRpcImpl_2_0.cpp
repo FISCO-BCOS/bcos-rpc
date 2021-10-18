@@ -510,10 +510,9 @@ void JsonRpcImpl_2_0::call(std::string const& _groupID, std::string const& _node
     auto transaction =
         transactionFactory->createTransaction(0, _to, *decodeData(_data), u256(0), 0, "", "", 0);
 
-
-    nodeService->executor()->asyncExecuteTransaction(
-        transaction, [_to, _respFunc](const Error::Ptr& _error,
-                         const protocol::TransactionReceipt::ConstPtr& _transactionReceiptPtr) {
+    nodeService->scheduler()->call(
+        transaction, [_to, _respFunc](Error::Ptr&& _error,
+                         protocol::TransactionReceipt::Ptr&& _transactionReceiptPtr) {
             Json::Value jResp;
             if (!_error || (_error->errorCode() == bcos::protocol::CommonError::SUCCESS))
             {
@@ -894,14 +893,16 @@ void JsonRpcImpl_2_0::getBlockNumber(
 }
 
 void JsonRpcImpl_2_0::getCode(std::string const& _groupID, std::string const& _nodeName,
-    const std::string _contractAddress, RespFunc _respFunc)
+    const std::string _contractAddress, RespFunc)
 {
     RPC_IMPL_LOG(TRACE) << LOG_BADGE("getCode") << LOG_KV("contractAddress", _contractAddress)
                         << LOG_KV("group", _groupID) << LOG_KV("node", _nodeName);
 
     auto nodeService = getNodeService(_groupID, _nodeName, "getCode");
-    auto executor = nodeService->executor();
-    executor->asyncGetCode(
+// TODO: scheduler provid asyncGetCode interface
+#if 0
+    auto scheduler = nodeService->scheduler();
+    scheduler->asyncGetCode(
         std::string_view(_contractAddress), [_contractAddress, _respFunc](const Error::Ptr& _error,
                                                 const std::shared_ptr<bytes>& _codeData) {
             std::string code;
@@ -924,6 +925,7 @@ void JsonRpcImpl_2_0::getCode(std::string const& _groupID, std::string const& _n
             Json::Value jResp = code;
             _respFunc(_error, jResp);
         });
+#endif
 }
 
 void JsonRpcImpl_2_0::getSealerList(
