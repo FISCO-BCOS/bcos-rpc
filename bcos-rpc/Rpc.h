@@ -36,7 +36,6 @@ class WsSession;
 class WsService;
 }  // namespace ws
 }  // namespace boostssl
-DERIVE_BCOS_EXCEPTION(RpcInitError);
 namespace rpc
 {
 class Rpc : public RPCInterface,

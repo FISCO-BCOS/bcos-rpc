@@ -1407,15 +1407,6 @@ void JsonRpcImpl_2_0::getGroupList(RespFunc _respFunc)
 // get the group information of the given group
 void JsonRpcImpl_2_0::getGroupInfo(std::string const& _groupID, RespFunc _respFunc)
 {
-    auto groupInfo = m_groupManager->getGroupInfo(_groupID);
-    // hit the cache, response directly
-    if (groupInfo)
-    {
-        Json::Value response;
-        groupInfoToJson(response, groupInfo);
-        _respFunc(nullptr, response);
-        return;
-    }
     auto const& chainID = m_groupManager->chainID();
     m_groupManager->groupMgrClient()->asyncGetGroupInfo(
         chainID, _groupID, [_respFunc](Error::Ptr&& _error, GroupInfo::Ptr&& _groupInfo) {

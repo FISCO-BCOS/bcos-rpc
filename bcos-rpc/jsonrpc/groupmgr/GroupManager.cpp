@@ -28,9 +28,13 @@ using namespace bcos::protocol;
 void GroupManager::updateGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo)
 {
     WriteGuard l(x_nodeServiceList);
-    m_groupInfos[_groupInfo->groupID()] = _groupInfo;
-    auto nodeInfos = _groupInfo->nodeInfos();
     auto const& groupID = _groupInfo->groupID();
+    if (!m_groupInfos.count(groupID))
+    {
+        m_groupInfos[groupID] = _groupInfo;
+        return;
+    }
+    auto nodeInfos = _groupInfo->nodeInfos();
     for (auto const& it : nodeInfos)
     {
         updateNodeServiceWithoutLock(groupID, it.second);
@@ -40,7 +44,7 @@ void GroupManager::updateGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo)
 void GroupManager::updateNodeServiceWithoutLock(
     std::string const& _groupID, ChainNodeInfo::Ptr _nodeInfo)
 {
-    auto nodeAppName = getApplicationName(m_chainID, _groupID, _nodeInfo->nodeName());
+    auto nodeAppName = _nodeInfo->nodeName();
     // the node has not been started
     if (_nodeInfo->status() != GroupStatus::Started)
     {
@@ -57,6 +61,8 @@ void GroupManager::updateNodeServiceWithoutLock(
     {
         auto nodeService = m_nodeServiceFactory->buildNodeService(m_chainID, _groupID, _nodeInfo);
         m_nodeServiceList[nodeAppName] = nodeService;
+        auto groupInfo = m_groupInfos[_groupID];
+        groupInfo->appendNodeInfo(_nodeInfo);
         BCOS_LOG(INFO) << LOG_DESC("buildNodeService for the started new node")
                        << printNodeInfo(_nodeInfo);
     }
@@ -70,6 +76,10 @@ NodeService::Ptr GroupManager::getNodeService(
     if (m_nodeServiceList.count(appName))
     {
         return m_nodeServiceList.at(appName);
+    }
+    if (m_nodeServiceList.count(_nodeName))
+    {
+        return m_nodeServiceList.at(_nodeName);
     }
     return nullptr;
 }

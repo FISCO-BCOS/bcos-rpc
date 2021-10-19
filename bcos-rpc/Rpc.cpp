@@ -106,10 +106,9 @@ void Rpc::init()
     auto error = future.get();
     if (error)
     {
-        BOOST_THROW_EXCEPTION(
-            RpcInitError() << errinfo_comment(
-                "Rpc init error for get group informations failed, code: " +
-                std::to_string(error->errorCode()) + ", message:" + error->errorMessage()));
+        BCOS_LOG(WARNING) << LOG_DESC("Rpc init error for get group informations failed")
+                          << LOG_KV("code", error->errorCode())
+                          << LOG_KV("msg", error->errorMessage());
     }
     BCOS_LOG(INFO) << LOG_DESC("Rpc init success");
 }

@@ -32,10 +32,10 @@ using namespace bcos::crypto;
 using namespace bcos::group;
 using namespace bcos::protocol;
 
-NodeService::Ptr NodeServiceFactory::buildNodeService(std::string const& _chainID,
-    std::string const& _groupID, bcos::group::ChainNodeInfo::Ptr _nodeInfo)
+NodeService::Ptr NodeServiceFactory::buildNodeService(
+    std::string const&, std::string const&, bcos::group::ChainNodeInfo::Ptr _nodeInfo)
 {
-    auto appName = getApplicationName(_chainID, _groupID, _nodeInfo->nodeName());
+    auto appName = _nodeInfo->nodeName();
     // create cryptoSuite
     auto const& type = _nodeInfo->nodeType();
     CryptoSuite::Ptr cryptoSuite = nullptr;
