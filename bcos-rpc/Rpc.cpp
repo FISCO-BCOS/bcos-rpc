@@ -31,7 +31,8 @@ using namespace bcos::group;
 void Rpc::start()
 {
     // start amop
-    m_AMOP->start();
+    // TODO: move AMOP to the gateway
+    // m_AMOP->start();
     // start event sub
     // m_eventSub->start();
     // start websocket service
