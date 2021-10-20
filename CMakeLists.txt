@@ -51,11 +51,11 @@ HunterGate(
 project(bcos-rpc VERSION "3.0.0")
 set(VERSION_SUFFIX "")
 
-hunter_add_package(OpenSSL)
-find_package(OpenSSL REQUIRED)
-
-hunter_add_package(bcos-boostssl)
-find_package(bcos-boostssl CONFIG REQUIRED)
+# install dependencies
+include(InstallBcosFrameworkDependencies)
+include(InstallBcosTarsProtocolDependencies)
+include(InstallBcosCryptoDependencies)
+include(InstallBoostSSL)
 
 hunter_add_package(jsoncpp)
 find_package(jsoncpp CONFIG REQUIRED)
@@ -70,13 +70,6 @@ include(InstallInclude)
 
 include_directories(${CMAKE_INSTALL_INCLUDEDIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
-# install dependencies
-include(InstallBcosFrameworkDependencies)
-include(InstallBcosTarsProtocolDependencies)
-include(InstallBcosCryptoDependencies)
-# TODO: wait ledger adapt to the latest bcos-framework
-#include(InstallBcosLedgerDependencies)
 
 set(RPC_TARGET "rpc")
 set(EVENT_TARGET "event")

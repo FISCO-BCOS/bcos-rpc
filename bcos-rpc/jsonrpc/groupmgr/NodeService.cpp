@@ -49,24 +49,29 @@ NodeService::Ptr NodeServiceFactory::buildNodeService(
     }
     auto blockFactory = createBlockFactory(cryptoSuite);
     auto ledgerClient =
-        createServiceClient<bcostars::LedgerServiceClient, bcostars::LedgerServicePrx>(
-            appName, LEDGER_SERVICE_NAME, blockFactory);
+        createServiceClient<bcostars::LedgerServiceClient, bcostars::LedgerServicePrx>(appName,
+            _nodeInfo->microService() ? LEDGER_SERVICE_NAME : NATIVE_SERVICE_NAME,
+            LEDGER_SERVANT_NAME, blockFactory);
     auto schedulerClient =
         createServiceClient<bcostars::SchedulerServiceClient, bcostars::SchedulerServicePrx>(
-            appName, SCHEDULER_SERVICE_NAME, cryptoSuite);
+            appName, _nodeInfo->microService() ? SCHEDULER_SERVICE_NAME : NATIVE_SERVICE_NAME,
+            SCHEDULER_SERVANT_NAME, cryptoSuite);
 
     // create txpool client
     auto txpoolClient =
-        createServiceClient<bcostars::TxPoolServiceClient, bcostars::TxPoolServicePrx>(
-            appName, TXPOOL_SERVICE_NAME, cryptoSuite, blockFactory);
+        createServiceClient<bcostars::TxPoolServiceClient, bcostars::TxPoolServicePrx>(appName,
+            _nodeInfo->microService() ? TXPOOL_SERVICE_NAME : NATIVE_SERVICE_NAME,
+            TXPOOL_SERVANT_NAME, cryptoSuite, blockFactory);
     // create consensus client
     auto consensusClient =
-        createServiceClient<bcostars::PBFTServiceClient, bcostars::PBFTServicePrx>(
-            appName, CONSENSUS_SERVICE_NAME);
+        createServiceClient<bcostars::PBFTServiceClient, bcostars::PBFTServicePrx>(appName,
+            _nodeInfo->microService() ? CONSENSUS_SERVICE_NAME : NATIVE_SERVICE_NAME,
+            CONSENSUS_SERVANT_NAME);
     // create sync client
     auto syncClient =
-        createServiceClient<bcostars::BlockSyncServiceClient, bcostars::PBFTServicePrx>(
-            appName, CONSENSUS_SERVICE_NAME);
+        createServiceClient<bcostars::BlockSyncServiceClient, bcostars::PBFTServicePrx>(appName,
+            _nodeInfo->microService() ? CONSENSUS_SERVICE_NAME : NATIVE_SERVICE_NAME,
+            CONSENSUS_SERVANT_NAME);
     return std::make_shared<NodeService>(
         ledgerClient, schedulerClient, txpoolClient, consensusClient, syncClient, blockFactory);
 }

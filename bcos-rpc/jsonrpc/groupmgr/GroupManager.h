@@ -78,6 +78,17 @@ public:
         return m_chainNodeInfoFactory;
     };
 
+    std::set<std::string> groupList()
+    {
+        ReadGuard l(x_nodeServiceList);
+        std::set<std::string> groupList;
+        for (auto const& it : m_groupInfos)
+        {
+            groupList.insert(it.first);
+        }
+        return groupList;
+    }
+
 protected:
     void updateNodeServiceWithoutLock(
         std::string const& _groupID, bcos::group::ChainNodeInfo::Ptr _nodeInfo);

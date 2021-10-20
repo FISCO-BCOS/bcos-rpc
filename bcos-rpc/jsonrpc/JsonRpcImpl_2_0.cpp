@@ -1390,14 +1390,23 @@ void JsonRpcImpl_2_0::getGroupList(RespFunc _respFunc)
 {
     auto const& chainID = m_groupManager->chainID();
     m_groupManager->groupMgrClient()->asyncGetGroupList(
-        chainID, [_respFunc](Error::Ptr&& _error, std::set<std::string>&& _groupList) {
+        chainID, [_respFunc, this](Error::Ptr&& _error, std::set<std::string>&& _groupList) {
             RPC_IMPL_LOG(INFO) << LOG_DESC("getGroupList") << LOG_KV("groupNum", _groupList.size())
                                << LOG_KV("code", _error ? _error->errorCode() : 0)
                                << LOG_KV("msg", _error ? _error->errorMessage() : "success");
             auto response = generateResponse(_error);
             response["groupList"] = Json::Value(Json::arrayValue);
+            auto groupList = m_groupManager->groupList();
+            for (auto const& it : groupList)
+            {
+                response["groupList"].append(it);
+            }
             for (auto const& it : _groupList)
             {
+                if (groupList.count(it))
+                {
+                    continue;
+                }
                 response["groupList"].append(it);
             }
             _respFunc(_error, response);
@@ -1407,6 +1416,15 @@ void JsonRpcImpl_2_0::getGroupList(RespFunc _respFunc)
 // get the group information of the given group
 void JsonRpcImpl_2_0::getGroupInfo(std::string const& _groupID, RespFunc _respFunc)
 {
+    auto groupInfo = m_groupManager->getGroupInfo(_groupID);
+    if (groupInfo)
+    {
+        // can only recover the deleted group
+        auto response = generateResponse(nullptr);
+        groupInfoToJson(response, groupInfo);
+        _respFunc(nullptr, response);
+        return;
+    }
     auto const& chainID = m_groupManager->chainID();
     m_groupManager->groupMgrClient()->asyncGetGroupInfo(
         chainID, _groupID, [_respFunc](Error::Ptr&& _error, GroupInfo::Ptr&& _groupInfo) {
