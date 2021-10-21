@@ -189,6 +189,14 @@ bcos::amop::AMOP::Ptr RpcFactory::buildAMOP(std::shared_ptr<boostssl::ws::WsServ
             }
         });
 
+    _wsService->registerDisconnectHandler(
+        [topicManager](std::shared_ptr<boostssl::ws::WsSession> _session) {
+            if (_session)
+            {
+                topicManager->removeTopicsByClient(_session->endPoint());
+            }
+        });
+
     return amop;
 }
 
