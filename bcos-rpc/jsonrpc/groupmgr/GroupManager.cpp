@@ -45,17 +45,6 @@ void GroupManager::updateNodeServiceWithoutLock(
     std::string const& _groupID, ChainNodeInfo::Ptr _nodeInfo)
 {
     auto nodeAppName = _nodeInfo->nodeName();
-    // the node has not been started
-    if (_nodeInfo->status() != GroupStatus::Started)
-    {
-        if (m_nodeServiceList.count(nodeAppName))
-        {
-            m_nodeServiceList.erase(nodeAppName);
-            BCOS_LOG(INFO) << LOG_DESC("Erase the node service for the node not started")
-                           << printNodeInfo(_nodeInfo);
-        }
-        return;
-    }
     // a started node
     if (!m_nodeServiceList.count(nodeAppName))
     {
@@ -69,14 +58,10 @@ void GroupManager::updateNodeServiceWithoutLock(
 }
 
 NodeService::Ptr GroupManager::getNodeService(
-    std::string const& _groupID, std::string const& _nodeName) const
+    std::string const&, std::string const& _nodeName) const
 {
-    auto appName = getApplicationName(m_chainID, _groupID, _nodeName);
+    // TODO: select a node randomly if _nodeName is empty
     ReadGuard l(x_nodeServiceList);
-    if (m_nodeServiceList.count(appName))
-    {
-        return m_nodeServiceList.at(appName);
-    }
     if (m_nodeServiceList.count(_nodeName))
     {
         return m_nodeServiceList.at(_nodeName);

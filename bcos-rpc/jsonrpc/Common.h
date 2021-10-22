@@ -77,6 +77,7 @@ enum JsonRpcError : int32_t
     GroupAlreadyExists = -32001,
     NodeAlreadyExists = -32002,
     OperationNotAllowed = -32003,
+    ServiceNotInitCompleted = -320004,
 };
 
 struct JsonRequest
@@ -117,17 +118,16 @@ inline void nodeInfoToJson(Json::Value& _response, bcos::group::ChainNodeInfo::P
 {
     _response["name"] = _nodeInfo->nodeName();
     _response["type"] = _nodeInfo->nodeType();
-    _response["status"] = (int32_t)_nodeInfo->status();
     _response["iniConfig"] = _nodeInfo->iniConfig();
     // set deployInfo
-    _response["deployInfo"] = Json::Value(Json::arrayValue);
-    auto const& infos = _nodeInfo->deployInfo();
+    _response["serviceInfo"] = Json::Value(Json::arrayValue);
+    auto const& infos = _nodeInfo->serviceInfo();
     for (auto const& it : infos)
     {
         Json::Value item;
-        item["service"] = it.first;
-        item["ip"] = it.second;
-        _response["deployInfo"].append(item);
+        item["type"] = it.first;
+        item["serviceName"] = it.second;
+        _response["serviceInfo"].append(item);
     }
 }
 
@@ -137,7 +137,6 @@ inline void groupInfoToJson(Json::Value& _response, bcos::group::GroupInfo::Ptr 
     _response["groupID"] = _groupInfo->groupID();
     _response["gensisConfig"] = _groupInfo->genesisConfig();
     _response["iniConfig"] = _groupInfo->iniConfig();
-    _response["status"] = (int32_t)_groupInfo->status();
     _response["nodeList"] = Json::Value(Json::arrayValue);
     auto nodeInfos = _groupInfo->nodeInfos();
     for (auto const& it : nodeInfos)

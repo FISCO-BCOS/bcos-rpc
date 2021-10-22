@@ -62,42 +62,6 @@ void Rpc::stop()
     BCOS_LOG(INFO) << LOG_DESC("[RPC][RPC][stop]") << LOG_DESC("stop rpc successfully");
 }
 
-void Rpc::init()
-{
-    BCOS_LOG(INFO) << LOG_DESC("init Rpc");
-    auto chainID = m_jsonRpcImpl->groupManager()->chainID();
-    auto groupMgrClient = m_jsonRpcImpl->groupManager()->groupMgrClient();
-    groupMgrClient->asyncGetGroupList(chainID, [this, chainID, groupMgrClient](Error::Ptr&& _error,
-                                                   std::set<std::string>&& _groupList) {
-        if (_error)
-        {
-            BCOS_LOG(ERROR) << LOG_DESC("Rpc init failed for getGroupList from GroupManager failed")
-                            << LOG_KV("code", _error->errorCode())
-                            << LOG_KV("msg", _error->errorMessage());
-            return;
-        }
-        // get and update all groupInfos
-        BCOS_LOG(INFO) << LOG_DESC("Rpc init: fetch groupList success, fetch group information now")
-                       << LOG_KV("groupSize", _groupList.size());
-        std::vector<std::string> groupList(_groupList.begin(), _groupList.end());
-        groupMgrClient->asyncGetGroupInfos(chainID, groupList,
-            [this](Error::Ptr&& _error, std::vector<GroupInfo::Ptr>&& _groupInfos) {
-                if (_error)
-                {
-                    BCOS_LOG(ERROR) << LOG_DESC("Rpc init failed for get group informations failed")
-                                    << LOG_KV("code", _error->errorCode())
-                                    << LOG_KV("msg", _error->errorMessage());
-                    return;
-                }
-                BCOS_LOG(INFO) << LOG_DESC("Rpc init: fetch group information succcess");
-                for (auto const& groupInfo : _groupInfos)
-                {
-                    m_jsonRpcImpl->groupManager()->updateGroupInfo(groupInfo);
-                }
-            });
-    });
-}
-
 /**
  * @brief: notify blockNumber to rpc
  * @param _blockNumber: blockNumber

@@ -127,27 +127,6 @@ public:
 
     void getPeers(RespFunc _respFunc) override;
 
-    // create a new group
-    void createGroup(std::string const& _groupInfo, RespFunc _respFunc) override;
-    // expand new node for the given group
-    void expandGroupNode(
-        std::string const& _groupID, std::string const& _nodeInfo, RespFunc _respFunc) override;
-    // remove the given group from the given chain
-    void removeGroup(std::string const& _groupID, RespFunc _respFunc) override;
-    // remove the given node from the given group
-    void removeGroupNode(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override;
-    // recover the given group
-    void recoverGroup(std::string const& _groupID, RespFunc _respFunc) override;
-    // recover the given node of the given group
-    void recoverGroupNode(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override;
-    // start the given node
-    void startNode(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override;
-    // stop the given node
-    void stopNode(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override;
     // get all the groupID list
     void getGroupList(RespFunc _respFunc) override;
     // get the group information of the given group
@@ -263,47 +242,6 @@ public:
         boost::ignore_unused(req);
         getPeers(_respFunc);
     }
-
-    // group manager related
-    void createGroupI(const Json::Value& _req, RespFunc _respFunc)
-    {
-        createGroup(_req[0u].asString(), _respFunc);
-    }
-
-    void expandGroupNodeI(const Json::Value& _req, RespFunc _respFunc)
-    {
-        expandGroupNode(_req[0u].asString(), _req[1u].asString(), _respFunc);
-    }
-    // remove the given group from the given chain
-    void removeGroupI(const Json::Value& _req, RespFunc _respFunc)
-    {
-        removeGroup(_req[0u].asString(), _respFunc);
-    }
-    // remove the given node from the given group
-    void removeGroupNodeI(const Json::Value& _req, RespFunc _respFunc)
-    {
-        removeGroupNode(_req[0u].asString(), _req[1u].asString(), _respFunc);
-    }
-    // recover the given group
-    void recoverGroupI(const Json::Value& _req, RespFunc _respFunc)
-    {
-        recoverGroup(_req[0u].asString(), _respFunc);
-    }
-    // recover the given node of the given group
-    void recoverGroupNodeI(const Json::Value& _req, RespFunc _respFunc)
-    {
-        recoverGroupNode(_req[0u].asString(), _req[1u].asString(), _respFunc);
-    }
-    // start the given node
-    void startNodeI(const Json::Value& _req, RespFunc _respFunc)
-    {
-        startNode(_req[0u].asString(), _req[1u].asString(), _respFunc);
-    }
-    // stop the given node
-    void stopNodeI(const Json::Value& _req, RespFunc _respFunc)
-    {
-        stopNode(_req[0u].asString(), _req[1u].asString(), _respFunc);
-    }
     // get all the groupID list
     void getGroupListI(const Json::Value& _req, RespFunc _respFunc)
     {
@@ -342,8 +280,15 @@ private:
     // TODO: check perf influence
     NodeService::Ptr getNodeService(
         std::string const& _groupID, std::string const& _nodeName, std::string const& _command);
-    void checkGroupStatus(std::string const& _command, bcos::group::GroupStatus const& _status,
-        std::set<bcos::group::GroupStatus> const& _statusSet, bool _allow = false);
+    template <typename T>
+    void checkService(T _service, std::string _serviceName)
+    {
+        if (!_service)
+        {
+            BOOST_THROW_EXCEPTION(JsonRpcException(JsonRpcError::ServiceNotInitCompleted,
+                "The service " + _serviceName + " has not been inited completed yet!"));
+        }
+    }
 
 private:
     std::unordered_map<std::string, std::function<void(Json::Value, RespFunc _respFunc)>>

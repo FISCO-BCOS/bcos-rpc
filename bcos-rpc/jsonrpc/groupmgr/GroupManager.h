@@ -20,8 +20,6 @@
  */
 #pragma once
 #include "NodeService.h"
-#include <bcos-framework/interfaces/multigroup/GroupInfoFactory.h>
-#include <bcos-framework/interfaces/multigroup/GroupManagerInterface.h>
 namespace bcos
 {
 namespace rpc
@@ -30,15 +28,8 @@ class GroupManager
 {
 public:
     using Ptr = std::shared_ptr<GroupManager>;
-    GroupManager(std::string const& _chainID, NodeServiceFactory::Ptr _nodeServiceFactory,
-        bcos::group::GroupManagerInterface::Ptr _groupMgr,
-        bcos::group::GroupInfoFactory::Ptr _groupInfoFactory,
-        bcos::group::ChainNodeInfoFactory::Ptr _chainNodeInfoFactory)
-      : m_chainID(_chainID),
-        m_nodeServiceFactory(_nodeServiceFactory),
-        m_groupMgrClient(_groupMgr),
-        m_groupInfoFactory(_groupInfoFactory),
-        m_chainNodeInfoFactory(_chainNodeInfoFactory)
+    GroupManager(std::string const& _chainID, NodeServiceFactory::Ptr _nodeServiceFactory)
+      : m_chainID(_chainID), m_nodeServiceFactory(_nodeServiceFactory)
     {}
     virtual ~GroupManager() {}
 
@@ -71,13 +62,6 @@ public:
         return groupInfo->nodeInfo(_nodeName);
     }
 
-    bcos::group::GroupManagerInterface::Ptr groupMgrClient() { return m_groupMgrClient; }
-    bcos::group::GroupInfoFactory::Ptr groupInfoFactory() { return m_groupInfoFactory; };
-    bcos::group::ChainNodeInfoFactory::Ptr chainNodeInfoFactory()
-    {
-        return m_chainNodeInfoFactory;
-    };
-
     std::set<std::string> groupList()
     {
         ReadGuard l(x_nodeServiceList);
@@ -96,14 +80,11 @@ protected:
 private:
     std::string m_chainID;
     NodeServiceFactory::Ptr m_nodeServiceFactory;
-    bcos::group::GroupManagerInterface::Ptr m_groupMgrClient;
-    bcos::group::GroupInfoFactory::Ptr m_groupInfoFactory;
-    bcos::group::ChainNodeInfoFactory::Ptr m_chainNodeInfoFactory;
 
     // map between groupID to groupInfo
     std::map<std::string, bcos::group::GroupInfo::Ptr> m_groupInfos;
 
-    // map between serviceName to NodeService
+    // map between nodeName to NodeService
     std::map<std::string, NodeService::Ptr> m_nodeServiceList;
     mutable SharedMutex x_nodeServiceList;
 };

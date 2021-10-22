@@ -48,9 +48,6 @@ class RpcFactory : public std::enable_shared_from_this<RpcFactory>
 public:
     using Ptr = std::shared_ptr<RpcFactory>;
     RpcFactory(std::string const& _chainID, bcos::gateway::GatewayInterface::Ptr _gatewayInterface,
-        bcos::group::GroupManagerInterface::Ptr _groupMgr,
-        bcos::group::GroupInfoFactory::Ptr _groupInfoFactory,
-        bcos::group::ChainNodeInfoFactory::Ptr _chainNodeInfoFactory,
         bcos::crypto::KeyFactory::Ptr _keyFactory);
     virtual ~RpcFactory() {}
 

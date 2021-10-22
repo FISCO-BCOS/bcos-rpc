@@ -97,41 +97,6 @@ public:
         std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) = 0;
 
     virtual void getPeers(RespFunc _respFunc) = 0;
-
-    // group manager related interfaces
-    /**
-     * @brief create a new group
-     *
-     * @param _groupInfo: the information for the group with json format
-     * Please refer to GroupInfo.h of bcos-framework to obtain the required groupInfo
-     */
-    virtual void createGroup(std::string const& _groupInfo, RespFunc _respFunc) = 0;
-
-    /**
-     * @brief expand new node for the given group
-     *
-     * @param _groupID the groupID of the node
-     * @param _nodeInfo the information of the node encoded with json format
-     *  Please refer to NodeInfo.h of bcos-framework to obtain the required nodeInfo
-     */
-    virtual void expandGroupNode(
-        std::string const& _groupID, std::string const& _nodeInfo, RespFunc _respFunc) = 0;
-    // remove the given group from the given chain
-    virtual void removeGroup(std::string const& _groupID, RespFunc _respFunc) = 0;
-    // remove the given node from the given group
-    virtual void removeGroupNode(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) = 0;
-    // recover the given group
-    virtual void recoverGroup(std::string const& _groupID, RespFunc _respFunc) = 0;
-    // recover the given node of the given group
-    virtual void recoverGroupNode(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) = 0;
-    // start the given node
-    virtual void startNode(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) = 0;
-    // stop the given node
-    virtual void stopNode(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) = 0;
     // get all the groupID list
     virtual void getGroupList(RespFunc _respFunc) = 0;
     // get the group information of the given group

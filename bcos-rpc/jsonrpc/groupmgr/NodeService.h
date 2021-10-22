@@ -77,12 +77,29 @@ public:
         bcos::group::ChainNodeInfo::Ptr _nodeInfo);
 
     template <typename T, typename S, typename... Args>
-    std::shared_ptr<T> createServiceClient(std::string const& _appName,
-        std::string const& _serviceName, std::string const& _objName, const Args&... _args)
+    std::shared_ptr<T> createServiceClient(
+        std::string const& _completedServiceName, const Args&... _args)
     {
-        auto servantName = bcos::protocol::getPrxDesc(_appName, _serviceName, _objName);
-        auto prx = Application::getCommunicator()->stringToProxy<S>(servantName);
+        auto prx = Application::getCommunicator()->stringToProxy<S>(_completedServiceName);
         return std::make_shared<T>(prx, _args...);
+    }
+
+    template <typename T, typename S, typename... Args>
+    inline std::shared_ptr<T> createServicePrx(bcos::protocol::ServiceType _type,
+        bcos::group::ChainNodeInfo::Ptr _nodeInfo, const Args&... _args)
+    {
+        auto serviceName = _nodeInfo->serviceName(_type);
+        if (serviceName.size() == 0)
+        {
+            return nullptr;
+        }
+        auto serviceObj = bcos::protocol::getServiceObjByType(_type);
+        if (serviceObj == bcos::protocol::UNKNOWN_SERVANT)
+        {
+            return nullptr;
+        }
+        auto completedServiceName = bcos::protocol::getPrxDesc(serviceName, serviceObj);
+        return createServiceClient<T, S>(completedServiceName, _args...);
     }
 };
 }  // namespace rpc

@@ -56,8 +56,6 @@ public:
     virtual void start() override;
     virtual void stop() override;
 
-    virtual void init();
-
     /**
      * @brief: notify blockNumber to rpc
      * @param _blockNumber: blockNumber
