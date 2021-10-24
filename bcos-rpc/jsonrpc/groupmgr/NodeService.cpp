@@ -50,20 +50,42 @@ NodeService::Ptr NodeServiceFactory::buildNodeService(
     auto blockFactory = createBlockFactory(cryptoSuite);
     auto ledgerClient = createServicePrx<bcostars::LedgerServiceClient, bcostars::LedgerServicePrx>(
         LEDGER, _nodeInfo, blockFactory);
+    if (!ledgerClient.first)
+    {
+        return nullptr;
+    }
     auto schedulerClient =
         createServicePrx<bcostars::SchedulerServiceClient, bcostars::SchedulerServicePrx>(
             SCHEDULER, _nodeInfo, cryptoSuite);
-
+    if (!schedulerClient.first)
+    {
+        return nullptr;
+    }
     // create txpool client
     auto txpoolClient = createServicePrx<bcostars::TxPoolServiceClient, bcostars::TxPoolServicePrx>(
         TXPOOL, _nodeInfo, cryptoSuite, blockFactory);
+    if (!txpoolClient.first)
+    {
+        return nullptr;
+    }
 
     // create consensus client
     auto consensusClient = createServicePrx<bcostars::PBFTServiceClient, bcostars::PBFTServicePrx>(
         CONSENSUS, _nodeInfo);
+    if (!consensusClient.first)
+    {
+        return nullptr;
+    }
     // create sync client
     auto syncClient = createServicePrx<bcostars::BlockSyncServiceClient, bcostars::PBFTServicePrx>(
         CONSENSUS, _nodeInfo);
-    return std::make_shared<NodeService>(
-        ledgerClient, schedulerClient, txpoolClient, consensusClient, syncClient, blockFactory);
+    if (!syncClient.first)
+    {
+        return nullptr;
+    }
+    auto nodeService = std::make_shared<NodeService>(ledgerClient.first, schedulerClient.first,
+        txpoolClient.first, consensusClient.first, syncClient.first, blockFactory);
+
+    nodeService->setLedgerPrx(ledgerClient.second);
+    return nodeService;
 }

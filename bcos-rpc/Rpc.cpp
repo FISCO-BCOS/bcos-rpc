@@ -128,8 +128,6 @@ void Rpc::asyncNotifyGroupInfo(
     bcos::group::GroupInfo::Ptr _groupInfo, std::function<void(Error::Ptr&&)> _callback)
 {
     m_jsonRpcImpl->groupManager()->updateGroupInfo(_groupInfo);
-    BCOS_LOG(INFO) << LOG_DESC("asyncNotifyGroupInfo: update the groupInfo")
-                   << printGroupInfo(_groupInfo);
     if (_callback)
     {
         _callback(nullptr);

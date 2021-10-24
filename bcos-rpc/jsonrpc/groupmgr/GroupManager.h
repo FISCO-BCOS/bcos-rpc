@@ -20,6 +20,7 @@
  */
 #pragma once
 #include "NodeService.h"
+#include <bcos-framework/libutilities/Timer.h>
 namespace bcos
 {
 namespace rpc
@@ -30,7 +31,12 @@ public:
     using Ptr = std::shared_ptr<GroupManager>;
     GroupManager(std::string const& _chainID, NodeServiceFactory::Ptr _nodeServiceFactory)
       : m_chainID(_chainID), m_nodeServiceFactory(_nodeServiceFactory)
-    {}
+    {
+        m_groupStatusUpdater = std::make_shared<Timer>(1000);
+        m_groupStatusUpdater->start();
+        m_groupStatusUpdater->registerTimeoutHandler(
+            boost::bind(&GroupManager::updateGroupStatus, this));
+    }
     virtual ~GroupManager() {}
 
     virtual void updateGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo);
@@ -111,7 +117,14 @@ public:
                         << LOG_KV("block", _blockNumber);
     }
 
+    void registerGroupInfoNotifier(std::function<void(bcos::group::GroupInfo::Ptr)> _callback)
+    {
+        m_groupInfoNotifier = _callback;
+    }
+
 protected:
+    virtual void updateGroupStatus();
+
     void updateNodeServiceWithoutLock(
         std::string const& _groupID, bcos::group::ChainNodeInfo::Ptr _nodeInfo);
 
@@ -134,6 +147,9 @@ private:
     std::map<std::string, std::set<std::string>> m_nodesWithLatestBlockNumber;
     std::map<std::string, bcos::protocol::BlockNumber> m_groupBlockInfos;
     mutable SharedMutex x_groupBlockInfos;
+
+    std::shared_ptr<Timer> m_groupStatusUpdater;
+    std::function<void(bcos::group::GroupInfo::Ptr)> m_groupInfoNotifier;
 };
 }  // namespace rpc
 }  // namespace bcos

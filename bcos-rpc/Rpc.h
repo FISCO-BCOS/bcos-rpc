@@ -49,7 +49,10 @@ public:
         bcos::rpc::JsonRpcImpl_2_0::Ptr _jsonRpcImpl, bcos::event::EventSub::Ptr _eventSub,
         bcos::amop::AMOP::Ptr _AMOP)
       : m_wsService(_wsService), m_jsonRpcImpl(_jsonRpcImpl), m_eventSub(_eventSub), m_AMOP(_AMOP)
-    {}
+    {
+        m_jsonRpcImpl->groupManager()->registerGroupInfoNotifier(
+            [this](bcos::group::GroupInfo::Ptr _groupInfo) { notifyGroupInfo(_groupInfo); });
+    }
 
     virtual ~Rpc() { stop(); }
 

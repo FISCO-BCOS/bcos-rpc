@@ -28,6 +28,7 @@
 #include <bcos-framework/interfaces/protocol/ServiceDesc.h>
 #include <bcos-framework/interfaces/sync/BlockSyncInterface.h>
 #include <bcos-framework/interfaces/txpool/TxPoolInterface.h>
+#include <bcos-tars-protocol/client/LedgerServiceClient.h>
 #include <tarscpp/servant/Application.h>
 namespace bcos
 {
@@ -58,6 +59,16 @@ public:
     bcos::sync::BlockSyncInterface::Ptr sync() { return m_sync; }
     bcos::protocol::BlockFactory::Ptr blockFactory() { return m_blockFactory; }
 
+    void setLedgerPrx(bcostars::LedgerServicePrx const& _ledgerPrx) { m_ledgerPrx = _ledgerPrx; }
+
+    bool unreachable()
+    {
+        vector<EndpointInfo> activeEndPoints;
+        vector<EndpointInfo> nactiveEndPoints;
+        m_ledgerPrx->tars_endpointsAll(activeEndPoints, nactiveEndPoints);
+        return (activeEndPoints.size() == 0);
+    }
+
 private:
     bcos::ledger::LedgerInterface::Ptr m_ledger;
     std::shared_ptr<bcos::scheduler::SchedulerInterface> m_scheduler;
@@ -65,6 +76,8 @@ private:
     bcos::consensus::ConsensusInterface::Ptr m_consensus;
     bcos::sync::BlockSyncInterface::Ptr m_sync;
     bcos::protocol::BlockFactory::Ptr m_blockFactory;
+
+    bcostars::LedgerServicePrx m_ledgerPrx;
 };
 
 class NodeServiceFactory
@@ -77,26 +90,26 @@ public:
         bcos::group::ChainNodeInfo::Ptr _nodeInfo);
 
     template <typename T, typename S, typename... Args>
-    std::shared_ptr<T> createServiceClient(
+    std::pair<std::shared_ptr<T>, S> createServiceClient(
         std::string const& _completedServiceName, const Args&... _args)
     {
         auto prx = Application::getCommunicator()->stringToProxy<S>(_completedServiceName);
-        return std::make_shared<T>(prx, _args...);
+        return std::make_pair(std::make_shared<T>(prx, _args...), prx);
     }
 
     template <typename T, typename S, typename... Args>
-    inline std::shared_ptr<T> createServicePrx(bcos::protocol::ServiceType _type,
+    inline std::pair<std::shared_ptr<T>, S> createServicePrx(bcos::protocol::ServiceType _type,
         bcos::group::ChainNodeInfo::Ptr _nodeInfo, const Args&... _args)
     {
         auto serviceName = _nodeInfo->serviceName(_type);
         if (serviceName.size() == 0)
         {
-            return nullptr;
+            return std::make_pair(nullptr, nullptr);
         }
         auto serviceObj = bcos::protocol::getServiceObjByType(_type);
         if (serviceObj == bcos::protocol::UNKNOWN_SERVANT)
         {
-            return nullptr;
+            return std::make_pair(nullptr, nullptr);
         }
         auto completedServiceName = bcos::protocol::getPrxDesc(serviceName, serviceObj);
         return createServiceClient<T, S>(completedServiceName, _args...);
