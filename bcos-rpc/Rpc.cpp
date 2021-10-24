@@ -94,7 +94,7 @@ void Rpc::asyncNotifyBlockNumber(std::string const& _groupID, std::string const&
     {
         _callback(nullptr);
     }
-
+    m_jsonRpcImpl->groupManager()->updateGroupBlockInfo(_groupID, _nodeName, _blockNumber);
     WEBSOCKET_SERVICE(INFO) << LOG_BADGE("asyncNotifyBlockNumber")
                             << LOG_KV("blockNumber", _blockNumber) << LOG_KV("ss size", ss.size());
 }

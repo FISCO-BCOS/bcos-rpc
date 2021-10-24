@@ -73,9 +73,52 @@ public:
         return groupList;
     }
 
+    virtual void updateGroupBlockInfo(std::string const& _groupID, std::string const& _nodeName,
+        bcos::protocol::BlockNumber _blockNumber)
+    {
+        UpgradableGuard l(x_groupBlockInfos);
+        if (m_groupBlockInfos.count(_groupID))
+        {
+            if (m_groupBlockInfos[_groupID] > _blockNumber)
+            {
+                return;
+            }
+            if (m_groupBlockInfos[_groupID] == _blockNumber &&
+                m_nodesWithLatestBlockNumber.count(_groupID) &&
+                m_nodesWithLatestBlockNumber[_groupID].count(_nodeName))
+            {
+                return;
+            }
+        }
+        UpgradeGuard ul(l);
+        bcos::protocol::BlockNumber oldBlockNumber = 0;
+        if (m_groupBlockInfos.count(_groupID))
+        {
+            oldBlockNumber = m_groupBlockInfos[_groupID];
+        }
+        if (!m_nodesWithLatestBlockNumber.count(_groupID))
+        {
+            m_nodesWithLatestBlockNumber[_groupID] = std::set<std::string>();
+        }
+        if (oldBlockNumber < _blockNumber)
+        {
+            m_groupBlockInfos[_groupID] = _blockNumber;
+            m_nodesWithLatestBlockNumber[_groupID].clear();
+        }
+        (m_nodesWithLatestBlockNumber[_groupID]).insert(_nodeName);
+        BCOS_LOG(DEBUG) << LOG_DESC("updateGroupBlockInfo for receive block notify")
+                        << LOG_KV("group", _groupID) << LOG_KV("node", _nodeName)
+                        << LOG_KV("block", _blockNumber);
+    }
+
 protected:
     void updateNodeServiceWithoutLock(
         std::string const& _groupID, bcos::group::ChainNodeInfo::Ptr _nodeInfo);
+
+    virtual NodeService::Ptr selectNode(std::string const& _groupID) const;
+    virtual std::string selectNodeByBlockNumber(std::string const& _groupID) const;
+    virtual NodeService::Ptr selectNodeRandomly(std::string const& _groupID) const;
+    virtual NodeService::Ptr queryNodeService(std::string const& _nodeName) const;
 
 private:
     std::string m_chainID;
@@ -87,6 +130,10 @@ private:
     // map between nodeName to NodeService
     std::map<std::string, NodeService::Ptr> m_nodeServiceList;
     mutable SharedMutex x_nodeServiceList;
+
+    std::map<std::string, std::set<std::string>> m_nodesWithLatestBlockNumber;
+    std::map<std::string, bcos::protocol::BlockNumber> m_groupBlockInfos;
+    mutable SharedMutex x_groupBlockInfos;
 };
 }  // namespace rpc
 }  // namespace bcos

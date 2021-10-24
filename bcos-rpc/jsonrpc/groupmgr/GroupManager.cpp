@@ -57,14 +57,66 @@ void GroupManager::updateNodeServiceWithoutLock(
     }
 }
 
-NodeService::Ptr GroupManager::getNodeService(
-    std::string const&, std::string const& _nodeName) const
+NodeService::Ptr GroupManager::selectNode(std::string const& _groupID) const
 {
-    // TODO: select a node randomly if _nodeName is empty
+    auto nodeName = selectNodeByBlockNumber(_groupID);
+    if (nodeName.size() == 0)
+    {
+        return selectNodeRandomly(_groupID);
+    }
+    return queryNodeService(nodeName);
+}
+std::string GroupManager::selectNodeByBlockNumber(std::string const& _groupID) const
+{
+    ReadGuard l(x_groupBlockInfos);
+    if (!m_nodesWithLatestBlockNumber.count(_groupID))
+    {
+        return "";
+    }
+    srand((unsigned)time(NULL));
+    auto const& nodesList = m_nodesWithLatestBlockNumber.at(_groupID);
+    auto selectNodeIndex = rand() % nodesList.size();
+    auto it = nodesList.begin();
+    std::advance(it, selectNodeIndex);
+    return *it;
+}
+
+NodeService::Ptr GroupManager::selectNodeRandomly(std::string const& _groupID) const
+{
+    ReadGuard l(x_nodeServiceList);
+    if (!m_groupInfos.count(_groupID))
+    {
+        return nullptr;
+    }
+    auto const& groupInfo = m_groupInfos.at(_groupID);
+    auto const& nodeInfos = groupInfo->nodeInfos();
+    for (auto const& it : nodeInfos)
+    {
+        auto const& node = it.second;
+        if (m_nodeServiceList.count(node->nodeName()))
+        {
+            return m_nodeServiceList.at(node->nodeName());
+        }
+    }
+    return nullptr;
+}
+
+NodeService::Ptr GroupManager::queryNodeService(std::string const& _nodeName) const
+{
     ReadGuard l(x_nodeServiceList);
     if (m_nodeServiceList.count(_nodeName))
     {
         return m_nodeServiceList.at(_nodeName);
     }
     return nullptr;
+}
+
+NodeService::Ptr GroupManager::getNodeService(
+    std::string const& _groupID, std::string const& _nodeName) const
+{
+    if (_nodeName.size() > 0)
+    {
+        return queryNodeService(_nodeName);
+    }
+    return selectNode(_groupID);
 }
