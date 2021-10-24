@@ -395,8 +395,12 @@ void AMOP::onReceiveAMOPMessage(
                 m_clients.erase(m_clients.begin());
 
                 auto session = m_wsService->getSession(client);
-                if (!session->isConnected())
+                if (!session || !session->isConnected())
                 {
+                    WEBSOCKET_SERVICE(ERROR)
+                        << LOG_BADGE("onRecvAMOPMessage")
+                        << LOG_DESC("cannot get session by endpoint") << LOG_KV("endpoint", client)
+                        << LOG_KV("topic", m_topic) << LOG_KV("nodeID", m_nodeID);
                     continue;
                 }
 
