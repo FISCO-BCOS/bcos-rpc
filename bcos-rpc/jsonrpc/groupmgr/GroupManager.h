@@ -32,6 +32,7 @@ public:
     GroupManager(std::string const& _chainID, NodeServiceFactory::Ptr _nodeServiceFactory)
       : m_chainID(_chainID), m_nodeServiceFactory(_nodeServiceFactory)
     {
+        m_startTime = utcTime();
         m_groupStatusUpdater = std::make_shared<Timer>(1000);
         m_groupStatusUpdater->start();
         m_groupStatusUpdater->registerTimeoutHandler(
@@ -150,6 +151,9 @@ private:
 
     std::shared_ptr<Timer> m_groupStatusUpdater;
     std::function<void(bcos::group::GroupInfo::Ptr)> m_groupInfoNotifier;
+
+    uint64_t c_tarsAdminRefreshInitTime = 120 * 1000;
+    uint64_t m_startTime = 0;
 };
 }  // namespace rpc
 }  // namespace bcos

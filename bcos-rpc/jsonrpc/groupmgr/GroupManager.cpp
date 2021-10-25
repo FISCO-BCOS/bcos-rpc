@@ -129,6 +129,10 @@ NodeService::Ptr GroupManager::getNodeService(
 void GroupManager::updateGroupStatus()
 {
     m_groupStatusUpdater->restart();
+    if (utcTime() - m_startTime <= c_tarsAdminRefreshInitTime)
+    {
+        return;
+    }
     std::vector<std::string> unreachableNodes;
     {
         UpgradableGuard l(x_nodeServiceList);

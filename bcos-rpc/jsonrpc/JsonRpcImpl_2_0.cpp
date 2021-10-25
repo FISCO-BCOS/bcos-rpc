@@ -880,12 +880,15 @@ void JsonRpcImpl_2_0::getBlockNumber(
 }
 
 void JsonRpcImpl_2_0::getCode(std::string const& _groupID, std::string const& _nodeName,
-    const std::string _contractAddress, RespFunc)
+    const std::string _contractAddress, RespFunc _callback)
 {
     RPC_IMPL_LOG(TRACE) << LOG_BADGE("getCode") << LOG_KV("contractAddress", _contractAddress)
                         << LOG_KV("group", _groupID) << LOG_KV("node", _nodeName);
 
     auto nodeService = getNodeService(_groupID, _nodeName, "getCode");
+    Json::Value response;
+    response["msg"] = "unimplemented method getConde";
+    _callback(nullptr, response);
 // TODO: scheduler provid asyncGetCode interface
 #if 0
     auto scheduler = nodeService->scheduler();
