@@ -75,6 +75,10 @@ public:
     GroupManager::Ptr groupManager() { return m_groupManager; }
 
 private:
+    void registerHandlers(std::shared_ptr<boostssl::ws::WsService> _wsService,
+        bcos::rpc::JsonRpcImpl_2_0::Ptr _jsonRpcInterface);
+
+private:
     bcos::gateway::GatewayInterface::Ptr m_gatewayInterface;
     std::shared_ptr<bcos::crypto::KeyFactory> m_keyFactory;
     GroupManager::Ptr m_groupManager;

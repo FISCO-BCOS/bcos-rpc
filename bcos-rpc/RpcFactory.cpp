@@ -154,6 +154,36 @@ bcos::amop::AMOP::Ptr RpcFactory::buildAMOP(std::shared_ptr<boostssl::ws::WsServ
     return amop;
 }
 
+void RpcFactory::registerHandlers(std::shared_ptr<boostssl::ws::WsService> _wsService,
+    bcos::rpc::JsonRpcImpl_2_0::Ptr _jsonRpcInterface)
+{
+    _wsService->registerMsgHandler(bcos::rpc::MessageType::RPC_REQUEST,
+        [_jsonRpcInterface](std::shared_ptr<boostssl::ws::WsMessage> _msg,
+            std::shared_ptr<boostssl::ws::WsSession> _session) {
+            if (!_jsonRpcInterface)
+            {
+                return;
+            }
+            std::string req = std::string(_msg->data()->begin(), _msg->data()->end());
+            _jsonRpcInterface->onRPCRequest(req, [req, _msg, _session](const std::string& _resp) {
+                if (_session && _session->isConnected())
+                {
+                    auto buffer = std::make_shared<bcos::bytes>(_resp.begin(), _resp.end());
+                    _msg->setData(buffer);
+                    _session->asyncSendMessage(_msg);
+                }
+                else
+                {
+                    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+                    BCOS_LOG(WARNING)
+                        << LOG_DESC("[RPC][FACTORY][buildJsonRpc]")
+                        << LOG_DESC("unable to send response for session has been inactive")
+                        << LOG_KV("req", req) << LOG_KV("resp", _resp) << LOG_KV("seq", seq)
+                        << LOG_KV("endpoint", _session ? _session->endPoint() : std::string(""));
+                }
+            });
+        });
+}
 bcos::rpc::JsonRpcImpl_2_0::Ptr RpcFactory::buildJsonRpc(
     std::shared_ptr<boostssl::ws::WsService> _wsService)
 {
@@ -167,6 +197,7 @@ bcos::rpc::JsonRpcImpl_2_0::Ptr RpcFactory::buildJsonRpc(
         httpServer->setHttpReqHandler(std::bind(&bcos::rpc::JsonRpcInterface::onRPCRequest,
             jsonRpcInterface, std::placeholders::_1, std::placeholders::_2));
     }
+    registerHandlers(_wsService, jsonRpcInterface);
     return jsonRpcInterface;
 }
 
