@@ -29,6 +29,13 @@ namespace bcos
 {
 namespace rpc
 {
+enum AMOPMessageType
+{
+    AMOP_SUBTOPIC = 0x110,   // 272
+    AMOP_REQUEST = 0x111,    // 273
+    AMOP_BROADCAST = 0x112,  // 274
+    AMOP_RESPONSE = 0x113    // 275
+};
 enum MessageType
 {
     HANDESHAKE = 0x100,    // 256

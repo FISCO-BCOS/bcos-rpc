@@ -34,7 +34,7 @@ void EventSub::start()
 {
     if (m_running.load())
     {
-        EVENT_PUSH(INFO) << LOG_BADGE("start") << LOG_DESC("amop is running");
+        EVENT_PUSH(INFO) << LOG_BADGE("start") << LOG_DESC("event sub is running");
         return;
     }
 

@@ -73,7 +73,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(RPC_TARGET "rpc")
 set(EVENT_TARGET "event")
-set(AMOP_TARGET "amop")
 set(JSONRPC_TARGET "jsonrpc")
 
 add_subdirectory(bcos-rpc)
@@ -81,7 +80,7 @@ add_subdirectory(bcos-rpc)
 if (TESTS)
     enable_testing()
     set(CTEST_OUTPUT_ON_FAILURE TRUE)
-    add_subdirectory(test)
+    #add_subdirectory(test)
 endif()
 
 # install bcos rpc target
@@ -96,15 +95,6 @@ install(
 
 install(
     TARGETS ${JSONRPC_TARGET}
-    EXPORT "${TARGETS_EXPORT_NAME}"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-)
-
-install(
-    TARGETS ${AMOP_TARGET}
     EXPORT "${TARGETS_EXPORT_NAME}"
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"

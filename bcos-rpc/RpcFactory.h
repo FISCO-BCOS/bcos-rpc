@@ -26,7 +26,6 @@
 #include <bcos-framework/interfaces/crypto/KeyFactory.h>
 #include <bcos-framework/interfaces/gateway/GatewayInterface.h>
 #include <bcos-rpc/Rpc.h>
-#include <bcos-rpc/amop/AMOP.h>
 #include <bcos-rpc/event/EventSub.h>
 #include <bcos-rpc/jsonrpc/JsonRpcImpl_2_0.h>
 
@@ -54,7 +53,6 @@ public:
     std::shared_ptr<boostssl::ws::WsConfig> initConfig(const std::string& _configPath);
     std::shared_ptr<boostssl::ws::WsService> buildWsService(
         bcos::boostssl::ws::WsConfig::Ptr _config);
-    bcos::amop::AMOP::Ptr buildAMOP(std::shared_ptr<boostssl::ws::WsService> _wsService);
     bcos::rpc::JsonRpcImpl_2_0::Ptr buildJsonRpc(
         std::shared_ptr<boostssl::ws::WsService> _wsService);
     bcos::event::EventSub::Ptr buildEventSub(std::shared_ptr<boostssl::ws::WsService> _wsService);
@@ -64,14 +62,14 @@ public:
      * @param _config: WsConfig
      * @return Rpc::Ptr:
      */
-    Rpc::Ptr buildRpc(bcos::boostssl::ws::WsConfig::Ptr _config);
+    Rpc::Ptr buildRpc(bcos::boostssl::ws::WsConfig::Ptr _config, std::string const& _clientID);
 
     /**
      * @brief: Rpc
      * @param _configPath: rpc config path
      * @return Rpc::Ptr:
      */
-    Rpc::Ptr buildRpc(const std::string& _configPath);
+    Rpc::Ptr buildRpc(const std::string& _configPath, std::string const& _clientID);
     GroupManager::Ptr groupManager() { return m_groupManager; }
 
 private:

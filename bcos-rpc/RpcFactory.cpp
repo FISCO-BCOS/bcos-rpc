@@ -22,12 +22,12 @@
 #include <bcos-boostssl/websocket/WsInitializer.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsService.h>
+#include <bcos-framework/libprotocol/amop/AMOPRequest.h>
 #include <bcos-framework/libutilities/Exceptions.h>
 #include <bcos-framework/libutilities/FileUtility.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <bcos-framework/libutilities/ThreadPool.h>
 #include <bcos-rpc/RpcFactory.h>
-#include <bcos-rpc/amop/TopicManager.h>
 #include <bcos-rpc/jsonrpc/JsonRpcImpl_2_0.h>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/property_tree/ini_parser.hpp>
@@ -41,8 +41,9 @@ using namespace bcos::rpc;
 using namespace bcos::protocol;
 using namespace bcos::crypto;
 using namespace bcos::gateway;
-using namespace bcos::amop;
 using namespace bcos::group;
+using namespace bcos::boostssl::ws;
+using namespace bcos::protocol;
 
 RpcFactory::RpcFactory(std::string const& _chainID, GatewayInterface::Ptr _gatewayInterface,
     KeyFactory::Ptr _keyFactory)
@@ -102,56 +103,6 @@ bcos::boostssl::ws::WsService::Ptr RpcFactory::buildWsService(
     initializer->setConfig(_config);
     initializer->initWsService(wsService);
     return wsService;
-}
-
-bcos::amop::AMOP::Ptr RpcFactory::buildAMOP(std::shared_ptr<boostssl::ws::WsService> _wsService)
-{
-    auto messageFactory = std::make_shared<bcos::amop::MessageFactory>();
-    auto topicManager = std::make_shared<amop::TopicManager>();
-    auto requestFactory = std::make_shared<AMOPRequestFactory>();
-    auto amop = std::make_shared<bcos::amop::AMOP>(
-        _wsService, messageFactory, topicManager, requestFactory, m_keyFactory);
-    amop->setThreadPool(_wsService->threadPool());
-    auto amopWeak = std::weak_ptr<bcos::amop::AMOP>(amop);
-    _wsService->registerMsgHandler(bcos::amop::MessageType::AMOP_SUBTOPIC,
-        [amopWeak](std::shared_ptr<boostssl::ws::WsMessage> _msg,
-            std::shared_ptr<boostssl::ws::WsSession> _session) {
-            auto amop = amopWeak.lock();
-            if (amop)
-            {
-                amop->onRecvSubTopics(_msg, _session);
-            }
-        });
-
-    _wsService->registerMsgHandler(bcos::amop::MessageType::AMOP_REQUEST,
-        [amopWeak](std::shared_ptr<boostssl::ws::WsMessage> _msg,
-            std::shared_ptr<boostssl::ws::WsSession> _session) {
-            auto amop = amopWeak.lock();
-            if (amop)
-            {
-                amop->onRecvAMOPRequest(_msg, _session);
-            }
-        });
-
-    _wsService->registerMsgHandler(bcos::amop::MessageType::AMOP_BROADCAST,
-        [amopWeak](std::shared_ptr<boostssl::ws::WsMessage> _msg,
-            std::shared_ptr<boostssl::ws::WsSession> _session) {
-            auto amop = amopWeak.lock();
-            if (amop)
-            {
-                amop->onRecvAMOPBroadcast(_msg, _session);
-            }
-        });
-
-    _wsService->registerDisconnectHandler(
-        [topicManager](std::shared_ptr<boostssl::ws::WsSession> _session) {
-            if (_session)
-            {
-                topicManager->removeTopicsByClient(_session->endPoint());
-            }
-        });
-
-    return amop;
 }
 
 void RpcFactory::registerHandlers(std::shared_ptr<boostssl::ws::WsService> _wsService,
@@ -214,10 +165,10 @@ bcos::event::EventSub::Ptr RpcFactory::buildEventSub(
  * @param _configPath: rpc config path
  * @return Rpc::Ptr:
  */
-Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath)
+Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath, std::string const& _clientID)
 {
     auto config = initConfig(_configPath);
-    return buildRpc(config);
+    return buildRpc(config, _clientID);
 }
 
 /**
@@ -226,7 +177,8 @@ Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath)
  * @param _nodeInfo: node info
  * @return Rpc::Ptr:
  */
-Rpc::Ptr RpcFactory::buildRpc(bcos::boostssl::ws::WsConfig::Ptr _config)
+Rpc::Ptr RpcFactory::buildRpc(
+    bcos::boostssl::ws::WsConfig::Ptr _config, std::string const& _clientID)
 {
     // checkParams();
 
@@ -234,15 +186,17 @@ Rpc::Ptr RpcFactory::buildRpc(bcos::boostssl::ws::WsConfig::Ptr _config)
 
     // JsonRpc
     auto jsonRpc = buildJsonRpc(wsService);
-    // AMOP
-    auto amop = buildAMOP(wsService);
     // EventSub
     auto es = buildEventSub(wsService);
 
-    auto rpc = std::make_shared<Rpc>(wsService, jsonRpc, es, amop);
+    auto wsFactory = std::make_shared<WsMessageFactory>();
+    auto requestFactory = std::make_shared<AMOPRequestFactory>();
+    auto rpc = std::make_shared<Rpc>(
+        wsService, jsonRpc, es, wsFactory, requestFactory, m_gatewayInterface, _clientID);
     BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][buildRpc]")
                    << LOG_KV("listenIP", _config->listenIP())
                    << LOG_KV("listenPort", _config->listenPort())
-                   << LOG_KV("threadCount", _config->threadPoolSize());
+                   << LOG_KV("threadCount", _config->threadPoolSize())
+                   << LOG_KV("clientID", _clientID);
     return rpc;
 }

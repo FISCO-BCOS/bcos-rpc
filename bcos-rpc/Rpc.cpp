@@ -20,18 +20,31 @@
  */
 
 #include <bcos-boostssl/websocket/WsService.h>
+#include <bcos-framework/libprotocol/amop/TopicItem.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <bcos-rpc/Rpc.h>
 
 using namespace bcos;
 using namespace bcos::rpc;
 using namespace bcos::group;
+using namespace bcos::protocol;
+using namespace bcos::boostssl::ws;
 
+void Rpc::initMsgHandler()
+{
+    m_wsService->registerMsgHandler(AMOPMessageType::AMOP_SUBTOPIC,
+        boost::bind(&Rpc::onRecvSubTopics, this, boost::placeholders::_1, boost::placeholders::_2));
+    m_wsService->registerMsgHandler(
+        AMOPMessageType::AMOP_REQUEST, boost::bind(&Rpc::onRecvAMOPRequest, this,
+                                           boost::placeholders::_1, boost::placeholders::_2));
+    m_wsService->registerMsgHandler(
+        AMOPMessageType::AMOP_BROADCAST, boost::bind(&Rpc::onRecvAMOPBroadcast, this,
+                                             boost::placeholders::_1, boost::placeholders::_2));
+    m_wsService->registerDisconnectHandler(
+        boost::bind(&Rpc::onClientDisconnect, this, boost::placeholders::_1));
+}
 void Rpc::start()
 {
-    // start amop
-    // TODO: move AMOP to the gateway
-    // m_AMOP->start();
     // start event sub
     // m_eventSub->start();
     // start websocket service
@@ -52,13 +65,6 @@ void Rpc::stop()
     {
         m_eventSub->stop();
     }
-
-    // stop amop
-    if (m_AMOP)
-    {
-        m_AMOP->stop();
-    }
-
     BCOS_LOG(INFO) << LOG_DESC("[RPC][RPC][stop]") << LOG_DESC("stop rpc successfully");
 }
 
@@ -99,31 +105,6 @@ void Rpc::asyncNotifyBlockNumber(std::string const& _groupID, std::string const&
                             << LOG_KV("blockNumber", _blockNumber) << LOG_KV("ss size", ss.size());
 }
 
-/**
- * @brief: async receive message from front service
- * @param _nodeID: the message sender nodeID
- * @param _id: the id of this message, it can by used to send response to the peer
- * @param _data: the message data
- * @return void
- */
-void Rpc::asyncNotifyAmopMessage(bcos::crypto::NodeIDPtr _nodeID, const std::string& _id,
-    bcos::bytesConstRef _data, std::function<void(Error::Ptr _error)> _onRecv)
-{
-    m_AMOP->asyncNotifyAmopMessage(_nodeID, _id, _data, _onRecv);
-}
-
-/**
- * @brief: async receive nodeIDs from front service
- * @param _nodeIDs: the nodeIDs
- * @param _callback: callback
- * @return void
- */
-void Rpc::asyncNotifyAmopNodeIDs(std::shared_ptr<const bcos::crypto::NodeIDs> _nodeIDs,
-    std::function<void(bcos::Error::Ptr _error)> _callback)
-{
-    m_AMOP->asyncNotifyAmopNodeIDs(_nodeIDs, _callback);
-}
-
 void Rpc::asyncNotifyGroupInfo(
     bcos::group::GroupInfo::Ptr _groupInfo, std::function<void(Error::Ptr&&)> _callback)
 {
@@ -153,5 +134,207 @@ void Rpc::notifyGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo)
             m_wsService->messageFactory()->buildMessage(bcos::rpc::MessageType::GROUP_NOTIFY,
                 std::make_shared<bcos::bytes>(response.begin(), response.end()));
         session->asyncSendMessage(message);
+    }
+}
+
+bool Rpc::updateTopicInfos(std::string const& _topicInfo, std::shared_ptr<WsSession> _session)
+{
+    TopicItems topicItems;
+    auto ret = parseSubTopicsJson(_topicInfo, topicItems);
+    if (!ret)
+    {
+        return false;
+    }
+    WriteGuard l(x_topicToSessions);
+    for (auto const& item : topicItems)
+    {
+        m_topicToSessions[item.topicName()][_session->endPoint()] = _session;
+    }
+    return true;
+}
+/**
+ * @brief: receive sub topic message from sdk
+ */
+void Rpc::onRecvSubTopics(std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session)
+{
+    auto topicInfo = std::string(_msg->data()->begin(), _msg->data()->end());
+    auto ret = updateTopicInfos(topicInfo, _session);
+    if (!ret)
+    {
+        BCOS_LOG(WARNING) << LOG_BADGE("onRecvSubTopics: invalid topic info")
+                          << LOG_KV("topicInfo", topicInfo)
+                          << LOG_KV("endpoint", _session->endPoint());
+        return;
+    }
+    m_gateway->asyncSubscribeTopic(m_clientID, topicInfo, [_session](Error::Ptr&& _error) {
+        if (_error)
+        {
+            BCOS_LOG(WARNING) << LOG_DESC("asyncSubScribeTopic error")
+                              << LOG_KV("code", _error->errorCode())
+                              << LOG_KV("msg", _error->errorMessage());
+        }
+    });
+    BCOS_LOG(INFO) << LOG_BADGE("onRecvSubTopics") << LOG_KV("topicInfo", topicInfo)
+                   << LOG_KV("endpoint", _session->endPoint());
+}
+
+/**
+ * @brief: receive amop request message from sdk
+ */
+void Rpc::onRecvAMOPRequest(std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session)
+{
+    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+    auto msgData = std::make_shared<bytes>();
+    _msg->encode(*msgData);
+
+    auto amopReq =
+        m_requestFactory->buildRequest(bytesConstRef(_msg->data()->data(), _msg->data()->size()));
+    m_gateway->asyncSendMessageByTopic(amopReq->topic(),
+        bytesConstRef(msgData->data(), msgData->size()),
+        [seq, _msg, _session](bcos::Error::Ptr&& _error, bytesPointer _responseData) {
+            if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
+            {
+                _msg->setStatus(_error->errorCode());
+                _msg->data()->clear();
+                BCOS_LOG(ERROR) << LOG_BADGE("onRecvAMOPRequest error")
+                                << LOG_DESC("AMOP async send message callback")
+                                << LOG_KV("seq", seq) << LOG_KV("code", _error->errorCode())
+                                << LOG_KV("msg", _error->errorMessage());
+                _session->asyncSendMessage(_msg);
+                return;
+            }
+            auto size = _msg->decode(_responseData->data(), _responseData->size());
+            BCOS_LOG(DEBUG) << LOG_BADGE("onRecvAMOPRequest")
+                            << LOG_DESC("AMOP async send message callback") << LOG_KV("seq", seq)
+                            << LOG_KV("size", size);
+            _session->asyncSendMessage(_msg);
+        });
+}
+
+/**
+ * @brief: receive amop broadcast message from sdk
+ */
+void Rpc::onRecvAMOPBroadcast(std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession>)
+{
+    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+    auto msgData = std::make_shared<bytes>();
+    _msg->encode(*msgData);
+
+    auto amopReq =
+        m_requestFactory->buildRequest(bytesConstRef(_msg->data()->data(), _msg->data()->size()));
+    m_gateway->asyncSendBroadbastMessageByTopic(
+        amopReq->topic(), bytesConstRef(msgData->data(), msgData->size()));
+    BCOS_LOG(DEBUG) << LOG_BADGE("onRecvAMOPBroadcast") << LOG_KV("seq", seq);
+}
+
+void Rpc::asyncNotifyAMOPMessage(std::string const& _topic, bytesConstRef _amopRequestData,
+    std::function<void(Error::Ptr&&, bytesPointer)> _callback)
+{
+    auto clientSession = randomChooseSession(_topic);
+    auto buffer = std::make_shared<bcos::bytes>();
+    if (!clientSession)
+    {
+        auto responseMessage = m_wsMessageFactory->buildMessage();
+        responseMessage->setStatus(bcos::protocol::CommonError::NotFoundClientByTopicDispatchMsg);
+        responseMessage->setType(AMOPMessageType::AMOP_RESPONSE);
+        responseMessage->encode(*buffer);
+        _callback(std::make_shared<Error>(CommonError::NotFoundClientByTopicDispatchMsg,
+                      "NotFoundClientByTopicDispatchMsg"),
+            buffer);
+        return;
+    }
+    auto requestMsg = m_wsMessageFactory->buildMessage();
+    requestMsg->decode(_amopRequestData.data(), _amopRequestData.size());
+    clientSession->asyncSendMessage(requestMsg, Options(30000),
+        [_topic, buffer, _callback](bcos::Error::Ptr _error,
+            std::shared_ptr<WsMessage> _responseMsg, std::shared_ptr<WsSession> _session) {
+            // try again when send message to the session failed
+            if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
+            {
+                BCOS_LOG(WARNING) << LOG_BADGE("asyncNotifyAMOPMessage")
+                                  << LOG_DESC("asyncSendMessage callback error")
+                                  << LOG_KV("endpoint",
+                                         (_session ? _session->endPoint() : std::string("")))
+                                  << LOG_KV("topic", _topic)
+                                  << LOG_KV("errorCode", _error ? _error->errorCode() : -1)
+                                  << LOG_KV("errorMessage",
+                                         _error ? _error->errorMessage() : "success");
+            }
+            auto seq = std::string(_responseMsg->seq()->begin(), _responseMsg->seq()->end());
+            BCOS_LOG(TRACE) << LOG_BADGE("asyncNotifyAMOPMessage")
+                            << LOG_DESC("asyncSendMessage callback response") << LOG_KV("seq", seq)
+                            << LOG_KV("data size", _responseMsg->data()->size());
+
+            _responseMsg->encode(*buffer);
+            _callback(std::move(_error), buffer);
+        });
+}
+
+void Rpc::asyncNotifyAMOPBroadcastMessage(std::string const& _topic, bytesConstRef _data,
+    std::function<void(Error::Ptr&&, bytesPointer)> _callback)
+{
+    auto sessions = querySessionsByTopic(_topic);
+    auto requestMsg = m_wsMessageFactory->buildMessage();
+    requestMsg->decode(_data.data(), _data.size());
+    for (auto const& session : sessions)
+    {
+        session.second->asyncSendMessage(requestMsg, Options(30000));
+    }
+    if (_callback)
+    {
+        _callback(nullptr, nullptr);
+    }
+}
+
+std::shared_ptr<WsSession> Rpc::randomChooseSession(std::string const& _topic)
+{
+    ReadGuard l(x_topicToSessions);
+    if (!m_topicToSessions.count(_topic))
+    {
+        return nullptr;
+    }
+    std::shared_ptr<WsSession> selectedSession;
+    auto const& sessions = m_topicToSessions[_topic];
+    do
+    {
+        srand(utcTime());
+        auto selectedClient = rand() % m_topicToSessions.size();
+        auto it = sessions.begin();
+        std::advance(it, selectedClient);
+        selectedSession = it->second;
+    } while (selectedSession && selectedSession->isConnected());
+    return selectedSession;
+}
+
+void Rpc::onClientDisconnect(std::shared_ptr<WsSession> _session)
+{
+    std::vector<std::string> topicsToRemove;
+    {
+        WriteGuard l(x_topicToSessions);
+        for (auto it = m_topicToSessions.begin(); it != m_topicToSessions.end();)
+        {
+            auto& sessions = it->second;
+            if (sessions.count(_session->endPoint()))
+            {
+                sessions.erase(_session->endPoint());
+            }
+            if (sessions.size() == 0)
+            {
+                topicsToRemove.emplace_back(it->first);
+                it = m_topicToSessions.erase(it);
+                continue;
+            }
+            it++;
+        }
+    }
+    if (topicsToRemove.size() > 0)
+    {
+        m_gateway->asyncRemoveTopic(
+            m_clientID, topicsToRemove, [topicsToRemove](Error::Ptr&& _error) {
+                BCOS_LOG(INFO) << LOG_DESC("asyncRemoveTopic")
+                               << LOG_KV("removedSize", topicsToRemove.size())
+                               << LOG_KV("code", _error ? _error->errorCode() : 0)
+                               << LOG_KV("msg", _error ? _error->errorMessage() : "");
+            });
     }
 }
