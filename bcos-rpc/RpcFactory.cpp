@@ -46,8 +46,12 @@ using namespace bcos::boostssl::ws;
 using namespace bcos::protocol;
 
 RpcFactory::RpcFactory(std::string const& _chainID, GatewayInterface::Ptr _gatewayInterface,
-    KeyFactory::Ptr _keyFactory)
-  : m_gatewayInterface(_gatewayInterface), m_keyFactory(_keyFactory)
+    KeyFactory::Ptr _keyFactory, std::string const& _clientID,
+    std::string const& _gatewayServiceName)
+  : m_gatewayInterface(_gatewayInterface),
+    m_keyFactory(_keyFactory),
+    m_clientID(_clientID),
+    m_gatewayServiceName(_gatewayServiceName)
 {
     auto nodeServiceFactory = std::make_shared<NodeServiceFactory>();
     m_groupManager = std::make_shared<GroupManager>(_chainID, nodeServiceFactory);
@@ -165,10 +169,10 @@ bcos::event::EventSub::Ptr RpcFactory::buildEventSub(
  * @param _configPath: rpc config path
  * @return Rpc::Ptr:
  */
-Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath, std::string const& _clientID)
+Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath)
 {
     auto config = initConfig(_configPath);
-    return buildRpc(config, _clientID);
+    return buildRpc(config);
 }
 
 /**
@@ -177,8 +181,7 @@ Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath, std::string const&
  * @param _nodeInfo: node info
  * @return Rpc::Ptr:
  */
-Rpc::Ptr RpcFactory::buildRpc(
-    bcos::boostssl::ws::WsConfig::Ptr _config, std::string const& _clientID)
+Rpc::Ptr RpcFactory::buildRpc(bcos::boostssl::ws::WsConfig::Ptr _config)
 {
     // checkParams();
 
@@ -191,12 +194,12 @@ Rpc::Ptr RpcFactory::buildRpc(
 
     auto wsFactory = std::make_shared<WsMessageFactory>();
     auto requestFactory = std::make_shared<AMOPRequestFactory>();
-    auto rpc = std::make_shared<Rpc>(
-        wsService, jsonRpc, es, wsFactory, requestFactory, m_gatewayInterface, _clientID);
+    auto rpc = std::make_shared<Rpc>(wsService, jsonRpc, es, wsFactory, requestFactory,
+        m_gatewayInterface, m_clientID, m_gatewayServiceName);
     BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][buildRpc]")
                    << LOG_KV("listenIP", _config->listenIP())
                    << LOG_KV("listenPort", _config->listenPort())
                    << LOG_KV("threadCount", _config->threadPoolSize())
-                   << LOG_KV("clientID", _clientID);
+                   << LOG_KV("clientID", m_clientID);
     return rpc;
 }

@@ -23,12 +23,15 @@
 #include <bcos-framework/libprotocol/amop/TopicItem.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <bcos-rpc/Rpc.h>
+#include <bcos-tars-protocol/client/GatewayServiceClient.h>
 
 using namespace bcos;
 using namespace bcos::rpc;
 using namespace bcos::group;
 using namespace bcos::protocol;
 using namespace bcos::boostssl::ws;
+using namespace bcostars;
+using namespace tars;
 
 void Rpc::initMsgHandler()
 {
@@ -166,14 +169,7 @@ void Rpc::onRecvSubTopics(std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSes
                           << LOG_KV("endpoint", _session->endPoint());
         return;
     }
-    m_gateway->asyncSubscribeTopic(m_clientID, topicInfo, [_session](Error::Ptr&& _error) {
-        if (_error)
-        {
-            BCOS_LOG(WARNING) << LOG_DESC("asyncSubScribeTopic error")
-                              << LOG_KV("code", _error->errorCode())
-                              << LOG_KV("msg", _error->errorMessage());
-        }
-    });
+    subscribeTopicToAllNodes(topicInfo);
     BCOS_LOG(INFO) << LOG_BADGE("onRecvSubTopics") << LOG_KV("topicInfo", topicInfo)
                    << LOG_KV("endpoint", _session->endPoint());
 }
@@ -191,23 +187,48 @@ void Rpc::onRecvAMOPRequest(std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsS
         m_requestFactory->buildRequest(bytesConstRef(_msg->data()->data(), _msg->data()->size()));
     m_gateway->asyncSendMessageByTopic(amopReq->topic(),
         bytesConstRef(msgData->data(), msgData->size()),
-        [seq, _msg, _session](bcos::Error::Ptr&& _error, bytesPointer _responseData) {
-            if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
+        [this, seq, _session](
+            bcos::Error::Ptr&& _error, int16_t _type, bytesPointer _responseData) {
+            try
             {
-                _msg->setStatus(_error->errorCode());
-                _msg->data()->clear();
-                BCOS_LOG(ERROR) << LOG_BADGE("onRecvAMOPRequest error")
-                                << LOG_DESC("AMOP async send message callback")
-                                << LOG_KV("seq", seq) << LOG_KV("code", _error->errorCode())
-                                << LOG_KV("msg", _error->errorMessage());
-                _session->asyncSendMessage(_msg);
-                return;
+                auto responseMsg = m_wsMessageFactory->buildMessage();
+                if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
+                {
+                    responseMsg->setStatus(_error->errorCode());
+                    BCOS_LOG(ERROR) << LOG_BADGE("onRecvAMOPRequest error")
+                                    << LOG_DESC("AMOP async send message callback")
+                                    << LOG_KV("seq", seq) << LOG_KV("code", _error->errorCode())
+                                    << LOG_KV("msg", _error->errorMessage());
+                    _session->asyncSendMessage(responseMsg);
+                    return;
+                }
+                if (_type == bcos::gateway::MessageType::AMOPMessageType)
+                {
+                    responseMsg->setData(_responseData);
+                    BCOS_LOG(INFO) << LOG_BADGE("onRecvAMOPRequest")
+                                   << LOG_DESC("receive AMOP response data from the p2pNode");
+                }
+                if (_type == bcos::gateway::MessageType::WSMessageType)
+                {
+                    auto size = responseMsg->decode(_responseData->data(), _responseData->size());
+                    BCOS_LOG(DEBUG)
+                        << LOG_BADGE("onRecvAMOPRequest")
+                        << LOG_DESC("AMOP async send message: receive message response for sdk")
+                        << LOG_KV("seq", seq) << LOG_KV("size", size);
+                }
+                else
+                {
+                    responseMsg->setStatus(bcos::protocol::CommonError::UnSupportedPacketType);
+                    BCOS_LOG(WARNING) << LOG_DESC("onRecvAMOPRequest: unknown packet type")
+                                      << LOG_KV("type", _type);
+                }
+                _session->asyncSendMessage(responseMsg);
             }
-            auto size = _msg->decode(_responseData->data(), _responseData->size());
-            BCOS_LOG(DEBUG) << LOG_BADGE("onRecvAMOPRequest")
-                            << LOG_DESC("AMOP async send message callback") << LOG_KV("seq", seq)
-                            << LOG_KV("size", size);
-            _session->asyncSendMessage(_msg);
+            catch (std::exception const& e)
+            {
+                BCOS_LOG(WARNING) << LOG_DESC("onRecvAMOPRequest exception")
+                                  << LOG_KV("error", boost::diagnostic_information(e));
+            }
         });
 }
 
@@ -327,14 +348,65 @@ void Rpc::onClientDisconnect(std::shared_ptr<WsSession> _session)
             it++;
         }
     }
-    if (topicsToRemove.size() > 0)
+    if (topicsToRemove.size() == 0)
     {
-        m_gateway->asyncRemoveTopic(
-            m_clientID, topicsToRemove, [topicsToRemove](Error::Ptr&& _error) {
-                BCOS_LOG(INFO) << LOG_DESC("asyncRemoveTopic")
+        return;
+    }
+    removeTopicFromAllNodes(topicsToRemove);
+}
+
+std::vector<tars::EndpointInfo> Rpc::getActiveGatewayEndPoints()
+{
+    vector<EndpointInfo> activeEndPoints;
+    vector<EndpointInfo> nactiveEndPoints;
+    auto gatewayClient = std::dynamic_pointer_cast<bcostars::GatewayServiceClient>(m_gateway);
+    gatewayClient->prx()->tars_endpointsAll(activeEndPoints, nactiveEndPoints);
+    return activeEndPoints;
+}
+
+void Rpc::subscribeTopicToAllNodes(std::string const& _topicInfo)
+{
+    auto activeEndPoints = getActiveGatewayEndPoints();
+    for (auto const& endPoint : activeEndPoints)
+    {
+        auto endPointStr = endPointToString(m_gatewayServiceName, endPoint.getEndpoint());
+        auto servicePrx =
+            Application::getCommunicator()->stringToProxy<GatewayServicePrx>(endPointStr);
+        auto serviceClient = std::make_shared<GatewayServiceClient>(servicePrx);
+        serviceClient->asyncSubscribeTopic(
+            m_clientID, _topicInfo, [endPointStr](Error::Ptr&& _error) {
+                if (_error)
+                {
+                    BCOS_LOG(WARNING)
+                        << LOG_DESC("asyncSubScribeTopic error") << LOG_KV("gateway", endPointStr)
+                        << LOG_KV("code", _error->errorCode())
+                        << LOG_KV("msg", _error->errorMessage());
+                }
+            });
+    }
+}
+void Rpc::removeTopicFromAllNodes(std::vector<std::string> const& topicsToRemove)
+{
+    auto activeEndPoints = getActiveGatewayEndPoints();
+    for (auto const& endPoint : activeEndPoints)
+    {
+        auto endPointStr = endPointToString(m_gatewayServiceName, endPoint.getEndpoint());
+        auto servicePrx =
+            Application::getCommunicator()->stringToProxy<GatewayServicePrx>(endPointStr);
+        auto serviceClient = std::make_shared<GatewayServiceClient>(servicePrx);
+        serviceClient->asyncRemoveTopic(
+            m_clientID, topicsToRemove, [topicsToRemove, endPointStr](Error::Ptr&& _error) {
+                BCOS_LOG(INFO) << LOG_DESC("asyncRemoveTopic") << LOG_KV("gateway", endPointStr)
                                << LOG_KV("removedSize", topicsToRemove.size())
                                << LOG_KV("code", _error ? _error->errorCode() : 0)
                                << LOG_KV("msg", _error ? _error->errorMessage() : "");
             });
     }
+
+    m_gateway->asyncRemoveTopic(m_clientID, topicsToRemove, [topicsToRemove](Error::Ptr&& _error) {
+        BCOS_LOG(INFO) << LOG_DESC("asyncRemoveTopic")
+                       << LOG_KV("removedSize", topicsToRemove.size())
+                       << LOG_KV("code", _error ? _error->errorCode() : 0)
+                       << LOG_KV("msg", _error ? _error->errorMessage() : "");
+    });
 }

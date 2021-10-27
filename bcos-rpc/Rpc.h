@@ -47,14 +47,16 @@ public:
         bcos::rpc::JsonRpcImpl_2_0::Ptr _jsonRpcImpl, bcos::event::EventSub::Ptr _eventSub,
         std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> _wsMessageFactory,
         std::shared_ptr<bcos::protocol::AMOPRequestFactory> _requestFactory,
-        bcos::gateway::GatewayInterface::Ptr _gateway, std::string const& _clientID)
+        bcos::gateway::GatewayInterface::Ptr _gateway, std::string const& _clientID,
+        std::string const& _gatewayServiceName)
       : m_wsService(_wsService),
         m_jsonRpcImpl(_jsonRpcImpl),
         m_eventSub(_eventSub),
         m_wsMessageFactory(_wsMessageFactory),
         m_requestFactory(_requestFactory),
         m_gateway(_gateway),
-        m_clientID(_clientID)
+        m_clientID(_clientID),
+        m_gatewayServiceName(_gatewayServiceName)
     {
         m_jsonRpcImpl->groupManager()->registerGroupInfoNotifier(
             [this](bcos::group::GroupInfo::Ptr _groupInfo) { notifyGroupInfo(_groupInfo); });
@@ -156,6 +158,15 @@ protected:
         bcos::protocol::TransactionSubmitResult::Ptr) override
     {}
 
+    std::vector<tars::EndpointInfo> getActiveGatewayEndPoints();
+    virtual void subscribeTopicToAllNodes(std::string const& _topicInfo);
+    virtual void removeTopicFromAllNodes(std::vector<std::string> const& _topicName);
+    std::string endPointToString(std::string const& _serviceName, TC_Endpoint const& _endPoint)
+    {
+        return _serviceName + "@tcp -h " + _endPoint.getHost() + " -p " +
+               boost::lexical_cast<std::string>(_endPoint.getPort());
+    }
+
 private:
     std::shared_ptr<boostssl::ws::WsService> m_wsService;
     bcos::rpc::JsonRpcImpl_2_0::Ptr m_jsonRpcImpl;
@@ -165,6 +176,7 @@ private:
     std::shared_ptr<bcos::protocol::AMOPRequestFactory> m_requestFactory;
     bcos::gateway::GatewayInterface::Ptr m_gateway;
     std::string m_clientID;
+    std::string m_gatewayServiceName;
 
     // for AMOP
     std::map<std::string, std::map<std::string, std::shared_ptr<boostssl::ws::WsSession>>>

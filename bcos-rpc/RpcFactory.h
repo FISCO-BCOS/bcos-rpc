@@ -47,7 +47,8 @@ class RpcFactory : public std::enable_shared_from_this<RpcFactory>
 public:
     using Ptr = std::shared_ptr<RpcFactory>;
     RpcFactory(std::string const& _chainID, bcos::gateway::GatewayInterface::Ptr _gatewayInterface,
-        bcos::crypto::KeyFactory::Ptr _keyFactory);
+        bcos::crypto::KeyFactory::Ptr _keyFactory, std::string const& _clientID,
+        std::string const& _gatewayServiceName);
     virtual ~RpcFactory() {}
 
     std::shared_ptr<boostssl::ws::WsConfig> initConfig(const std::string& _configPath);
@@ -62,14 +63,14 @@ public:
      * @param _config: WsConfig
      * @return Rpc::Ptr:
      */
-    Rpc::Ptr buildRpc(bcos::boostssl::ws::WsConfig::Ptr _config, std::string const& _clientID);
+    Rpc::Ptr buildRpc(bcos::boostssl::ws::WsConfig::Ptr _config);
 
     /**
      * @brief: Rpc
      * @param _configPath: rpc config path
      * @return Rpc::Ptr:
      */
-    Rpc::Ptr buildRpc(const std::string& _configPath, std::string const& _clientID);
+    Rpc::Ptr buildRpc(const std::string& _configPath);
     GroupManager::Ptr groupManager() { return m_groupManager; }
 
 private:
@@ -79,6 +80,8 @@ private:
 private:
     bcos::gateway::GatewayInterface::Ptr m_gatewayInterface;
     std::shared_ptr<bcos::crypto::KeyFactory> m_keyFactory;
+    std::string m_clientID;
+    std::string m_gatewayServiceName;
     GroupManager::Ptr m_groupManager;
 };
 }  // namespace rpc
