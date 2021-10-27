@@ -86,6 +86,8 @@ void JsonRpcImpl_2_0::initMethod()
         &JsonRpcImpl_2_0::getGroupListI, this, std::placeholders::_1, std::placeholders::_2);
     m_methodToFunc["getGroupInfo"] = std::bind(
         &JsonRpcImpl_2_0::getGroupInfoI, this, std::placeholders::_1, std::placeholders::_2);
+    m_methodToFunc["getGroupInfoList"] = std::bind(
+        &JsonRpcImpl_2_0::getGroupInfoListI, this, std::placeholders::_1, std::placeholders::_2);
     m_methodToFunc["getGroupNodeInfo"] = std::bind(
         &JsonRpcImpl_2_0::getGroupNodeInfoI, this, std::placeholders::_1, std::placeholders::_2);
 

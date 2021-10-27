@@ -256,6 +256,12 @@ public:
         (void)_req;
         getGroupInfo(_req[0u].asString(), _respFunc);
     }
+    // get the group information of the given group
+    void getGroupInfoListI(const Json::Value& _req, RespFunc _respFunc)
+    {
+        (void)_req;
+        getGroupInfoList(_respFunc);
+    }
     // get the information of a given node
     void getGroupNodeInfoI(const Json::Value& _req, RespFunc _respFunc)
     {
