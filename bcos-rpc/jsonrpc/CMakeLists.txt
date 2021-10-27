@@ -7,4 +7,4 @@ aux_source_directory(. SRC_LIST)
 aux_source_directory(./groupmgr SRC_LIST)
 
 add_library(${JSONRPC_TARGET} ${SRC_LIST})
-target_link_libraries(${JSONRPC_TARGET} PUBLIC bcos-framework::utilities bcos-tars-protocol::protocol-tars)
+target_link_libraries(${JSONRPC_TARGET} PUBLIC bcos-framework::utilities ${WS_TARGET} bcos-tars-protocol::protocol-tars)

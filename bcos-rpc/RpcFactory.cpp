@@ -29,6 +29,7 @@
 #include <bcos-rpc/RpcFactory.h>
 #include <bcos-rpc/amop/TopicManager.h>
 #include <bcos-rpc/jsonrpc/JsonRpcImpl_2_0.h>
+#include <bcos-rpc/ws/ProtocolVersion.h>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -101,6 +102,7 @@ bcos::boostssl::ws::WsService::Ptr RpcFactory::buildWsService(
 
     initializer->setConfig(_config);
     initializer->initWsService(wsService);
+
     return wsService;
 }
 
@@ -157,6 +159,46 @@ bcos::amop::AMOP::Ptr RpcFactory::buildAMOP(std::shared_ptr<boostssl::ws::WsServ
 void RpcFactory::registerHandlers(std::shared_ptr<boostssl::ws::WsService> _wsService,
     bcos::rpc::JsonRpcImpl_2_0::Ptr _jsonRpcInterface)
 {
+    _wsService->registerMsgHandler(bcos::rpc::MessageType::HANDESHAKE,
+        [_jsonRpcInterface](std::shared_ptr<boostssl::ws::WsMessage> _msg,
+            std::shared_ptr<boostssl::ws::WsSession> _session) {
+            auto seq = std::string(_msg->data()->begin(), _msg->data()->end());
+            auto version = ws::EnumPV::CurrentVersion;
+            _session->setVersion(version);
+
+            _jsonRpcInterface->getGroupInfoList(
+                [_msg, _session, version, seq](
+                    bcos::Error::Ptr _error, Json::Value& _jGroupInfoList) {
+                    if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
+                    {
+                        BCOS_LOG(ERROR)
+                            << LOG_BADGE("HANDSHAKE") << LOG_DESC("get group info list error")
+                            << LOG_KV("seq", seq)
+                            << LOG_KV("endpoint", _session ? _session->endPoint() : std::string(""))
+                            << LOG_KV("errorCode", _error->errorCode())
+                            << LOG_KV("errorMessage", _error->errorMessage());
+                        return;
+                    }
+
+                    auto pv = std::make_shared<ws::ProtocolVersion>();
+                    pv->setProtocolVersion(version);
+                    auto jResult = pv->toJson();
+                    jResult["groupInfoList"] = _jGroupInfoList;
+
+                    Json::FastWriter writer;
+                    std::string result = writer.write(jResult);
+
+                    _msg->setData(std::make_shared<bcos::bytes>(result.begin(), result.end()));
+                    _session->asyncSendMessage(_msg);
+
+                    BCOS_LOG(INFO)
+                        << LOG_BADGE("HANDSHAKE") << LOG_DESC("handshake response")
+                        << LOG_KV("version", version) << LOG_KV("seq", seq)
+                        << LOG_KV("endpoint", _session ? _session->endPoint() : std::string(""))
+                        << LOG_KV("result", result);
+                });
+        });
+
     _wsService->registerMsgHandler(bcos::rpc::MessageType::RPC_REQUEST,
         [_jsonRpcInterface](std::shared_ptr<boostssl::ws::WsMessage> _msg,
             std::shared_ptr<boostssl::ws::WsSession> _session) {
