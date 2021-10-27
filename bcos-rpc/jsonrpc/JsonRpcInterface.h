@@ -101,6 +101,8 @@ public:
     virtual void getGroupList(RespFunc _respFunc) = 0;
     // get the group information of the given group
     virtual void getGroupInfo(std::string const& _groupID, RespFunc _respFunc) = 0;
+    // get all the group info list
+    virtual void getGroupInfoList(RespFunc _respFunc) = 0;
     // get the information of a given node
     virtual void getGroupNodeInfo(
         std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) = 0;

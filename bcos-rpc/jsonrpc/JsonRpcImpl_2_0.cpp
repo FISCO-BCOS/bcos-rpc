@@ -1197,6 +1197,15 @@ void JsonRpcImpl_2_0::getGroupInfo(std::string const& _groupID, RespFunc _respFu
     _respFunc(nullptr, response);
 }
 
+// get all the group info list
+void JsonRpcImpl_2_0::getGroupInfoList(RespFunc _respFunc)
+{
+    auto groupInfoList = m_groupManager->groupInfoList();
+    Json::Value response(Json::arrayValue);
+    groupInfoListToJson(response, groupInfoList);
+    _respFunc(nullptr, response);
+}
+
 // get the information of a given node
 void JsonRpcImpl_2_0::getGroupNodeInfo(
     std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc)

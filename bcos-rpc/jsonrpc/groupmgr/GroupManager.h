@@ -71,11 +71,22 @@ public:
 
     std::set<std::string> groupList()
     {
-        ReadGuard l(x_nodeServiceList);
         std::set<std::string> groupList;
+        ReadGuard l(x_nodeServiceList);
         for (auto const& it : m_groupInfos)
         {
             groupList.insert(it.first);
+        }
+        return groupList;
+    }
+
+    std::vector<bcos::group::GroupInfo::Ptr> groupInfoList()
+    {
+        std::vector<bcos::group::GroupInfo::Ptr> groupList;
+        ReadGuard l(x_nodeServiceList);
+        for (auto const& it : m_groupInfos)
+        {
+            groupList.push_back(it.second);
         }
         return groupList;
     }

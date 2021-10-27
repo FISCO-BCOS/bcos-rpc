@@ -146,5 +146,16 @@ inline void groupInfoToJson(Json::Value& _response, bcos::group::GroupInfo::Ptr 
         _response["nodeList"].append(nodeInfoResponse);
     }
 }
+
+inline void groupInfoListToJson(
+    Json::Value& _response, const std::vector<bcos::group::GroupInfo::Ptr> _groupInfoList)
+{
+    for (const auto& groupInfo : _groupInfoList)
+    {
+        Json::Value item;
+        groupInfoToJson(item, groupInfo);
+        _response.append(item);
+    }
+}
 }  // namespace rpc
 }  // namespace bcos

@@ -131,6 +131,8 @@ public:
     void getGroupList(RespFunc _respFunc) override;
     // get the group information of the given group
     void getGroupInfo(std::string const& _groupID, RespFunc _respFunc) override;
+    // get all the group info list
+    void getGroupInfoList(RespFunc _respFunc) override;
     // get the information of a given node
     void getGroupNodeInfo(
         std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override;
