@@ -1,6 +1,6 @@
 hunter_config(bcos-framework VERSION 3.0.0-local
-	URL https://${URL_BASE}/cyjseagull/bcos-framework/archive/bbf6bae4058762177464ba94100e703b38452e2d.tar.gz
-    SHA1 d8295b9d8b822c8c5a73b30797150f910c06af55
+	URL https://${URL_BASE}/FISCO-BCOS/bcos-framework/archive/e1c95020a8a0ab919fee0bc76adcde9f7b76c911.tar.gz
+    SHA1 6cb40b8e85f2cd29049819777efa383ee0e6f88f
 	CMAKE_ARGS HUNTER_PACKAGE_LOG_BUILD=ON HUNTER_PACKAGE_LOG_INSTALL=ON
 )
 
@@ -12,8 +12,8 @@ hunter_config(bcos-crypto
 
 hunter_config(bcos-tars-protocol
     VERSION 3.0.0-local
-    URL https://${URL_BASE}/cyjseagull/bcos-tars-protocol/archive/f5f1ecfb128da727cc3874abba0e6364780cc394.tar.gz
-    SHA1 670c09c512c0af6344a982c03b4c74eb90da8094
+    URL https://${URL_BASE}/FISCO-BCOS/bcos-tars-protocol/archive/81a32da0968a3d4a97cd412af255dedc9b85a4a2.tar.gz
+    SHA1 aa34e527968b0db250b487462219d68a87ba489d
     CMAKE_ARGS HUNTER_PACKAGE_LOG_BUILD=ON HUNTER_PACKAGE_LOG_INSTALL=ON URL_BASE=${URL_BASE}
 )
 

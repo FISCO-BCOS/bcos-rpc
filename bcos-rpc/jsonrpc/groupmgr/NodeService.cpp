@@ -20,6 +20,7 @@
  */
 #include "NodeService.h"
 #include "Common.h"
+#include <bcos-crypto/signature/key/KeyFactoryImpl.h>
 #include <bcos-framework/interfaces/protocol/ServiceDesc.h>
 #include <bcos-tars-protocol/client/LedgerServiceClient.h>
 #include <bcos-tars-protocol/client/PBFTServiceClient.h>
@@ -47,6 +48,9 @@ NodeService::Ptr NodeServiceFactory::buildNodeService(
     {
         cryptoSuite = createCryptoSuite();
     }
+    auto keyFactory = std::make_shared<bcos::crypto::KeyFactoryImpl>();
+    cryptoSuite->setKeyFactory(keyFactory);
+
     auto blockFactory = createBlockFactory(cryptoSuite);
     auto ledgerClient = createServicePrx<bcostars::LedgerServiceClient, bcostars::LedgerServicePrx>(
         LEDGER, _nodeInfo, blockFactory);

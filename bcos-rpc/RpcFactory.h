@@ -20,11 +20,15 @@
  */
 
 #pragma once
+#include "bcos-rpc/amop/AMOPClient.h"
+#include "bcos-rpc/amop/LocalAMOPClient.h"
 #include "bcos-rpc/jsonrpc/groupmgr/GroupManager.h"
+#include "bcos-rpc/jsonrpc/groupmgr/LocalGroupManager.h"
 #include <bcos-boostssl/websocket/WsConfig.h>
 #include <bcos-framework/interfaces/consensus/ConsensusInterface.h>
 #include <bcos-framework/interfaces/crypto/KeyFactory.h>
 #include <bcos-framework/interfaces/gateway/GatewayInterface.h>
+#include <bcos-rpc/Common.h>
 #include <bcos-rpc/Rpc.h>
 #include <bcos-rpc/event/EventSub.h>
 #include <bcos-rpc/jsonrpc/JsonRpcImpl_2_0.h>
@@ -47,41 +51,49 @@ class RpcFactory : public std::enable_shared_from_this<RpcFactory>
 public:
     using Ptr = std::shared_ptr<RpcFactory>;
     RpcFactory(std::string const& _chainID, bcos::gateway::GatewayInterface::Ptr _gatewayInterface,
-        bcos::crypto::KeyFactory::Ptr _keyFactory, std::string const& _clientID,
-        std::string const& _gatewayServiceName);
+        bcos::crypto::KeyFactory::Ptr _keyFactory);
     virtual ~RpcFactory() {}
 
     std::shared_ptr<boostssl::ws::WsConfig> initConfig(const std::string& _configPath);
     std::shared_ptr<boostssl::ws::WsService> buildWsService(
         bcos::boostssl::ws::WsConfig::Ptr _config);
-    bcos::rpc::JsonRpcImpl_2_0::Ptr buildJsonRpc(
-        std::shared_ptr<boostssl::ws::WsService> _wsService);
-    bcos::event::EventSub::Ptr buildEventSub(std::shared_ptr<boostssl::ws::WsService> _wsService);
+
+    Rpc::Ptr buildRpc(const std::string& _configPath, std::string const& _clientID,
+        std::string const& _gatewayServiceName);
+    Rpc::Ptr buildLocalRpc(const std::string& _configPath, bcos::group::GroupInfo::Ptr _groupInfo,
+        NodeService::Ptr _nodeService);
 
     /**
      * @brief: Rpc
      * @param _config: WsConfig
      * @return Rpc::Ptr:
      */
-    Rpc::Ptr buildRpc(bcos::boostssl::ws::WsConfig::Ptr _config);
+    Rpc::Ptr buildRpc(std::shared_ptr<boostssl::ws::WsService> _wsService,
+        GroupManager::Ptr _groupManager, AMOPClient::Ptr _amopClient);
 
-    /**
-     * @brief: Rpc
-     * @param _configPath: rpc config path
-     * @return Rpc::Ptr:
-     */
-    Rpc::Ptr buildRpc(const std::string& _configPath);
-    GroupManager::Ptr groupManager() { return m_groupManager; }
+    // for groupManager builder
+    GroupManager::Ptr buildGroupManager();
+    GroupManager::Ptr buildLocalGroupManager(
+        bcos::group::GroupInfo::Ptr _groupInfo, NodeService::Ptr _nodeService);
+
+    // for AMOP builder
+    AMOPClient::Ptr buildAMOPClient(std::shared_ptr<boostssl::ws::WsService> _wsService,
+        std::string const& _clientID, std::string const& _gatewayServiceName);
+    AMOPClient::Ptr buildLocalAMOPClient(std::shared_ptr<boostssl::ws::WsService> _wsService);
+
+protected:
+    bcos::rpc::JsonRpcImpl_2_0::Ptr buildJsonRpc(
+        std::shared_ptr<boostssl::ws::WsService> _wsService, GroupManager::Ptr _groupManager);
+    bcos::event::EventSub::Ptr buildEventSub(std::shared_ptr<boostssl::ws::WsService> _wsService);
 
 private:
     void registerHandlers(std::shared_ptr<boostssl::ws::WsService> _wsService,
         bcos::rpc::JsonRpcImpl_2_0::Ptr _jsonRpcInterface);
 
 private:
-    bcos::gateway::GatewayInterface::Ptr m_gatewayInterface;
+    std::string m_chainID;
+    bcos::gateway::GatewayInterface::Ptr m_gateway;
     std::shared_ptr<bcos::crypto::KeyFactory> m_keyFactory;
-    std::string m_clientID;
-    std::string m_gatewayServiceName;
     GroupManager::Ptr m_groupManager;
 };
 }  // namespace rpc

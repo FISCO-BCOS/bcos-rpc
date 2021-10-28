@@ -46,16 +46,9 @@ using namespace bcos::boostssl::ws;
 using namespace bcos::protocol;
 
 RpcFactory::RpcFactory(std::string const& _chainID, GatewayInterface::Ptr _gatewayInterface,
-    KeyFactory::Ptr _keyFactory, std::string const& _clientID,
-    std::string const& _gatewayServiceName)
-  : m_gatewayInterface(_gatewayInterface),
-    m_keyFactory(_keyFactory),
-    m_clientID(_clientID),
-    m_gatewayServiceName(_gatewayServiceName)
-{
-    auto nodeServiceFactory = std::make_shared<NodeServiceFactory>();
-    m_groupManager = std::make_shared<GroupManager>(_chainID, nodeServiceFactory);
-}
+    KeyFactory::Ptr _keyFactory)
+  : m_chainID(_chainID), m_gateway(_gatewayInterface), m_keyFactory(_keyFactory)
+{}
 
 std::shared_ptr<bcos::boostssl::ws::WsConfig> RpcFactory::initConfig(const std::string& _configPath)
 {
@@ -140,12 +133,11 @@ void RpcFactory::registerHandlers(std::shared_ptr<boostssl::ws::WsService> _wsSe
         });
 }
 bcos::rpc::JsonRpcImpl_2_0::Ptr RpcFactory::buildJsonRpc(
-    std::shared_ptr<boostssl::ws::WsService> _wsService)
+    std::shared_ptr<boostssl::ws::WsService> _wsService, GroupManager::Ptr _groupManager)
 {
     assert(m_groupManager);
     // JsonRpcImpl_2_0
-    auto jsonRpcInterface =
-        std::make_shared<bcos::rpc::JsonRpcImpl_2_0>(m_groupManager, m_gatewayInterface);
+    auto jsonRpcInterface = std::make_shared<bcos::rpc::JsonRpcImpl_2_0>(_groupManager, m_gateway);
     auto httpServer = _wsService->httpServer();
     if (httpServer)
     {
@@ -164,15 +156,29 @@ bcos::event::EventSub::Ptr RpcFactory::buildEventSub(
     return nullptr;
 }
 
-/**
- * @brief: Rpc
- * @param _configPath: rpc config path
- * @return Rpc::Ptr:
- */
-Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath)
+Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath, std::string const& _clientID,
+    std::string const& _gatewayServiceName)
 {
     auto config = initConfig(_configPath);
-    return buildRpc(config);
+    auto wsService = buildWsService(config);
+    auto groupManager = buildGroupManager();
+    auto amopClient = buildAMOPClient(wsService, _clientID, _gatewayServiceName);
+
+    BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][buildRpc]") << LOG_KV("listenIP", config->listenIP())
+                   << LOG_KV("listenPort", config->listenPort())
+                   << LOG_KV("threadCount", config->threadPoolSize()) << LOG_KV("client", _clientID)
+                   << LOG_KV("gatewayServiceName", _gatewayServiceName);
+    return buildRpc(wsService, groupManager, amopClient);
+}
+
+Rpc::Ptr RpcFactory::buildLocalRpc(const std::string& _configPath,
+    bcos::group::GroupInfo::Ptr _groupInfo, NodeService::Ptr _nodeService)
+{
+    auto config = initConfig(_configPath);
+    auto wsService = buildWsService(config);
+    auto groupManager = buildLocalGroupManager(_groupInfo, _nodeService);
+    auto amopClient = buildLocalAMOPClient(wsService);
+    return buildRpc(wsService, groupManager, amopClient);
 }
 
 /**
@@ -181,25 +187,41 @@ Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath)
  * @param _nodeInfo: node info
  * @return Rpc::Ptr:
  */
-Rpc::Ptr RpcFactory::buildRpc(bcos::boostssl::ws::WsConfig::Ptr _config)
+Rpc::Ptr RpcFactory::buildRpc(std::shared_ptr<boostssl::ws::WsService> _wsService,
+    GroupManager::Ptr _groupManager, AMOPClient::Ptr _amopClient)
 {
-    // checkParams();
-
-    auto wsService = buildWsService(_config);
-
     // JsonRpc
-    auto jsonRpc = buildJsonRpc(wsService);
+    auto jsonRpc = buildJsonRpc(_wsService, _groupManager);
     // EventSub
-    auto es = buildEventSub(wsService);
+    auto es = buildEventSub(_wsService);
+    return std::make_shared<Rpc>(_wsService, jsonRpc, es, _amopClient);
+}
 
+GroupManager::Ptr RpcFactory::buildGroupManager()
+{
+    auto nodeServiceFactory = std::make_shared<NodeServiceFactory>();
+    return std::make_shared<GroupManager>(m_chainID, nodeServiceFactory);
+}
+
+GroupManager::Ptr RpcFactory::buildLocalGroupManager(
+    GroupInfo::Ptr _groupInfo, NodeService::Ptr _nodeService)
+{
+    return std::make_shared<LocalGroupManager>(m_chainID, _groupInfo, _nodeService);
+}
+
+AMOPClient::Ptr RpcFactory::buildAMOPClient(std::shared_ptr<boostssl::ws::WsService> _wsService,
+    std::string const& _clientID, std::string const& _gatewayServiceName)
+{
     auto wsFactory = std::make_shared<WsMessageFactory>();
     auto requestFactory = std::make_shared<AMOPRequestFactory>();
-    auto rpc = std::make_shared<Rpc>(wsService, jsonRpc, es, wsFactory, requestFactory,
-        m_gatewayInterface, m_clientID, m_gatewayServiceName);
-    BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][buildRpc]")
-                   << LOG_KV("listenIP", _config->listenIP())
-                   << LOG_KV("listenPort", _config->listenPort())
-                   << LOG_KV("threadCount", _config->threadPoolSize())
-                   << LOG_KV("clientID", m_clientID);
-    return rpc;
+    return std::make_shared<AMOPClient>(
+        _wsService, wsFactory, requestFactory, m_gateway, _clientID, _gatewayServiceName);
+}
+
+AMOPClient::Ptr RpcFactory::buildLocalAMOPClient(
+    std::shared_ptr<boostssl::ws::WsService> _wsService)
+{
+    auto wsFactory = std::make_shared<WsMessageFactory>();
+    auto requestFactory = std::make_shared<AMOPRequestFactory>();
+    return std::make_shared<LocalAMOPClient>(_wsService, wsFactory, requestFactory, m_gateway);
 }

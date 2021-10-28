@@ -47,7 +47,7 @@ public:
 
     std::string const& chainID() const { return m_chainID; }
 
-    bcos::group::GroupInfo::Ptr getGroupInfo(std::string const& _groupID)
+    virtual bcos::group::GroupInfo::Ptr getGroupInfo(std::string const& _groupID)
     {
         ReadGuard l(x_nodeServiceList);
         if (m_groupInfos.count(_groupID))
@@ -57,7 +57,7 @@ public:
         return nullptr;
     }
 
-    bcos::group::ChainNodeInfo::Ptr getNodeInfo(
+    virtual bcos::group::ChainNodeInfo::Ptr getNodeInfo(
         std::string const& _groupID, std::string const& _nodeName)
     {
         ReadGuard l(x_nodeServiceList);
@@ -69,7 +69,7 @@ public:
         return groupInfo->nodeInfo(_nodeName);
     }
 
-    std::set<std::string> groupList()
+    virtual std::set<std::string> groupList()
     {
         ReadGuard l(x_nodeServiceList);
         std::set<std::string> groupList;
@@ -118,12 +118,14 @@ public:
                         << LOG_KV("block", _blockNumber);
     }
 
-    void registerGroupInfoNotifier(std::function<void(bcos::group::GroupInfo::Ptr)> _callback)
+    virtual void registerGroupInfoNotifier(
+        std::function<void(bcos::group::GroupInfo::Ptr)> _callback)
     {
         m_groupInfoNotifier = _callback;
     }
 
 protected:
+    GroupManager(std::string const& _chainID) : m_chainID(_chainID) {}
     virtual void updateGroupStatus();
 
     void updateNodeServiceWithoutLock(
@@ -134,7 +136,7 @@ protected:
     virtual NodeService::Ptr selectNodeRandomly(std::string const& _groupID) const;
     virtual NodeService::Ptr queryNodeService(std::string const& _nodeName) const;
 
-private:
+protected:
     std::string m_chainID;
     NodeServiceFactory::Ptr m_nodeServiceFactory;
 
