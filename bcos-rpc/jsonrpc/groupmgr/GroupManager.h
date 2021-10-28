@@ -80,7 +80,7 @@ public:
         return groupList;
     }
 
-    std::vector<bcos::group::GroupInfo::Ptr> groupInfoList()
+    virtual std::vector<bcos::group::GroupInfo::Ptr> groupInfoList()
     {
         std::vector<bcos::group::GroupInfo::Ptr> groupList;
         ReadGuard l(x_nodeServiceList);

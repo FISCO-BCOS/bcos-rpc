@@ -69,6 +69,17 @@ public:
         return m_groupInfo->nodeInfo(_nodeName);
     }
 
+    virtual void updateGroupBlockInfo(
+        std::string const&, std::string const&, bcos::protocol::BlockNumber) override
+    {}
+
+    std::vector<bcos::group::GroupInfo::Ptr> groupInfoList() override
+    {
+        std::vector<bcos::group::GroupInfo::Ptr> groupList;
+        groupList.emplace_back(m_groupInfo);
+        return groupList;
+    }
+
 private:
     NodeService::Ptr m_nodeService;
     bcos::group::GroupInfo::Ptr m_groupInfo;
