@@ -36,8 +36,14 @@ public:
 
     ~LocalGroupManager() override {}
 
-    NodeService::Ptr getNodeService(std::string const& _groupID, std::string const&) const override
+    NodeService::Ptr getNodeService(
+        std::string const& _groupID, std::string const& _nodeName) const override
     {
+        // return local nodeService when pass in empty groupID or nodeName
+        if (m_groupInfo->groupID().size() == 0 || _nodeName.size() == 0)
+        {
+            return m_nodeService;
+        }
         if (m_groupInfo->groupID() == _groupID)
         {
             return m_nodeService;

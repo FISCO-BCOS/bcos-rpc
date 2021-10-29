@@ -177,7 +177,6 @@ void RpcFactory::registerHandlers(std::shared_ptr<boostssl::ws::WsService> _wsSe
 bcos::rpc::JsonRpcImpl_2_0::Ptr RpcFactory::buildJsonRpc(
     std::shared_ptr<boostssl::ws::WsService> _wsService, GroupManager::Ptr _groupManager)
 {
-    assert(m_groupManager);
     // JsonRpcImpl_2_0
     auto jsonRpcInterface = std::make_shared<bcos::rpc::JsonRpcImpl_2_0>(_groupManager, m_gateway);
     auto httpServer = _wsService->httpServer();

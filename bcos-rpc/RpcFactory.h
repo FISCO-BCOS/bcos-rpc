@@ -94,7 +94,6 @@ private:
     std::string m_chainID;
     bcos::gateway::GatewayInterface::Ptr m_gateway;
     std::shared_ptr<bcos::crypto::KeyFactory> m_keyFactory;
-    GroupManager::Ptr m_groupManager;
 };
 }  // namespace rpc
 }  // namespace bcos
