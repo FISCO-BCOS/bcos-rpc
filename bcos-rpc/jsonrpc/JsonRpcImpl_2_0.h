@@ -46,6 +46,7 @@ public:
     ~JsonRpcImpl_2_0() {}
 
     void initMethod();
+    void setClientID(std::string const& _clientID) { m_clientID = _clientID; }
 
 public:
     static std::string encodeData(bcos::bytesConstRef _data);
@@ -309,6 +310,9 @@ private:
     GroupManager::Ptr m_groupManager;
     bcos::gateway::GatewayInterface::Ptr m_gatewayInterface;
     NodeInfo m_nodeInfo;
+    // Note: here clientID must non-empty for the rpc will set clientID as source for the tx for
+    // tx-notify and the scheduler will not notify the tx-result if the tx source is empty
+    std::string m_clientID = "localRpc";
 
     struct TxHasher
     {

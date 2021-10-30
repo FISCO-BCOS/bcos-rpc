@@ -197,19 +197,20 @@ bcos::event::EventSub::Ptr RpcFactory::buildEventSub(
     return nullptr;
 }
 
-Rpc::Ptr RpcFactory::buildRpc(const std::string& _configPath, std::string const& _clientID,
-    std::string const& _gatewayServiceName)
+Rpc::Ptr RpcFactory::buildRpc(
+    const std::string& _configPath, std::string const& _gatewayServiceName)
 {
     auto config = initConfig(_configPath);
     auto wsService = buildWsService(config);
     auto groupManager = buildGroupManager();
-    auto amopClient = buildAMOPClient(wsService, _clientID, _gatewayServiceName);
+    auto amopClient = buildAMOPClient(wsService, _gatewayServiceName);
 
     BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][buildRpc]") << LOG_KV("listenIP", config->listenIP())
                    << LOG_KV("listenPort", config->listenPort())
-                   << LOG_KV("threadCount", config->threadPoolSize()) << LOG_KV("client", _clientID)
+                   << LOG_KV("threadCount", config->threadPoolSize())
                    << LOG_KV("gatewayServiceName", _gatewayServiceName);
-    return buildRpc(wsService, groupManager, amopClient);
+    auto rpc = buildRpc(wsService, groupManager, amopClient);
+    return rpc;
 }
 
 Rpc::Ptr RpcFactory::buildLocalRpc(const std::string& _configPath,
@@ -250,13 +251,13 @@ GroupManager::Ptr RpcFactory::buildLocalGroupManager(
     return std::make_shared<LocalGroupManager>(m_chainID, _groupInfo, _nodeService);
 }
 
-AMOPClient::Ptr RpcFactory::buildAMOPClient(std::shared_ptr<boostssl::ws::WsService> _wsService,
-    std::string const& _clientID, std::string const& _gatewayServiceName)
+AMOPClient::Ptr RpcFactory::buildAMOPClient(
+    std::shared_ptr<boostssl::ws::WsService> _wsService, std::string const& _gatewayServiceName)
 {
     auto wsFactory = std::make_shared<WsMessageFactory>();
     auto requestFactory = std::make_shared<AMOPRequestFactory>();
     return std::make_shared<AMOPClient>(
-        _wsService, wsFactory, requestFactory, m_gateway, _clientID, _gatewayServiceName);
+        _wsService, wsFactory, requestFactory, m_gateway, _gatewayServiceName);
 }
 
 AMOPClient::Ptr RpcFactory::buildLocalAMOPClient(

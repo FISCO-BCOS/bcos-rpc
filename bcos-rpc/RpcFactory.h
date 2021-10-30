@@ -58,8 +58,7 @@ public:
     std::shared_ptr<boostssl::ws::WsService> buildWsService(
         bcos::boostssl::ws::WsConfig::Ptr _config);
 
-    Rpc::Ptr buildRpc(const std::string& _configPath, std::string const& _clientID,
-        std::string const& _gatewayServiceName);
+    Rpc::Ptr buildRpc(const std::string& _configPath, std::string const& _gatewayServiceName);
     Rpc::Ptr buildLocalRpc(const std::string& _configPath, bcos::group::GroupInfo::Ptr _groupInfo,
         NodeService::Ptr _nodeService);
 
@@ -78,7 +77,7 @@ public:
 
     // for AMOP builder
     AMOPClient::Ptr buildAMOPClient(std::shared_ptr<boostssl::ws::WsService> _wsService,
-        std::string const& _clientID, std::string const& _gatewayServiceName);
+        std::string const& _gatewayServiceName);
     AMOPClient::Ptr buildLocalAMOPClient(std::shared_ptr<boostssl::ws::WsService> _wsService);
 
 protected:

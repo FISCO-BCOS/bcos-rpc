@@ -20,8 +20,8 @@
  */
 #pragma once
 #include <bcos-boostssl/websocket/WsService.h>
-#include <bcos-framework/interfaces/rpc/RPCInterface.h>
 #include <bcos-framework/interfaces/gateway/GatewayInterface.h>
+#include <bcos-framework/interfaces/rpc/RPCInterface.h>
 #include <bcos-framework/libprotocol/amop/AMOPRequest.h>
 #include <tarscpp/servant/Application.h>
 namespace bcos
@@ -35,13 +35,11 @@ public:
     AMOPClient(std::shared_ptr<boostssl::ws::WsService> _wsService,
         std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> _wsMessageFactory,
         std::shared_ptr<bcos::protocol::AMOPRequestFactory> _requestFactory,
-        bcos::gateway::GatewayInterface::Ptr _gateway, std::string const& _clientID,
-        std::string const& _gatewayServiceName)
+        bcos::gateway::GatewayInterface::Ptr _gateway, std::string const& _gatewayServiceName)
       : m_wsService(_wsService),
         m_wsMessageFactory(_wsMessageFactory),
         m_requestFactory(_requestFactory),
         m_gateway(_gateway),
-        m_clientID(_clientID),
         m_gatewayServiceName(_gatewayServiceName)
     {
         initMsgHandler();
@@ -76,6 +74,8 @@ public:
                               << LOG_KV("error", boost::diagnostic_information(e));
         }
     }
+
+    void setClientID(std::string const& _clientID) { m_clientID = _clientID; }
 
 protected:
     /// for AMOP requests from SDK
@@ -128,7 +128,7 @@ protected:
     std::shared_ptr<bcos::protocol::AMOPRequestFactory> m_requestFactory;
 
     bcos::gateway::GatewayInterface::Ptr m_gateway;
-    std::string m_clientID;
+    std::string m_clientID = "localAMOP";
     std::string m_gatewayServiceName;
 
     // for AMOP

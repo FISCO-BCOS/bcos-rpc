@@ -523,7 +523,6 @@ void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string c
 
     auto self = std::weak_ptr<JsonRpcImpl_2_0>(shared_from_this());
     auto transactionDataPtr = decodeData(_data);
-
     auto nodeService = getNodeService(_groupID, _nodeName, "sendTransaction");
     auto txpool = nodeService->txpool();
     checkService(txpool, "txpool");

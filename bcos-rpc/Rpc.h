@@ -67,7 +67,7 @@ public:
         bcos::protocol::BlockNumber _blockNumber,
         std::function<void(Error::Ptr)> _callback) override;
 
-    void asyncNotifyTransactionResult(const std::string_view& groupID,
+    void asyncNotifyTransactionResult(std::string const& _source, const std::string_view& groupID,
         bcos::crypto::HashType txHash,
         bcos::protocol::TransactionSubmitResult::Ptr result) override;
 
@@ -83,6 +83,12 @@ public:
         std::function<void(Error::Ptr&& _error, bytesPointer _responseData)> _callback) override
     {
         m_amopClient->asyncNotifyAMOPMessage(_type, _topic, _requestData, _callback);
+    }
+
+    void setClientID(std::string const& _clientID)
+    {
+        m_jsonRpcImpl->setClientID(_clientID);
+        m_amopClient->setClientID(_clientID);
     }
 
 protected:
