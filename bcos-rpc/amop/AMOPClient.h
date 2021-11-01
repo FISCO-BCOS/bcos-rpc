@@ -24,11 +24,12 @@
 #include <bcos-framework/interfaces/rpc/RPCInterface.h>
 #include <bcos-framework/libprotocol/amop/AMOPRequest.h>
 #include <tarscpp/servant/Application.h>
+#define AMOP_CLIENT_LOG(level) BCOS_LOG(level) << LOG_BADGE("AMOPClient")
 namespace bcos
 {
 namespace rpc
 {
-class AMOPClient
+class AMOPClient : public std::enable_shared_from_this<AMOPClient>
 {
 public:
     using Ptr = std::shared_ptr<AMOPClient>;
