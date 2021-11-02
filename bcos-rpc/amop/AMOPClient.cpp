@@ -60,7 +60,6 @@ bool AMOPClient::updateTopicInfos(
     for (auto const& item : topicItems)
     {
         m_topicToSessions[item.topicName()][_session->endPoint()] = _session;
-        AMOP_CLIENT_LOG(INFO) << LOG_DESC("### m_topicToSessions insert:") << item.topicName();
     }
     return true;
 }
@@ -290,7 +289,8 @@ void AMOPClient::broadcastAMOPMessage(std::string const& _topic, std::shared_ptr
 std::shared_ptr<WsSession> AMOPClient::randomChooseSession(std::string const& _topic)
 {
     AMOP_CLIENT_LOG(INFO) << LOG_DESC("randomChooseSession:")
-                          << LOG_KV("sessionSize", m_topicToSessions.size());
+                          << LOG_KV("sessionSize", m_topicToSessions.size())
+                          << LOG_KV("topic", _topic);
     ReadGuard l(x_topicToSessions);
     if (!m_topicToSessions.count(_topic))
     {
