@@ -199,6 +199,9 @@ void AMOPClient::onRecvAMOPBroadcast(std::shared_ptr<WsMessage> _msg, std::share
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
     auto amopReq =
         m_requestFactory->buildRequest(bytesConstRef(_msg->data()->data(), _msg->data()->size()));
+    // broadcast message to the sdks connected to the local node
+    broadcastAMOPMessage(amopReq->topic(), _msg);
+    // broadcast messsage to sdks connected to other nodes
     m_gateway->asyncSendBroadbastMessageByTopic(
         amopReq->topic(), bytesConstRef(_msg->data()->data(), _msg->data()->size()));
     AMOP_CLIENT_LOG(DEBUG) << LOG_BADGE("onRecvAMOPBroadcast") << LOG_KV("seq", seq)
@@ -212,7 +215,6 @@ void AMOPClient::sendMessageToClient(std::string const& _topic,
     _selectSession->asyncSendMessage(_msg, Options(30000),
         [_topic, _callback](bcos::Error::Ptr _error, std::shared_ptr<WsMessage> _responseMsg,
             std::shared_ptr<WsSession> _session) {
-            // try again when send message to the session failed
             if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
             {
                 AMOP_CLIENT_LOG(WARNING)
@@ -266,20 +268,25 @@ void AMOPClient::asyncNotifyAMOPBroadcastMessage(std::string const& _topic, byte
     std::function<void(Error::Ptr&&, bytesPointer)> _callback)
 {
     AMOP_CLIENT_LOG(INFO) << LOG_DESC("asyncNotifyAMOPBroadcastMessage") << LOG_KV("topic", _topic);
-    auto sessions = querySessionsByTopic(_topic);
     auto requestMsg = m_wsMessageFactory->buildMessage();
     requestMsg->setType(AMOPClientMessageType::AMOP_BROADCAST);
     requestMsg->setData(std::make_shared<bytes>(_data.begin(), _data.end()));
-    for (auto const& session : sessions)
-    {
-        session.second->asyncSendMessage(requestMsg, Options(30000));
-    }
+    broadcastAMOPMessage(_topic, requestMsg);
     if (_callback)
     {
         _callback(nullptr, nullptr);
     }
 }
 
+void AMOPClient::broadcastAMOPMessage(std::string const& _topic, std::shared_ptr<WsMessage> _msg)
+{
+    AMOP_CLIENT_LOG(INFO) << LOG_DESC("broadcastAMOPMessage") << LOG_KV("topic", _topic);
+    auto sessions = querySessionsByTopic(_topic);
+    for (auto const& session : sessions)
+    {
+        session.second->asyncSendMessage(_msg, Options(30000));
+    }
+}
 std::shared_ptr<WsSession> AMOPClient::randomChooseSession(std::string const& _topic)
 {
     AMOP_CLIENT_LOG(INFO) << LOG_DESC("randomChooseSession:")
