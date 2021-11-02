@@ -111,6 +111,7 @@ inline void nodeInfoToJson(Json::Value& _response, bcos::group::ChainNodeInfo::P
 {
     _response["name"] = _nodeInfo->nodeName();
     _response["type"] = _nodeInfo->nodeType();
+    _response["microService"] = _nodeInfo->microService();
     _response["iniConfig"] = _nodeInfo->iniConfig();
     // set deployInfo
     _response["serviceInfo"] = Json::Value(Json::arrayValue);
