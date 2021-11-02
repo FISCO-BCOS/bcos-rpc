@@ -96,10 +96,12 @@ void AMOPClient::onRecvAMOPRequest(
     AMOP_CLIENT_LOG(INFO) << LOG_DESC("onRecvAMOPRequest") << LOG_KV("seq", seq)
                           << LOG_KV("topic", amopReq->topic());
 
+    auto topic = amopReq->topic();
     auto self = std::weak_ptr<AMOPClient>(shared_from_this());
     m_gateway->asyncSendMessageByTopic(amopReq->topic(),
         bytesConstRef(_msg->data()->data(), _msg->data()->size()),
-        [self, seq, _session](bcos::Error::Ptr&& _error, int16_t, bytesPointer _responseData) {
+        [self, seq, _msg, topic, _session](
+            bcos::Error::Ptr&& _error, int16_t, bytesPointer _responseData) {
             try
             {
                 auto amopClient = self.lock();
@@ -111,6 +113,12 @@ void AMOPClient::onRecvAMOPRequest(
                 auto orgSeq = std::make_shared<bcos::bytes>(seq.begin(), seq.end());
                 if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
                 {
+                    auto ret = amopClient->trySendAMOPRequestToLocalNode(_session, topic, _msg);
+                    // to local node
+                    if (ret)
+                    {
+                        return;
+                    }
                     responseMsg->setStatus(_error->errorCode());
                     // constructor the response
                     responseMsg->setData(std::make_shared<bytes>(
@@ -145,6 +153,44 @@ void AMOPClient::onRecvAMOPRequest(
         });
 }
 
+bool AMOPClient::trySendAMOPRequestToLocalNode(
+    std::shared_ptr<WsSession> _session, std::string const& _topic, std::shared_ptr<WsMessage> _msg)
+{
+    // the local node has no client subscribe to the topic
+    auto selectedSession = randomChooseSession(_topic);
+    if (!selectedSession)
+    {
+        return false;
+    }
+    auto self = std::weak_ptr<AMOPClient>(shared_from_this());
+    sendMessageToClient(
+        _topic, selectedSession, _msg, [self, _session](Error::Ptr&&, bytesPointer _responseData) {
+            try
+            {
+                auto amopClient = self.lock();
+                if (!amopClient)
+                {
+                    return;
+                }
+                auto responseMsg = amopClient->m_wsMessageFactory->buildMessage();
+                auto size = responseMsg->decode(_responseData->data(), _responseData->size());
+                auto seq = std::string(responseMsg->seq()->begin(), responseMsg->seq()->end());
+                _session->asyncSendMessage(responseMsg);
+                AMOP_CLIENT_LOG(DEBUG)
+                    << LOG_BADGE("trySendAMOPRequestToLocalNode")
+                    << LOG_DESC("AMOP async send message: receive message response for sdk")
+                    << LOG_KV("size", size) << LOG_KV("seq", seq)
+                    << LOG_KV("type", responseMsg->type());
+            }
+            catch (std::exception const& e)
+            {
+                AMOP_CLIENT_LOG(WARNING) << LOG_DESC("trySendAMOPRequestToLocalNode exception")
+                                         << LOG_KV("error", boost::diagnostic_information(e));
+            }
+        });
+    return true;
+}
+
 /**
  * @brief: receive amop broadcast message from sdk
  */
@@ -159,33 +205,13 @@ void AMOPClient::onRecvAMOPBroadcast(std::shared_ptr<WsMessage> _msg, std::share
                            << LOG_KV("topic", amopReq->topic());
 }
 
-void AMOPClient::asyncNotifyAMOPMessage(std::string const& _topic, bytesConstRef _amopRequestData,
+void AMOPClient::sendMessageToClient(std::string const& _topic,
+    std::shared_ptr<WsSession> _selectSession, std::shared_ptr<WsMessage> _msg,
     std::function<void(Error::Ptr&&, bytesPointer)> _callback)
 {
-    auto clientSession = randomChooseSession(_topic);
-    auto buffer = std::make_shared<bcos::bytes>();
-    if (!clientSession)
-    {
-        auto responseMessage = m_wsMessageFactory->buildMessage();
-        responseMessage->setStatus(bcos::protocol::CommonError::NotFoundClientByTopicDispatchMsg);
-        responseMessage->setType(AMOPClientMessageType::AMOP_RESPONSE);
-        responseMessage->encode(*buffer);
-        _callback(std::make_shared<Error>(CommonError::NotFoundClientByTopicDispatchMsg,
-                      "NotFoundClientByTopicDispatchMsg"),
-            buffer);
-        AMOP_CLIENT_LOG(DEBUG) << LOG_BADGE("asyncNotifyAMOPMessage: no client found")
-                               << LOG_KV("topic", _topic);
-        return;
-    }
-    AMOP_CLIENT_LOG(DEBUG) << LOG_BADGE("asyncNotifyAMOPMessage") << LOG_KV("topic", _topic)
-                           << LOG_KV("choosedSession", clientSession->endPoint());
-    auto requestMsg = m_wsMessageFactory->buildMessage();
-    requestMsg->setType(AMOPClientMessageType::AMOP_REQUEST);
-    auto requestPayLoad = std::make_shared<bytes>(_amopRequestData.begin(), _amopRequestData.end());
-    requestMsg->setData(requestPayLoad);
-    clientSession->asyncSendMessage(requestMsg, Options(30000),
-        [_topic, buffer, _callback](bcos::Error::Ptr _error,
-            std::shared_ptr<WsMessage> _responseMsg, std::shared_ptr<WsSession> _session) {
+    _selectSession->asyncSendMessage(_msg, Options(30000),
+        [_topic, _callback](bcos::Error::Ptr _error, std::shared_ptr<WsMessage> _responseMsg,
+            std::shared_ptr<WsSession> _session) {
             // try again when send message to the session failed
             if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
             {
@@ -202,10 +228,38 @@ void AMOPClient::asyncNotifyAMOPMessage(std::string const& _topic, bytesConstRef
                                   << LOG_DESC("asyncSendMessage callback response")
                                   << LOG_KV("seq", seq)
                                   << LOG_KV("data size", _responseMsg->data()->size());
-
+            auto buffer = std::make_shared<bcos::bytes>();
             _responseMsg->encode(*buffer);
             _callback(std::move(_error), buffer);
         });
+}
+
+void AMOPClient::asyncNotifyAMOPMessage(std::string const& _topic, bytesConstRef _amopRequestData,
+    std::function<void(Error::Ptr&&, bytesPointer)> _callback)
+{
+    auto clientSession = randomChooseSession(_topic);
+
+    if (!clientSession)
+    {
+        auto responseMessage = m_wsMessageFactory->buildMessage();
+        responseMessage->setStatus(bcos::protocol::CommonError::NotFoundClientByTopicDispatchMsg);
+        responseMessage->setType(AMOPClientMessageType::AMOP_RESPONSE);
+        auto buffer = std::make_shared<bcos::bytes>();
+        responseMessage->encode(*buffer);
+        _callback(std::make_shared<Error>(CommonError::NotFoundClientByTopicDispatchMsg,
+                      "NotFoundClientByTopicDispatchMsg"),
+            buffer);
+        AMOP_CLIENT_LOG(DEBUG) << LOG_BADGE("asyncNotifyAMOPMessage: no client found")
+                               << LOG_KV("topic", _topic);
+        return;
+    }
+    AMOP_CLIENT_LOG(DEBUG) << LOG_BADGE("asyncNotifyAMOPMessage") << LOG_KV("topic", _topic)
+                           << LOG_KV("choosedSession", clientSession->endPoint());
+    auto requestMsg = m_wsMessageFactory->buildMessage();
+    requestMsg->setType(AMOPClientMessageType::AMOP_REQUEST);
+    auto requestPayLoad = std::make_shared<bytes>(_amopRequestData.begin(), _amopRequestData.end());
+    requestMsg->setData(requestPayLoad);
+    sendMessageToClient(_topic, clientSession, requestMsg, _callback);
 }
 
 void AMOPClient::asyncNotifyAMOPBroadcastMessage(std::string const& _topic, bytesConstRef _data,

@@ -123,6 +123,14 @@ protected:
 
     virtual void initMsgHandler();
 
+    void sendMessageToClient(std::string const& _topic,
+        std::shared_ptr<boostssl::ws::WsSession> _selectSession,
+        std::shared_ptr<boostssl::ws::WsMessage> _msg,
+        std::function<void(bcos::Error::Ptr&&, bytesPointer)> _callback);
+
+    bool trySendAMOPRequestToLocalNode(std::shared_ptr<boostssl::ws::WsSession> _session,
+        std::string const& _topic, std::shared_ptr<boostssl::ws::WsMessage> _msg);
+
 protected:
     std::shared_ptr<boostssl::ws::WsService> m_wsService;
     std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> m_wsMessageFactory;
