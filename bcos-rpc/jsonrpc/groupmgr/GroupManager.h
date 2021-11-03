@@ -97,10 +97,12 @@ public:
         UpgradableGuard l(x_groupBlockInfos);
         if (m_groupBlockInfos.count(_groupID))
         {
+            // expired block
             if (m_groupBlockInfos[_groupID] > _blockNumber)
             {
                 return;
             }
+            // has already in the m_nodesWithLatestBlockNumber
             if (m_groupBlockInfos[_groupID] == _blockNumber &&
                 m_nodesWithLatestBlockNumber.count(_groupID) &&
                 m_nodesWithLatestBlockNumber[_groupID].count(_nodeName))
@@ -118,11 +120,13 @@ public:
         {
             m_nodesWithLatestBlockNumber[_groupID] = std::set<std::string>();
         }
+        // nodes with newer highest block
         if (oldBlockNumber < _blockNumber)
         {
             m_groupBlockInfos[_groupID] = _blockNumber;
             m_nodesWithLatestBlockNumber[_groupID].clear();
         }
+        // nodes with the same highest block
         (m_nodesWithLatestBlockNumber[_groupID]).insert(_nodeName);
         BCOS_LOG(DEBUG) << LOG_DESC("updateGroupBlockInfo for receive block notify")
                         << LOG_KV("group", _groupID) << LOG_KV("node", _nodeName)
@@ -145,7 +149,13 @@ protected:
     virtual NodeService::Ptr selectNode(std::string const& _groupID) const;
     virtual std::string selectNodeByBlockNumber(std::string const& _groupID) const;
     virtual NodeService::Ptr selectNodeRandomly(std::string const& _groupID) const;
-    virtual NodeService::Ptr queryNodeService(std::string const& _nodeName) const;
+    virtual NodeService::Ptr queryNodeService(
+        std::string const& _groupID, std::string const& _nodeName) const;
+    virtual void removeGroupBlockInfo(
+        std::map<std::string, std::set<std::string>> const& _unreachableNodes);
+    virtual void removeUnreachablNodeService(
+        std::map<std::string, std::set<std::string>> const& _unreachableNodes);
+    virtual std::map<std::string, std::set<std::string>> checkNodeStatus();
 
 protected:
     std::string m_chainID;
@@ -155,7 +165,7 @@ protected:
     std::map<std::string, bcos::group::GroupInfo::Ptr> m_groupInfos;
 
     // map between nodeName to NodeService
-    std::map<std::string, NodeService::Ptr> m_nodeServiceList;
+    std::map<std::string, std::map<std::string, NodeService::Ptr>> m_nodeServiceList;
     mutable SharedMutex x_nodeServiceList;
 
     std::map<std::string, std::set<std::string>> m_nodesWithLatestBlockNumber;

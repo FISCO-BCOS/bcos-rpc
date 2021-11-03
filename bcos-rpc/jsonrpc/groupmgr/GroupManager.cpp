@@ -47,21 +47,23 @@ void GroupManager::updateNodeServiceWithoutLock(
     std::string const& _groupID, ChainNodeInfo::Ptr _nodeInfo)
 {
     auto nodeAppName = _nodeInfo->nodeName();
-    // a started node
-    if (!m_nodeServiceList.count(nodeAppName))
+    // the node has already been existed
+    if (m_nodeServiceList.count(_groupID) && m_nodeServiceList[_groupID].count(nodeAppName))
     {
-        auto nodeService = m_nodeServiceFactory->buildNodeService(m_chainID, _groupID, _nodeInfo);
-        if (!nodeService)
-        {
-            return;
-        }
-        m_nodeServiceList[nodeAppName] = nodeService;
-        auto groupInfo = m_groupInfos[_groupID];
-        groupInfo->appendNodeInfo(_nodeInfo);
-        m_groupInfoNotifier(groupInfo);
-        BCOS_LOG(INFO) << LOG_DESC("buildNodeService for the started new node")
-                       << printNodeInfo(_nodeInfo) << printGroupInfo(groupInfo);
+        return;
     }
+    // a started node
+    auto nodeService = m_nodeServiceFactory->buildNodeService(m_chainID, _groupID, _nodeInfo);
+    if (!nodeService)
+    {
+        return;
+    }
+    m_nodeServiceList[_groupID][nodeAppName] = nodeService;
+    auto groupInfo = m_groupInfos[_groupID];
+    groupInfo->appendNodeInfo(_nodeInfo);
+    m_groupInfoNotifier(groupInfo);
+    BCOS_LOG(INFO) << LOG_DESC("buildNodeService for the started new node")
+                   << printNodeInfo(_nodeInfo) << printGroupInfo(groupInfo);
 }
 
 NodeService::Ptr GroupManager::selectNode(std::string const& _groupID) const
@@ -71,12 +73,13 @@ NodeService::Ptr GroupManager::selectNode(std::string const& _groupID) const
     {
         return selectNodeRandomly(_groupID);
     }
-    return queryNodeService(nodeName);
+    return queryNodeService(_groupID, nodeName);
 }
 std::string GroupManager::selectNodeByBlockNumber(std::string const& _groupID) const
 {
     ReadGuard l(x_groupBlockInfos);
-    if (!m_nodesWithLatestBlockNumber.count(_groupID))
+    if (!m_nodesWithLatestBlockNumber.count(_groupID) ||
+        m_nodesWithLatestBlockNumber.at(_groupID).size() == 0)
     {
         return "";
     }
@@ -95,25 +98,34 @@ NodeService::Ptr GroupManager::selectNodeRandomly(std::string const& _groupID) c
     {
         return nullptr;
     }
+    if (!m_nodeServiceList.count(_groupID))
+    {
+        return nullptr;
+    }
     auto const& groupInfo = m_groupInfos.at(_groupID);
     auto const& nodeInfos = groupInfo->nodeInfos();
     for (auto const& it : nodeInfos)
     {
         auto const& node = it.second;
-        if (m_nodeServiceList.count(node->nodeName()))
+        if (m_nodeServiceList.at(_groupID).count(node->nodeName()))
         {
-            return m_nodeServiceList.at(node->nodeName());
+            auto nodeService = m_nodeServiceList.at(_groupID).at(node->nodeName());
+            if (nodeService)
+            {
+                return nodeService;
+            }
         }
     }
     return nullptr;
 }
 
-NodeService::Ptr GroupManager::queryNodeService(std::string const& _nodeName) const
+NodeService::Ptr GroupManager::queryNodeService(
+    std::string const& _groupID, std::string const& _nodeName) const
 {
     ReadGuard l(x_nodeServiceList);
-    if (m_nodeServiceList.count(_nodeName))
+    if (m_nodeServiceList.count(_groupID) && m_nodeServiceList.at(_groupID).count(_nodeName))
     {
-        return m_nodeServiceList.at(_nodeName);
+        return m_nodeServiceList.at(_groupID).at(_nodeName);
     }
     return nullptr;
 }
@@ -123,7 +135,7 @@ NodeService::Ptr GroupManager::getNodeService(
 {
     if (_nodeName.size() > 0)
     {
-        return queryNodeService(_nodeName);
+        return queryNodeService(_groupID, _nodeName);
     }
     return selectNode(_groupID);
 }
@@ -135,55 +147,94 @@ void GroupManager::updateGroupStatus()
     {
         return;
     }
-    std::vector<std::string> unreachableNodes;
+    auto unreachableNodes = checkNodeStatus();
+    if (unreachableNodes.size() == 0)
     {
-        UpgradableGuard l(x_nodeServiceList);
-        for (auto const& it : m_groupInfos)
+        return;
+    }
+    removeUnreachablNodeService(unreachableNodes);
+    removeGroupBlockInfo(unreachableNodes);
+}
+
+std::map<std::string, std::set<std::string>> GroupManager::checkNodeStatus()
+{
+    ReadGuard l(x_nodeServiceList);
+    std::map<std::string, std::set<std::string>> unreachableNodes;
+    for (auto const& it : m_groupInfos)
+    {
+        bool groupInfoUpdated = false;
+        auto groupInfo = it.second;
+        auto groupID = groupInfo->groupID();
+        auto const& groupNodeList = groupInfo->nodeInfos();
+        for (auto const& nodeInfo : groupNodeList)
         {
-            bool groupInfoUpdated = false;
-            auto groupInfo = it.second;
-            auto const& groupNodeList = groupInfo->nodeInfos();
-            for (auto const& nodeInfo : groupNodeList)
+            if (!m_nodeServiceList.count(groupID) ||
+                !m_nodeServiceList[groupID].count(nodeInfo.first) ||
+                m_nodeServiceList[groupID][nodeInfo.first]->unreachable())
             {
-                if (!m_nodeServiceList.count(nodeInfo.first))
-                {
-                    groupInfo->removeNodeInfo(nodeInfo.second);
-                    groupInfoUpdated = true;
-                    unreachableNodes.emplace_back(nodeInfo.first);
-                    continue;
-                }
-                auto nodeService = m_nodeServiceList.at(nodeInfo.first);
-                if (nodeService->unreachable())
-                {
-                    GROUP_LOG(INFO)
-                        << LOG_DESC("erase the node service for unreachable")
-                        << LOG_KV("group", groupInfo->groupID()) << LOG_KV("node", nodeInfo.first);
-                    groupInfo->removeNodeInfo(nodeInfo.second);
-                    groupInfoUpdated = true;
-                    unreachableNodes.emplace_back(nodeInfo.first);
-                }
-            }
-            // notify the updated groupInfo to the sdk
-            if (m_groupInfoNotifier && groupInfoUpdated)
-            {
-                m_groupInfoNotifier(groupInfo);
+                groupInfo->removeNodeInfo(nodeInfo.second);
+                unreachableNodes[groupID].insert(nodeInfo.first);
+                groupInfoUpdated = true;
+                continue;
             }
         }
-        if (unreachableNodes.size() == 0)
+        // notify the updated groupInfo to the sdk
+        if (m_groupInfoNotifier && groupInfoUpdated)
         {
-            return;
-        }
-        // update m_nodeServiceList
-        UpgradeGuard ul(l);
-        for (auto const& node : unreachableNodes)
-        {
-            m_nodeServiceList.erase(node);
+            m_groupInfoNotifier(groupInfo);
         }
     }
-    WriteGuard l(x_groupBlockInfos);
-    for (auto const& node : unreachableNodes)
+    return unreachableNodes;
+}
+
+void GroupManager::removeUnreachablNodeService(
+    std::map<std::string, std::set<std::string>> const& _unreachableNodes)
+{
+    WriteGuard l(x_nodeServiceList);
+    for (auto const& it : _unreachableNodes)
     {
-        m_groupBlockInfos.erase(node);
-        m_nodesWithLatestBlockNumber.erase(node);
+        auto group = it.first;
+        if (!m_nodeServiceList.count(group))
+        {
+            continue;
+        }
+        auto const& nodeList = it.second;
+        for (auto const& node : nodeList)
+        {
+            m_nodeServiceList[group].erase(node);
+        }
+        if (m_nodeServiceList[group].size() == 0)
+        {
+            m_nodeServiceList.erase(group);
+        }
+    }
+}
+void GroupManager::removeGroupBlockInfo(
+    std::map<std::string, std::set<std::string>> const& _unreachableNodes)
+{
+    WriteGuard l(x_groupBlockInfos);
+    for (auto const& it : _unreachableNodes)
+    {
+        auto group = it.first;
+        if (!m_nodesWithLatestBlockNumber.count(group))
+        {
+            m_groupBlockInfos.erase(group);
+            continue;
+        }
+        if (!m_groupBlockInfos.count(group))
+        {
+            m_nodesWithLatestBlockNumber.erase(group);
+            continue;
+        }
+        auto const& nodeList = it.second;
+        for (auto const& node : nodeList)
+        {
+            m_nodesWithLatestBlockNumber[group].erase(node);
+        }
+        if (m_nodesWithLatestBlockNumber[group].size() == 0)
+        {
+            m_groupBlockInfos.erase(group);
+            m_nodesWithLatestBlockNumber.erase(group);
+        }
     }
 }
