@@ -28,6 +28,7 @@
 #include <bcos-framework/interfaces/consensus/ConsensusInterface.h>
 #include <bcos-framework/interfaces/crypto/KeyFactory.h>
 #include <bcos-framework/interfaces/gateway/GatewayInterface.h>
+#include <bcos-framework/libtool/NodeConfig.h>
 #include <bcos-rpc/Common.h>
 #include <bcos-rpc/Rpc.h>
 #include <bcos-rpc/event/EventSub.h>
@@ -54,13 +55,12 @@ public:
         bcos::crypto::KeyFactory::Ptr _keyFactory);
     virtual ~RpcFactory() {}
 
-    std::shared_ptr<boostssl::ws::WsConfig> initConfig(const std::string& _configPath);
+    std::shared_ptr<boostssl::ws::WsConfig> initConfig(bcos::tool::NodeConfig::Ptr _nodeConfig);
     std::shared_ptr<boostssl::ws::WsService> buildWsService(
         bcos::boostssl::ws::WsConfig::Ptr _config);
 
-    Rpc::Ptr buildRpc(const std::string& _configPath, std::string const& _gatewayServiceName);
-    Rpc::Ptr buildLocalRpc(const std::string& _configPath, bcos::group::GroupInfo::Ptr _groupInfo,
-        NodeService::Ptr _nodeService);
+    Rpc::Ptr buildRpc(std::string const& _gatewayServiceName);
+    Rpc::Ptr buildLocalRpc(bcos::group::GroupInfo::Ptr _groupInfo, NodeService::Ptr _nodeService);
 
     /**
      * @brief: Rpc
@@ -80,6 +80,10 @@ public:
         std::string const& _gatewayServiceName);
     AMOPClient::Ptr buildLocalAMOPClient(std::shared_ptr<boostssl::ws::WsService> _wsService);
 
+public:
+    bcos::tool::NodeConfig::Ptr nodeConfig() const { return m_nodeConfig; }
+    void setNodeConfig(bcos::tool::NodeConfig::Ptr _nodeConfig) { m_nodeConfig = _nodeConfig; }
+
 protected:
     bcos::rpc::JsonRpcImpl_2_0::Ptr buildJsonRpc(
         std::shared_ptr<boostssl::ws::WsService> _wsService, GroupManager::Ptr _groupManager);
@@ -93,6 +97,7 @@ private:
     std::string m_chainID;
     bcos::gateway::GatewayInterface::Ptr m_gateway;
     std::shared_ptr<bcos::crypto::KeyFactory> m_keyFactory;
+    bcos::tool::NodeConfig::Ptr m_nodeConfig;
 };
 }  // namespace rpc
 }  // namespace bcos

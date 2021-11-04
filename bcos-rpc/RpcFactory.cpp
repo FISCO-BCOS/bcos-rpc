@@ -19,6 +19,7 @@
  * @date 2021-07-15
  */
 
+#include <bcos-boostssl/context/ContextBuilder.h>
 #include <bcos-boostssl/websocket/WsInitializer.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
 #include <bcos-boostssl/websocket/WsService.h>
@@ -51,45 +52,74 @@ RpcFactory::RpcFactory(std::string const& _chainID, GatewayInterface::Ptr _gatew
   : m_chainID(_chainID), m_gateway(_gatewayInterface), m_keyFactory(_keyFactory)
 {}
 
-std::shared_ptr<bcos::boostssl::ws::WsConfig> RpcFactory::initConfig(const std::string& _configPath)
+std::shared_ptr<bcos::boostssl::ws::WsConfig> RpcFactory::initConfig(
+    bcos::tool::NodeConfig::Ptr _nodeConfig)
 {
-    try
+    auto wsConfig = std::make_shared<boostssl::ws::WsConfig>();
+    wsConfig->setModel(bcos::boostssl::ws::WsModel::Server);
+
+    wsConfig->setListenIP(_nodeConfig->rpcListenIP());
+    wsConfig->setListenPort(_nodeConfig->rpcListenPort());
+    wsConfig->setThreadPoolSize(_nodeConfig->rpcThreadPoolSize());
+    wsConfig->setDisableSsl(_nodeConfig->rpcDisableSsl());
+    if (_nodeConfig->rpcDisableSsl())
     {
-        boost::property_tree::ptree pt;
-        boost::property_tree::ini_parser::read_ini(_configPath, pt);
-        /*
-        [rpc]
-            listen_ip=0.0.0.0
-            listen_port=30300
-            thread_count=16
-        */
-        std::string listenIP = pt.get<std::string>("rpc.listen_ip", "0.0.0.0");
-        int listenPort = pt.get<int>("rpc.listen_port", 20200);
-        int threadCount = pt.get<int>("rpc.thread_count", 8);
-
-        auto config = std::make_shared<boostssl::ws::WsConfig>();
-        config->setModel(bcos::boostssl::ws::WsModel::Server);
-        config->setListenIP(listenIP);
-        config->setListenPort(listenPort);
-        config->setThreadPoolSize(threadCount);
-
-        BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][initConfig]") << LOG_KV("listenIP", listenIP)
-                       << LOG_KV("listenPort", listenPort) << LOG_KV("threadCount", threadCount)
-                       << LOG_KV("asServer", config->asServer());
-
-        return config;
+        BCOS_LOG(INFO) << LOG_BADGE("[RPC][FACTORY][initConfig]")
+                       << LOG_DESC("rpc work in disable ssl model")
+                       << LOG_KV("listenIP", wsConfig->listenIP())
+                       << LOG_KV("listenPort", wsConfig->listenPort())
+                       << LOG_KV("threadCount", wsConfig->threadPoolSize())
+                       << LOG_KV("asServer", wsConfig->asServer());
+        return wsConfig;
     }
-    catch (const std::exception& e)
-    {
-        boost::filesystem::path full_path(boost::filesystem::current_path());
-        BCOS_LOG(ERROR) << LOG_DESC("[RPC][FACTORY][initConfig]")
-                        << LOG_KV("configPath", _configPath)
-                        << LOG_KV("currentPath", full_path.string())
-                        << LOG_KV("error: ", boost::diagnostic_information(e));
-        BOOST_THROW_EXCEPTION(
-            InvalidParameter() << errinfo_comment("initConfig: currentPath:" + full_path.string() +
-                                                  " ,error:" + boost::diagnostic_information(e)));
+
+    auto contextConfig = std::make_shared<boostssl::context::ContextConfig>();
+    if (!_nodeConfig->rpcSmSsl())
+    {  //  ssl
+        boostssl::context::ContextConfig::CertConfig certConfig;
+        certConfig.caCert = _nodeConfig->caCert();
+        certConfig.nodeCert = _nodeConfig->nodeCert();
+        certConfig.nodeKey = _nodeConfig->nodeKey();
+        contextConfig->setCertConfig(certConfig);
+        contextConfig->setSslType("ssl");
+
+        BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][initConfig]")
+                       << LOG_DESC("rpc work in ssl model")
+                       << LOG_KV("listenIP", wsConfig->listenIP())
+                       << LOG_KV("listenPort", wsConfig->listenPort())
+                       << LOG_KV("threadCount", wsConfig->threadPoolSize())
+                       << LOG_KV("asServer", wsConfig->asServer())
+                       << LOG_KV("caCert", _nodeConfig->caCert())
+                       << LOG_KV("nodeCert", _nodeConfig->nodeCert())
+                       << LOG_KV("nodeKey", _nodeConfig->nodeKey());
     }
+    else
+    {  // sm ssl
+        boostssl::context::ContextConfig::SMCertConfig certConfig;
+        certConfig.caCert = _nodeConfig->smCaCert();
+        certConfig.nodeCert = _nodeConfig->smNodeCert();
+        certConfig.nodeKey = _nodeConfig->smNodeKey();
+        certConfig.enNodeCert = _nodeConfig->enSmNodeCert();
+        certConfig.enNodeKey = _nodeConfig->enSmNodeKey();
+        contextConfig->setSmCertConfig(certConfig);
+        contextConfig->setSslType("sm_ssl");
+
+        BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][initConfig]")
+                       << LOG_DESC("rpc work in sm ssl model")
+                       << LOG_KV("listenIP", wsConfig->listenIP())
+                       << LOG_KV("listenPort", wsConfig->listenPort())
+                       << LOG_KV("threadCount", wsConfig->threadPoolSize())
+                       << LOG_KV("asServer", wsConfig->asServer())
+                       << LOG_KV("caCert", _nodeConfig->smCaCert())
+                       << LOG_KV("nodeCert", _nodeConfig->smNodeCert())
+                       << LOG_KV("nodeKey", _nodeConfig->smNodeKey())
+                       << LOG_KV("enNodeCert", _nodeConfig->enSmNodeCert())
+                       << LOG_KV("enNodeKey", _nodeConfig->enSmNodeKey());
+    }
+
+    wsConfig->setContextConfig(contextConfig);
+
+    return wsConfig;
 }
 
 bcos::boostssl::ws::WsService::Ptr RpcFactory::buildWsService(
@@ -197,10 +227,9 @@ bcos::event::EventSub::Ptr RpcFactory::buildEventSub(
     return nullptr;
 }
 
-Rpc::Ptr RpcFactory::buildRpc(
-    const std::string& _configPath, std::string const& _gatewayServiceName)
+Rpc::Ptr RpcFactory::buildRpc(std::string const& _gatewayServiceName)
 {
-    auto config = initConfig(_configPath);
+    auto config = initConfig(m_nodeConfig);
     auto wsService = buildWsService(config);
     auto groupManager = buildGroupManager();
     auto amopClient = buildAMOPClient(wsService, _gatewayServiceName);
@@ -213,10 +242,10 @@ Rpc::Ptr RpcFactory::buildRpc(
     return rpc;
 }
 
-Rpc::Ptr RpcFactory::buildLocalRpc(const std::string& _configPath,
+Rpc::Ptr RpcFactory::buildLocalRpc(
     bcos::group::GroupInfo::Ptr _groupInfo, NodeService::Ptr _nodeService)
 {
-    auto config = initConfig(_configPath);
+    auto config = initConfig(m_nodeConfig);
     auto wsService = buildWsService(config);
     auto groupManager = buildLocalGroupManager(_groupInfo, _nodeService);
     auto amopClient = buildLocalAMOPClient(wsService);
