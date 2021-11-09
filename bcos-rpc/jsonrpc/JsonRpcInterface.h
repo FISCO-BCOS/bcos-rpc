@@ -86,7 +86,6 @@ public:
 
     virtual void getSyncStatus(
         std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) = 0;
-    // TODO: implement getConsensusStatus in pbft and rpc
     virtual void getConsensusStatus(
         std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) = 0;
 

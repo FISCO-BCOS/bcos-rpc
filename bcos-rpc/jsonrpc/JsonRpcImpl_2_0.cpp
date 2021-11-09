@@ -1054,6 +1054,33 @@ void JsonRpcImpl_2_0::getSyncStatus(
     });
 }
 
+void JsonRpcImpl_2_0::getConsensusStatus(
+    std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc)
+{
+    RPC_IMPL_LOG(TRACE) << LOG_BADGE("getConsensusStatus") << LOG_KV("group", _groupID)
+                        << LOG_KV("node", _nodeName);
+
+    auto nodeService = getNodeService(_groupID, _nodeName, "getConsensusStatus");
+    auto consensus = nodeService->consensus();
+    checkService(consensus, "consensus");
+    consensus->asyncGetConsensusStatus(
+        [_respFunc](Error::Ptr _error, std::string _consensusStatus) {
+            Json::Value jResp;
+            if (!_error || (_error->errorCode() == bcos::protocol::CommonError::SUCCESS))
+            {
+                jResp = _consensusStatus;
+            }
+            else
+            {
+                RPC_IMPL_LOG(ERROR)
+                    << LOG_BADGE("getConsensusStatus")
+                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
+                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
+            }
+            _respFunc(_error, jResp);
+        });
+}
+
 void JsonRpcImpl_2_0::getSystemConfigByKey(std::string const& _groupID,
     std::string const& _nodeName, const std::string& _keyValue, RespFunc _respFunc)
 {

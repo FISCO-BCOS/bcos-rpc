@@ -112,14 +112,8 @@ public:
     void getSyncStatus(
         std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override;
 
-    // TODO: implement getConsensusStatus
     void getConsensusStatus(
-        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override
-    {
-        (void)_groupID;
-        (void)_nodeName;
-        (void)_respFunc;
-    }
+        std::string const& _groupID, std::string const& _nodeName, RespFunc _respFunc) override;
 
     void getSystemConfigByKey(std::string const& _groupID, std::string const& _nodeName,
         const std::string& _keyValue, RespFunc _respFunc) override;
@@ -226,7 +220,6 @@ public:
 
     void getConsensusStatusI(const Json::Value& _req, RespFunc _respFunc)
     {
-        (void)_req;
         getConsensusStatus(_req[0u].asString(), _req[1u].asString(), _respFunc);
     }
 
