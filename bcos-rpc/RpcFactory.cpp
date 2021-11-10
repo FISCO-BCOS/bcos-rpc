@@ -19,6 +19,7 @@
  * @date 2021-07-15
  */
 
+#include "interfaces/gateway/GatewayTypeDef.h"
 #include <bcos-boostssl/context/ContextBuilder.h>
 #include <bcos-boostssl/websocket/WsInitializer.h>
 #include <bcos-boostssl/websocket/WsMessage.h>
@@ -29,6 +30,7 @@
 #include <bcos-framework/libutilities/Log.h>
 #include <bcos-framework/libutilities/ThreadPool.h>
 #include <bcos-rpc/RpcFactory.h>
+#include <bcos-rpc/event/EventSubMatcher.h>
 #include <bcos-rpc/jsonrpc/JsonRpcImpl_2_0.h>
 #include <bcos-rpc/ws/ProtocolVersion.h>
 #include <boost/core/ignore_unused.hpp>
@@ -220,11 +222,42 @@ bcos::rpc::JsonRpcImpl_2_0::Ptr RpcFactory::buildJsonRpc(
 }
 
 bcos::event::EventSub::Ptr RpcFactory::buildEventSub(
-    std::shared_ptr<boostssl::ws::WsService> _wsService)
+    std::shared_ptr<boostssl::ws::WsService> _wsService, GroupManager::Ptr _groupManager)
 {
-    // TODO:
-    boost::ignore_unused(_wsService);
-    return nullptr;
+    auto eventSubFactory = std::make_shared<event::EventSubFactory>();
+    auto eventSub = eventSubFactory->buildEventSub();
+
+    auto matcher = std::make_shared<event::EventSubMatcher>();
+    eventSub->setIoc(_wsService->ioc());
+    eventSub->setGroupManager(_groupManager);
+    eventSub->setMessageFactory(_wsService->messageFactory());
+    eventSub->setMatcher(matcher);
+
+    auto eventSubWeakPtr = std::weak_ptr<bcos::event::EventSub>(eventSub);
+
+    // register event subscribe message
+    _wsService->registerMsgHandler(bcos::event::MessageType::EVENT_SUBSCRIBE,
+        [eventSubWeakPtr](std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session) {
+            auto eventSub = eventSubWeakPtr.lock();
+            if (eventSub)
+            {
+                eventSub->onRecvSubscribeEvent(_msg, _session);
+            }
+        });
+
+    // register event subscribe message
+    _wsService->registerMsgHandler(bcos::event::MessageType::EVENT_UNSUBSCRIBE,
+        [eventSubWeakPtr](std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session) {
+            auto eventSub = eventSubWeakPtr.lock();
+            if (eventSub)
+            {
+                eventSub->onRecvUnsubscribeEvent(_msg, _session);
+            }
+        });
+
+    BCOS_LOG(INFO) << LOG_DESC("[RPC][FACTORY][buildEventSub]") << LOG_DESC("create event sub obj");
+
+    return eventSub;
 }
 
 Rpc::Ptr RpcFactory::buildRpc(std::string const& _gatewayServiceName)
@@ -264,7 +297,7 @@ Rpc::Ptr RpcFactory::buildRpc(std::shared_ptr<boostssl::ws::WsService> _wsServic
     // JsonRpc
     auto jsonRpc = buildJsonRpc(_wsService, _groupManager);
     // EventSub
-    auto es = buildEventSub(_wsService);
+    auto es = buildEventSub(_wsService, _groupManager);
     return std::make_shared<Rpc>(_wsService, jsonRpc, es, _amopClient);
 }
 

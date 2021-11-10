@@ -13,53 +13,50 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- * @file EvenPush.h
+ * @file EventSub.h
  * @author: octopus
- * @date 2021-09-26
+ * @date 2021-09-07
  */
 
 #pragma once
 
 #include <bcos-framework/interfaces/ledger/LedgerInterface.h>
-#include <bcos-rpc/event/EventSubGroup.h>
-#include <json/value.h>
+#include <bcos-framework/interfaces/protocol/ProtocolTypeDef.h>
+#include <bcos-framework/libutilities/Worker.h>
+#include <bcos-rpc/event/EventSubTask.h>
+#include <bcos-rpc/jsonrpc/groupmgr/GroupManager.h>
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <shared_mutex>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace bcos
-{
-namespace boostssl
 {
 namespace ws
 {
 class WsSession;
 class WsMessage;
 }  // namespace ws
-}  // namespace boostssl
 
 namespace event
 {
-class EventSub : public std::enable_shared_from_this<EventSub>
+class EventSubMatcher;
+class EventSub : bcos::Worker, public std::enable_shared_from_this<EventSub>
 {
 public:
     using Ptr = std::shared_ptr<EventSub>;
-
+    using ConstPtr = std::shared_ptr<const EventSub>;
+    EventSub() : bcos::Worker("t_event_sub") {}
     virtual ~EventSub() { stop(); }
 
 public:
     virtual void start();
     virtual void stop();
 
-public:
-    virtual EventSubGroup::Ptr getGroup(const std::string& _group);
-    virtual bool addGroup(
-        const std::string& _group, bcos::ledger::LedgerInterface::Ptr _ledgerInterface);
-    virtual bool removeGroup(const std::string& _group);
-
-    virtual bool notifyBlockNumber(
-        const std::string& _group, bcos::protocol::BlockNumber _blockNumber);
+    void executeWorker() override;
 
 public:
     virtual void onRecvSubscribeEvent(std::shared_ptr<bcos::boostssl::ws::WsMessage> _msg,
@@ -84,14 +81,57 @@ public:
      * @brief: send event log list to client
      * @param _session: the peer
      * @param _complete: if task _completed
-     * @param _id: the EventSub id
+     * @param _id: the event sub id
      * @param _result:
      * @return bool: if _session is inactive, false will be return
      */
     bool sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _session, bool _complete,
         const std::string& _id, const Json::Value& _result);
 
+    /**
+     * @brief: send completed message to client
+     * @param _session: the peer
+     * @param _id: the event sub id
+     * @return bool:
+     */
+    bool sendCompletedMsg(
+        std::shared_ptr<bcos::boostssl::ws::WsSession> _session, const std::string& _id);
+
 public:
+    void executeAddTasks();
+    void executeCancelTasks();
+    void executeEventSubTasks();
+
+public:
+    void subscribeEventSub(EventSubTask::Ptr _task);
+    void unsubscribeEventSub(const std::string& _id);
+    int64_t executeEventSubTask(EventSubTask::Ptr _task);
+
+public:
+    void onTaskComplete(bcos::event::EventSubTask::Ptr _task);
+    bool checkConnAvailable(bcos::event::EventSubTask::Ptr _task);
+    void processNextBlock(int64_t _blockNumber, bcos::event::EventSubTask::Ptr _task,
+        std::function<void(Error::Ptr _error)> _callback);
+
+public:
+    std::shared_ptr<EventSubMatcher> matcher() const { return m_matcher; }
+    void setMatcher(std::shared_ptr<EventSubMatcher> _matcher) { m_matcher = _matcher; }
+
+    void setIoc(std::shared_ptr<boost::asio::io_context> _ioc) { m_ioc = _ioc; }
+    std::shared_ptr<boost::asio::io_context> ioc() const { return m_ioc; }
+
+    int64_t maxBlockProcessPerLoop() const { return m_maxBlockProcessPerLoop; }
+    void setMaxBlockProcessPerLoop(int64_t _maxBlockProcessPerLoop)
+    {
+        m_maxBlockProcessPerLoop = _maxBlockProcessPerLoop;
+    }
+
+    bcos::rpc::GroupManager::Ptr groupManager() { return m_groupManager; }
+    void setGroupManager(bcos::rpc::GroupManager::Ptr _groupManager)
+    {
+        m_groupManager = _groupManager;
+    }
+
     std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> messageFactory() const
     {
         return m_messageFactory;
@@ -102,13 +142,50 @@ public:
     }
 
 private:
+    // group manager
+    bcos::rpc::GroupManager::Ptr m_groupManager;
+    // io context
+    std::shared_ptr<boost::asio::io_context> m_ioc;
+    // match for event log compare
+    std::shared_ptr<EventSubMatcher> m_matcher;
+    // message factory
+    std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> m_messageFactory;
+
+private:
     std::atomic<bool> m_running{false};
 
-    // lock for m_groups
-    mutable std::shared_mutex x_groups;
-    std::unordered_map<std::string, EventSubGroup::Ptr> m_groups;
+    // lock for m_addTasks
+    mutable std::shared_mutex x_addTasks;
+    // tasks to be add
+    std::vector<bcos::event::EventSubTask::Ptr> m_addTasks;
+    // the number of tasks to be add
+    std::atomic<uint32_t> m_addTaskCount{0};
 
-    std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> m_messageFactory;
+    // lock for m_cancelTasks
+    mutable std::shared_mutex x_cancelTasks;
+    // tasks to be cancel
+    std::vector<std::string> m_cancelTasks;
+    // the number of tasks to be cancel
+    std::atomic<uint32_t> m_cancelTaskCount{0};
+
+    // all subscribe event tasks
+    std::unordered_map<std::string, EventSubTask::Ptr> m_tasks;
+
+    //
+    int64_t m_maxBlockProcessPerLoop = 5;
+};
+
+class EventSubFactory : public std::enable_shared_from_this<EventSubFactory>
+{
+public:
+    using Ptr = std::shared_ptr<EventSubFactory>;
+
+public:
+    EventSub::Ptr buildEventSub()
+    {
+        auto es = std::make_shared<EventSub>();
+        return es;
+    }
 };
 
 }  // namespace event

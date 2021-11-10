@@ -20,6 +20,7 @@
  */
 #include "GroupManager.h"
 #include <bcos-framework/interfaces/protocol/ServiceDesc.h>
+#include <cstdint>
 using namespace bcos;
 using namespace bcos::group;
 using namespace bcos::rpc;
@@ -64,6 +65,17 @@ void GroupManager::updateNodeServiceWithoutLock(
     m_groupInfoNotifier(groupInfo);
     BCOS_LOG(INFO) << LOG_DESC("buildNodeService for the started new node")
                    << printNodeInfo(_nodeInfo) << printGroupInfo(groupInfo);
+}
+
+bcos::protocol::BlockNumber GroupManager::getBlockNumberByGroup(const std::string& _groupID)
+{
+    ReadGuard l(x_groupBlockInfos);
+    if (!m_groupBlockInfos.count(_groupID))
+    {
+        return -1;
+    }
+
+    return m_groupBlockInfos.at(_groupID);
 }
 
 NodeService::Ptr GroupManager::selectNode(std::string const& _groupID) const
@@ -152,7 +164,7 @@ void GroupManager::updateGroupStatus()
     {
         return;
     }
-    removeUnreachablNodeService(unreachableNodes);
+    removeUnreachableNodeService(unreachableNodes);
     removeGroupBlockInfo(unreachableNodes);
 }
 
@@ -187,7 +199,7 @@ std::map<std::string, std::set<std::string>> GroupManager::checkNodeStatus()
     return unreachableNodes;
 }
 
-void GroupManager::removeUnreachablNodeService(
+void GroupManager::removeUnreachableNodeService(
     std::map<std::string, std::set<std::string>> const& _unreachableNodes)
 {
     WriteGuard l(x_nodeServiceList);

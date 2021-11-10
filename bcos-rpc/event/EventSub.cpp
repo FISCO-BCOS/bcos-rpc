@@ -15,17 +15,21 @@
  *
  * @file EventSub.cpp
  * @author: octopus
- * @date 2021-09-26
+ * @date 2021-09-07
  */
-#include <bcos-boostssl/websocket/WsSession.h>
-#include <bcos-framework/libutilities/Common.h>
-#include <bcos-rpc/event/Common.h>
+
+#include <bcos-framework/interfaces/protocol/CommonError.h>
+#include <bcos-framework/interfaces/protocol/ProtocolTypeDef.h>
+#include <bcos-framework/libutilities/Log.h>
 #include <bcos-rpc/event/EventSub.h>
 #include <bcos-rpc/event/EventSubMatcher.h>
 #include <bcos-rpc/event/EventSubRequest.h>
 #include <bcos-rpc/event/EventSubResponse.h>
-#include <memory>
-#include <shared_mutex>
+#include <bcos-rpc/event/EventSubTask.h>
+#include <boost/core/ignore_unused.hpp>
+#include <chrono>
+#include <cstddef>
+#include <thread>
 
 using namespace bcos;
 using namespace bcos::event;
@@ -34,162 +38,95 @@ void EventSub::start()
 {
     if (m_running.load())
     {
-        EVENT_PUSH(INFO) << LOG_BADGE("start") << LOG_DESC("event sub is running");
+        EVENT_SUB(INFO) << LOG_BADGE("start") << LOG_DESC("event sub is running");
         return;
     }
-
     m_running.store(true);
+    startWorking();
 
-    EVENT_PUSH(INFO) << LOG_BADGE("start") << LOG_DESC("start event sub successfully");
+    EVENT_SUB(INFO) << LOG_BADGE("start") << LOG_DESC("start event sub successfully");
 }
 
 void EventSub::stop()
 {
     if (!m_running.load())
     {
-        EVENT_PUSH(INFO) << LOG_BADGE("stop") << LOG_DESC("event sub is not running");
+        EVENT_SUB(INFO) << LOG_BADGE("stop") << LOG_DESC("event sub is not running");
         return;
     }
+    m_running.store(false);
 
-    for (auto esp : m_groups)
-    {
-        esp.second->stop();
-    }
+    finishWorker();
+    stopWorking();
+    // will not restart worker, so terminate it
+    terminate();
 
-    EVENT_PUSH(INFO) << LOG_BADGE("stop") << LOG_DESC("stop event sub successfully");
-}
-
-bool EventSub::addGroup(
-    const std::string& _group, bcos::ledger::LedgerInterface::Ptr _ledgerInterface)
-{
-    std::unique_lock lock(x_groups);
-    auto it = m_groups.find(_group);
-    if (it != m_groups.end())
-    {
-        EVENT_PUSH(WARNING) << LOG_BADGE("addGroup") << LOG_DESC("event sub group has been exist")
-                            << LOG_KV("group", _group);
-        return false;
-    }
-
-    auto matcher = std::make_shared<EventSubMatcher>();
-    auto esGroup = std::make_shared<EventSubGroup>(_group);
-
-    esGroup->setGroup(_group);
-    esGroup->setLedger(_ledgerInterface);
-    esGroup->setMatcher(matcher);
-    esGroup->start();
-
-    m_groups[_group] = esGroup;
-
-    EVENT_PUSH(INFO) << LOG_BADGE("addGroup") << LOG_DESC("add event sub group successfully")
-                     << LOG_KV("group", _group);
-    return true;
-}
-
-bool EventSub::removeGroup(const std::string& _group)
-{
-    std::unique_lock lock(x_groups);
-    auto it = m_groups.find(_group);
-    if (it == m_groups.end())
-    {
-        EVENT_PUSH(WARNING) << LOG_BADGE("removeGroup") << LOG_DESC("event sub group is not exist")
-                            << LOG_KV("group", _group);
-        return false;
-    }
-
-    auto esGroup = it->second;
-    m_groups.erase(it);
-    esGroup->stop();
-
-    EVENT_PUSH(INFO) << LOG_BADGE("removeGroup") << LOG_DESC("remove event sub group successfully")
-                     << LOG_KV("group", _group);
-    return true;
-}
-
-EventSubGroup::Ptr EventSub::getGroup(const std::string& _group)
-{
-    std::shared_lock lock(x_groups);
-    auto it = m_groups.find(_group);
-    if (it == m_groups.end())
-    {
-        return nullptr;
-    }
-
-    return it->second;
-}
-
-// register this function to blockNumber notify
-bool EventSub::notifyBlockNumber(
-    const std::string& _group, bcos::protocol::BlockNumber _blockNumber)
-{
-    auto esGroup = getGroup(_group);
-    if (esGroup)
-    {
-        esGroup->setLatestBlockNumber(_blockNumber);
-        EVENT_PUSH(DEBUG) << LOG_BADGE("notifyBlockNumber") << LOG_KV("group", _group)
-                          << LOG_KV("blockNumber", _blockNumber);
-        return true;
-    }
-    else
-    {
-        EVENT_PUSH(WARNING) << LOG_BADGE("notifyBlockNumber") << LOG_DESC("group is not exist")
-                            << LOG_KV("group", _group) << LOG_KV("blockNumber", _blockNumber);
-        return false;
-    }
+    EVENT_SUB(INFO) << LOG_BADGE("stop") << LOG_DESC("stop event sub successfully");
 }
 
 void EventSub::onRecvSubscribeEvent(std::shared_ptr<bcos::boostssl::ws::WsMessage> _msg,
     std::shared_ptr<bcos::boostssl::ws::WsSession> _session)
 {
+    std::string seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
     std::string request = std::string(_msg->data()->begin(), _msg->data()->end());
 
-    EVENT_PUSH(TRACE) << LOG_BADGE("onRecvSubscribeEvent") << LOG_KV("request", request)
-                      << LOG_KV("endpoint", _session->endPoint());
+    EVENT_SUB(INFO) << LOG_BADGE("onRecvSubscribeEvent") << LOG_KV("endpoint", _session->endPoint())
+                    << LOG_KV("seq", seq) << LOG_KV("request", request);
 
-    auto esRes = std::make_shared<EventSubSubRequest>();
-    if (!esRes->fromJson(request))
+    auto eventSubRequest = std::make_shared<EventSubRequest>();
+    if (!eventSubRequest->fromJson(request))
     {
-        sendResponse(_session, _msg, esRes->id(), EP_STATUS_CODE::INVALID_PARAMS);
+        sendResponse(_session, _msg, eventSubRequest->id(), EP_STATUS_CODE::INVALID_PARAMS);
         return;
     }
 
-    auto esGroup = getGroup(esRes->group());
-    if (!esGroup)
+    auto blockNumber = m_groupManager->getBlockNumberByGroup(eventSubRequest->group());
+    if (blockNumber < 0)
     {
-        sendResponse(_session, _msg, esRes->id(), EP_STATUS_CODE::GROUP_NOT_EXIST);
+        sendResponse(_session, _msg, eventSubRequest->id(), EP_STATUS_CODE::GROUP_NOT_EXIST);
+        EVENT_SUB(ERROR) << LOG_BADGE("onRecvSubscribeEvent") << LOG_DESC("group not exist")
+                         << LOG_KV("group", eventSubRequest->group());
         return;
     }
 
-    auto task = std::make_shared<EventSubTask>();
-    task->setGroup(esRes->group());
-    task->setId(esRes->id());
-    task->setParams(esRes->params());
+    auto state = std::make_shared<EventSubTaskState>();
+    state->setCurrentBlockNumber(eventSubRequest->params()->fromBlock() > 0 ?
+                                     eventSubRequest->params()->fromBlock() :
+                                     blockNumber);
+    eventSubRequest->setState(state);
 
     // TODO: check request parameters
-    auto self = std::weak_ptr<EventSub>(shared_from_this());
-    task->setCallback([self, _session](const std::string& _id, bool _complete,
-                          const Json::Value& _result) -> bool {
-        auto es = self.lock();
-        if (!es)
-        {
-            return false;
-        }
+    // TODO: update from/to block number
 
-        return es->sendEvents(_session, _complete, _id, _result);
+    auto task = std::make_shared<EventSubTask>();
+    task->setGroup(eventSubRequest->group());
+    task->setId(eventSubRequest->id());
+    task->setParams(eventSubRequest->params());
+
+    auto eventSubWeakPtr = std::weak_ptr<EventSub>(shared_from_this());
+    task->setCallback([eventSubWeakPtr, _session](const std::string& _id, bool _complete,
+                          const Json::Value& _result) -> bool {
+        auto eventSub = eventSubWeakPtr.lock();
+        if (eventSub)
+        {
+            return eventSub->sendEvents(_session, _complete, _id, _result);
+        }
+        return false;
     });
 
-    esGroup->subEventSubTask(task);
-    sendResponse(_session, _msg, esRes->id(), EP_STATUS_CODE::SUCCESS);
+    subscribeEventSub(task);
+    sendResponse(_session, _msg, eventSubRequest->id(), EP_STATUS_CODE::SUCCESS);
     return;
 }
 
 void EventSub::onRecvUnsubscribeEvent(std::shared_ptr<bcos::boostssl::ws::WsMessage> _msg,
     std::shared_ptr<bcos::boostssl::ws::WsSession> _session)
 {
+    std::string seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
     std::string request = std::string(_msg->data()->begin(), _msg->data()->end());
-    EVENT_PUSH(TRACE) << LOG_BADGE("onRecvUnsubscribeEvent") << LOG_KV("request", request)
-                      << LOG_KV("endpoint", _session->endPoint());
 
+    EVENT_SUB(INFO) << LOG_BADGE("onRecvUnsubscribeEvent") << LOG_KV("seq", seq)
+                    << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("request", request);
 
     auto esRes = std::make_shared<EventSubUnsubRequest>();
     if (!esRes->fromJson(request))
@@ -198,17 +135,11 @@ void EventSub::onRecvUnsubscribeEvent(std::shared_ptr<bcos::boostssl::ws::WsMess
         return;
     }
 
-    auto esGroup = getGroup(esRes->group());
-    if (!esGroup)
-    {
-        sendResponse(_session, _msg, esRes->id(), EP_STATUS_CODE::GROUP_NOT_EXIST);
-        return;
-    }
-
-    esGroup->unsubEventSubTask(esRes->id());
+    unsubscribeEventSub(esRes->id());
     sendResponse(_session, _msg, esRes->id(), EP_STATUS_CODE::SUCCESS);
     return;
 }
+
 
 /**
  * @brief: send response
@@ -222,9 +153,9 @@ bool EventSub::sendResponse(std::shared_ptr<bcos::boostssl::ws::WsSession> _sess
 {
     if (!_session->isConnected())
     {
-        EVENT_PUSH(WARNING) << LOG_BADGE("sendResponse") << LOG_DESC("session has been inactive")
-                            << LOG_KV("id", _id) << LOG_KV("status", _status)
-                            << LOG_KV("endpoint", _session->endPoint());
+        EVENT_SUB(WARNING) << LOG_BADGE("sendResponse") << LOG_DESC("session has been inactive")
+                           << LOG_KV("id", _id) << LOG_KV("status", _status)
+                           << LOG_KV("endpoint", _session->endPoint());
         return false;
     }
 
@@ -254,8 +185,8 @@ bool EventSub::sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _sessio
     // session disconnected
     if (!_session->isConnected())
     {
-        EVENT_PUSH(WARNING) << LOG_BADGE("sendEvents") << LOG_DESC("session has been inactive")
-                            << LOG_KV("id", _id) << LOG_KV("endpoint", _session->endPoint());
+        EVENT_SUB(WARNING) << LOG_BADGE("sendEvents") << LOG_DESC("session has been inactive")
+                           << LOG_KV("id", _id) << LOG_KV("endpoint", _session->endPoint());
         return false;
     }
 
@@ -283,17 +214,296 @@ bool EventSub::sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _sessio
     jResp["result"] = _result;
 
     Json::FastWriter writer;
-    std::string s = writer.write(jResp);
-    auto data = std::make_shared<bcos::bytes>(s.begin(), s.end());
+    std::string strEventInfo = writer.write(jResp);
+    auto data = std::make_shared<bcos::bytes>(strEventInfo.begin(), strEventInfo.end());
 
     auto msg = m_messageFactory->buildMessage();
     msg->setType(bcos::event::MessageType::EVENT_LOG_PUSH);
     msg->setData(data);
     _session->asyncSendMessage(msg);
 
-    EVENT_PUSH(TRACE) << LOG_BADGE("sendEvents") << LOG_DESC("send events to client")
-                      << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("id", _id)
-                      << LOG_KV("events", s);
+    EVENT_SUB(DEBUG) << LOG_BADGE("sendEvents") << LOG_DESC("send events to client")
+                     << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("id", _id)
+                     << LOG_KV("events", strEventInfo);
 
     return true;
+}
+
+/**
+ * @brief: send completed message to client
+ * @param _session: the peer
+ * @param _id: the event sub id
+ * @return bool:
+ */
+bool EventSub::sendCompletedMsg(
+    std::shared_ptr<bcos::boostssl::ws::WsSession> _session, const std::string& _id)
+{
+    // session disconnected
+    if (!_session->isConnected())
+    {
+        EVENT_SUB(WARNING) << LOG_BADGE("sendCompletedMsg") << LOG_DESC("session has been inactive")
+                           << LOG_KV("id", _id) << LOG_KV("endpoint", _session->endPoint());
+        return false;
+    }
+
+    auto msg = m_messageFactory->buildMessage();
+    msg->setType(bcos::event::MessageType::EVENT_LOG_PUSH);
+    sendResponse(_session, msg, _id, EP_STATUS_CODE::PUSH_COMPLETED);
+
+    return true;
+}
+
+void EventSub::subscribeEventSub(EventSubTask::Ptr _task)
+{
+    EVENT_SUB(INFO) << LOG_BADGE("subscribeEventSub") << LOG_KV("id", _task->id())
+                    << LOG_KV("startBlk", _task->state()->currentBlockNumber());
+    std::unique_lock lock(x_addTasks);
+    m_addTasks.push_back(_task);
+    m_addTaskCount++;
+}
+
+void EventSub::unsubscribeEventSub(const std::string& _id)
+{
+    EVENT_SUB(INFO) << LOG_BADGE("unsubscribeEventSub") << LOG_KV("id", _id);
+    std::unique_lock lock(x_cancelTasks);
+    m_cancelTasks.push_back(_id);
+    m_cancelTaskCount++;
+}
+
+void EventSub::executeWorker()
+{
+    executeCancelTasks();
+    executeAddTasks();
+    executeEventSubTasks();
+}
+
+void EventSub::executeAddTasks()
+{
+    if (m_addTaskCount.load() == 0)
+    {
+        return;
+    }
+
+    std::unique_lock lock(x_addTasks);
+    for (auto& task : m_addTasks)
+    {
+        auto id = task->id();
+        if (m_tasks.find(id) == m_tasks.end())
+        {
+            m_tasks[id] = task;
+            EVENT_SUB(INFO) << LOG_BADGE("executeAddTasks") << LOG_KV("id", task->id());
+        }
+        else
+        {
+            EVENT_SUB(ERROR) << LOG_BADGE("executeAddTasks")
+                             << LOG_DESC("event sub task already exist")
+                             << LOG_KV("id", task->id());
+        }
+    }
+    m_addTaskCount.store(0);
+    m_addTasks.clear();
+
+    auto taskCount = m_tasks.size();
+    EVENT_SUB(INFO) << LOG_BADGE("executeAddTasks") << LOG_DESC("report event subscribe tasks ")
+                    << LOG_KV("count", taskCount);
+}
+
+void EventSub::executeCancelTasks()
+{
+    if (m_cancelTaskCount.load() == 0)
+    {
+        return;
+    }
+
+    std::unique_lock lock(x_cancelTasks);
+    for (const auto& id : m_cancelTasks)
+    {
+        auto r = m_tasks.erase(id);
+        if (r)
+        {
+            EVENT_SUB(INFO) << LOG_BADGE("executeCancelTasks") << LOG_KV("id", id);
+        }
+        else
+        {
+            EVENT_SUB(WARNING) << LOG_BADGE("executeCancelTasks")
+                               << LOG_DESC("event sub task not exist") << LOG_KV("id", id);
+        }
+    }
+    m_cancelTaskCount.store(0);
+    m_cancelTasks.clear();
+
+    auto taskCount = m_tasks.size();
+    EVENT_SUB(INFO) << LOG_BADGE("executeCancelTasks") << LOG_DESC("report event subscribe tasks ")
+                    << LOG_KV("count", taskCount);
+}
+
+bool EventSub::checkConnAvailable(EventSubTask::Ptr _task)
+{
+    Json::Value jResp(Json::arrayValue);
+    return _task->callback()(_task->id(), false, jResp);
+}
+
+void EventSub::onTaskComplete(EventSubTask::Ptr _task)
+{
+    Json::Value jResp(Json::arrayValue);
+    _task->callback()(_task->id(), true, jResp);
+
+    EVENT_SUB(INFO) << LOG_BADGE("onTaskComplete") << LOG_DESC("event sub completed")
+                    << LOG_KV("id", _task->id())
+                    << LOG_KV("fromBlock", _task->params()->fromBlock())
+                    << LOG_KV("toBlock", _task->params()->toBlock())
+                    << LOG_KV("currentBlock", _task->state()->currentBlockNumber());
+}
+
+int64_t EventSub::executeEventSubTask(EventSubTask::Ptr _task)
+{
+    // tests whether the connection of the session is available first
+    auto connAvailable = checkConnAvailable(_task);
+    if (!connAvailable)
+    {
+        unsubscribeEventSub(_task->id());
+        return -1;
+    }
+
+    if (_task->isCompleted())
+    {
+        unsubscribeEventSub(_task->id());
+        onTaskComplete(_task);
+        return 0;
+    }
+
+    // task is working, waiting for done
+    if (_task->work())
+    {
+        return 0;
+    }
+
+    bcos::protocol::BlockNumber blockNumber = m_groupManager->getBlockNumberByGroup(_task->group());
+    if (blockNumber < 0)
+    {
+        // group not exist, group has been removed??? remove this task
+        unsubscribeEventSub(_task->id());
+        EVENT_SUB(ERROR)
+            << LOG_BADGE("executeEventSubTask")
+            << LOG_DESC("unable get block number of the group maybe the group has been removed")
+            << LOG_KV("id", _task->id()) << LOG_KV("group", _task->group());
+        return -1;
+    }
+
+    bcos::protocol::BlockNumber currentBlockNumber = _task->state()->currentBlockNumber();
+    if (blockNumber < currentBlockNumber)
+    {
+        // waiting for block to be sealed
+        return 0;
+    }
+
+    _task->setWork(true);
+
+    int64_t blockCanProcess = blockNumber - currentBlockNumber + 1;
+    int64_t maxBlockProcessPerLoop = m_maxBlockProcessPerLoop;
+    blockCanProcess =
+        (blockCanProcess > maxBlockProcessPerLoop ? maxBlockProcessPerLoop : blockCanProcess);
+
+    class RecursiveProcess : public std::enable_shared_from_this<RecursiveProcess>
+    {
+    public:
+        void process(int64_t _blockNumber)
+        {
+            if (_blockNumber > m_endBlockNumber)
+            {  // all block has been proccessed
+                m_task->setWork(false);
+                return;
+            }
+
+            auto eventSub = m_eventSub;
+            auto task = m_task;
+            auto p = shared_from_this();
+            eventSub->processNextBlock(
+                _blockNumber, task, [task, _blockNumber, p](Error::Ptr _error) {
+                    if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
+                    {
+                        return;
+                    }
+                    // next block
+                    task->state()->setCurrentBlockNumber(_blockNumber + 1);
+                    p->process(_blockNumber + 1);
+                });
+        }
+
+    public:
+        bcos::protocol::BlockNumber m_endBlockNumber;
+        std::shared_ptr<EventSub> m_eventSub;
+        EventSubTask::Ptr m_task;
+    };
+
+    auto p = std::make_shared<RecursiveProcess>();
+    p->m_endBlockNumber = currentBlockNumber + blockCanProcess - 1;
+    p->m_eventSub = shared_from_this();
+    p->m_task = _task;
+    p->process(currentBlockNumber);
+
+    return blockCanProcess;
+}
+
+void EventSub::processNextBlock(
+    int64_t _blockNumber, EventSubTask::Ptr _task, std::function<void(Error::Ptr _error)> _callback)
+{
+    auto self = std::weak_ptr<EventSub>(shared_from_this());
+    auto matcher = m_matcher;
+
+    std::string group = _task->group();
+    auto nodeService = m_groupManager->getNodeService(group, "");
+    if (!nodeService)
+    {
+        // group not exist???
+        EVENT_SUB(ERROR)
+            << LOG_BADGE("processNextBlock")
+            << LOG_DESC("unable get node service of the group maybe the group has been removed")
+            << LOG_KV("id", _task->id()) << LOG_KV("group", _task->group());
+        unsubscribeEventSub(_task->id());
+        return;
+    }
+
+    auto ledger = nodeService->ledger();
+    ledger->asyncGetBlockDataByNumber(_blockNumber,
+        bcos::ledger::RECEIPTS | bcos::ledger::TRANSACTIONS,
+        [matcher, _task, _blockNumber, _callback, self](
+            Error::Ptr _error, protocol::Block::Ptr _block) {
+            if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
+            {
+                // Note: wait for next time
+                EVENT_SUB(ERROR) << LOG_BADGE("processNextBlock")
+                                 << LOG_DESC("asyncGetBlockDataByNumber")
+                                 << LOG_KV("id", _task->id()) << LOG_KV("blockNumber", _blockNumber)
+                                 << LOG_KV("errorCode", _error->errorCode())
+                                 << LOG_KV("errorMessage", _error->errorMessage());
+                _callback(_error);
+                return;
+            }
+
+            Json::Value jResp(Json::arrayValue);
+            auto count = matcher->matches(_task->params(), _block, jResp);
+            if (count)
+            {
+                EVENT_SUB(DEBUG) << LOG_BADGE("processNextBlock")
+                                 << LOG_DESC("asyncGetBlockDataByNumber")
+                                 << LOG_KV("blockNumber", _blockNumber) << LOG_KV("id", _task->id())
+                                 << LOG_KV("count", count);
+
+                _task->callback()(_task->id(), false, jResp);
+            }
+
+            _callback(nullptr);
+        });
+}
+
+void EventSub::executeEventSubTasks()
+{
+    for (auto& task : m_tasks)
+    {
+        executeEventSubTask(task.second);
+    }
+
+    // limiting speed
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }

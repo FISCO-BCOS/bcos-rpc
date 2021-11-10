@@ -87,7 +87,8 @@ public:
 protected:
     bcos::rpc::JsonRpcImpl_2_0::Ptr buildJsonRpc(
         std::shared_ptr<boostssl::ws::WsService> _wsService, GroupManager::Ptr _groupManager);
-    bcos::event::EventSub::Ptr buildEventSub(std::shared_ptr<boostssl::ws::WsService> _wsService);
+    bcos::event::EventSub::Ptr buildEventSub(
+        std::shared_ptr<boostssl::ws::WsService> _wsService, GroupManager::Ptr _groupManager);
 
 private:
     void registerHandlers(std::shared_ptr<boostssl::ws::WsService> _wsService,

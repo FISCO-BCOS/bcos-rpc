@@ -139,12 +139,15 @@ public:
         m_groupInfoNotifier = _callback;
     }
 
+    virtual bcos::protocol::BlockNumber getBlockNumberByGroup(const std::string& _groupID);
+
 protected:
     GroupManager(std::string const& _chainID) : m_chainID(_chainID) {}
     virtual void updateGroupStatus();
 
     void updateNodeServiceWithoutLock(
         std::string const& _groupID, bcos::group::ChainNodeInfo::Ptr _nodeInfo);
+
 
     virtual NodeService::Ptr selectNode(std::string const& _groupID) const;
     virtual std::string selectNodeByBlockNumber(std::string const& _groupID) const;
@@ -153,7 +156,7 @@ protected:
         std::string const& _groupID, std::string const& _nodeName) const;
     virtual void removeGroupBlockInfo(
         std::map<std::string, std::set<std::string>> const& _unreachableNodes);
-    virtual void removeUnreachablNodeService(
+    virtual void removeUnreachableNodeService(
         std::map<std::string, std::set<std::string>> const& _unreachableNodes);
     virtual std::map<std::string, std::set<std::string>> checkNodeStatus();
 

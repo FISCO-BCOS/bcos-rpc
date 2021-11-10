@@ -78,7 +78,8 @@ bool EventSubMatcher::matches(
     const auto& topics = _params->topics();
 
     // An empty address array matches all values otherwise log.address must be in addresses
-    if (!addresses.empty() && !addresses.count(std::string(_logEntry.address())))
+    if (!addresses.empty() && !addresses.count(std::string(_logEntry.address())) &&
+        !addresses.count("0x" + std::string(_logEntry.address())))
     {
         return false;
     }

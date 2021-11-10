@@ -48,12 +48,12 @@ private:
     std::string m_group;
 };
 
-class EventSubSubRequest : public EventSubUnsubRequest
+class EventSubRequest : public EventSubUnsubRequest
 {
 public:
-    using Ptr = std::shared_ptr<EventSubSubRequest>;
+    using Ptr = std::shared_ptr<EventSubRequest>;
 
-    virtual ~EventSubSubRequest() {}
+    virtual ~EventSubRequest() {}
 
 public:
     void setParams(std::shared_ptr<EventSubParams> _params) { m_params = _params; }
