@@ -110,6 +110,7 @@ inline Json::Value generateResponse(Error::Ptr _error)
 inline void nodeInfoToJson(Json::Value& _response, bcos::group::ChainNodeInfo::Ptr _nodeInfo)
 {
     _response["name"] = _nodeInfo->nodeName();
+    _response["nodeID"] = _nodeInfo->nodeID();
     _response["type"] = _nodeInfo->nodeType();
     _response["microService"] = _nodeInfo->microService();
     _response["iniConfig"] = _nodeInfo->iniConfig();

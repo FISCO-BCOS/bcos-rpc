@@ -201,6 +201,8 @@ void GroupManager::removeUnreachablNodeService(
         auto const& nodeList = it.second;
         for (auto const& node : nodeList)
         {
+            BCOS_LOG(INFO) << LOG_DESC("GroupManager: removeUnreachablNodeService")
+                           << LOG_KV("group", group) << LOG_KV("node", node);
             m_nodeServiceList[group].erase(node);
         }
         if (m_nodeServiceList[group].size() == 0)

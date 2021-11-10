@@ -18,11 +18,11 @@
  * @author: octopus
  * @date: 2021-07-09
  */
-
 #include "libutilities/DataConvertUtility.h"
 #include <bcos-framework/interfaces/protocol/Transaction.h>
 #include <bcos-framework/interfaces/protocol/TransactionReceipt.h>
 #include <bcos-framework/libprotocol/LogEntry.h>
+#include <bcos-framework/libprotocol/TransactionStatus.h>
 #include <bcos-framework/libutilities/Base64.h>
 #include <bcos-framework/libutilities/Log.h>
 #include <bcos-rpc/jsonrpc/Common.h>
@@ -82,6 +82,9 @@ void JsonRpcImpl_2_0::initMethod()
             std::placeholders::_2);
     m_methodToFunc["getPeers"] =
         std::bind(&JsonRpcImpl_2_0::getPeersI, this, std::placeholders::_1, std::placeholders::_2);
+    m_methodToFunc["getGroupPeers"] = std::bind(
+        &JsonRpcImpl_2_0::getGroupPeersI, this, std::placeholders::_1, std::placeholders::_2);
+
     m_methodToFunc["getGroupList"] = std::bind(
         &JsonRpcImpl_2_0::getGroupListI, this, std::placeholders::_1, std::placeholders::_2);
     m_methodToFunc["getGroupInfo"] = std::bind(
@@ -574,6 +577,14 @@ void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string c
                     << LOG_KV("requireProof", _requireProof);
 
                 Json::Value jResp;
+                if (_transactionSubmitResult->status() !=
+                    (int32_t)bcos::protocol::TransactionStatus::None)
+                {
+                    std::stringstream errorMsg;
+                    errorMsg << (bcos::protocol::TransactionStatus)(
+                        _transactionSubmitResult->status());
+                    jResp["errorMessage"] = errorMsg.str();
+                }
                 toJsonResp(jResp, hexPreTxHash, _transactionSubmitResult->transactionReceipt());
                 jResp["input"] = "";  // TODO: add input
                 respFunc(nullptr, jResp);
@@ -1140,16 +1151,16 @@ void JsonRpcImpl_2_0::getTotalTransactionCount(
             _respFunc(_error, jResp);
         });
 }
-
 void JsonRpcImpl_2_0::getPeers(RespFunc _respFunc)
 {
     RPC_IMPL_LOG(TRACE) << LOG_DESC("getPeers");
     m_gatewayInterface->asyncGetPeers(
-        [_respFunc](Error::Ptr _error, const std::string& _peersInfo) {
+        [this, _respFunc](Error::Ptr _error, bcos::gateway::GatewayInfo::Ptr _localP2pInfo,
+            bcos::gateway::GatewayInfosPtr _peersInfo) {
             Json::Value jResp;
             if (!_error || (_error->errorCode() == bcos::protocol::CommonError::SUCCESS))
             {
-                jResp = _peersInfo;
+                gatewayInfoToJson(jResp, _localP2pInfo, _peersInfo);
             }
             else
             {
@@ -1170,11 +1181,11 @@ NodeService::Ptr JsonRpcImpl_2_0::getNodeService(
     if (!nodeService)
     {
         std::stringstream errorMsg;
-        errorMsg
-            << LOG_DESC(
-                   "Invalid request for the specified node of doesn't exist or doesn't started!")
-            << LOG_KV("request", _command) << LOG_KV("chain", m_groupManager->chainID())
-            << LOG_KV("group", _groupID) << LOG_KV("node", _nodeName);
+        errorMsg << LOG_DESC(
+                        "Invalid request for the specified node of doesn't exist or doesn't "
+                        "started!")
+                 << LOG_KV("request", _command) << LOG_KV("chain", m_groupManager->chainID())
+                 << LOG_KV("group", _groupID) << LOG_KV("node", _nodeName);
         RPC_IMPL_LOG(WARNING) << errorMsg.str();
         BOOST_THROW_EXCEPTION(
             JsonRpcException(JsonRpcError::NodeNotExistOrNotStarted, errorMsg.str()));
@@ -1244,4 +1255,97 @@ void JsonRpcImpl_2_0::notifyTransactionResult(
     callback(nullptr, std::move(result));
 
     m_txHash2Callback.erase(it);
+}
+
+
+void JsonRpcImpl_2_0::gatewayInfoToJson(
+    Json::Value& _response, bcos::gateway::GatewayInfo::Ptr _gatewayInfo)
+{
+    auto p2pInfo = _gatewayInfo->p2pInfo();
+    _response["p2pNodeID"] = p2pInfo.p2pID;
+    _response["endPoint"] =
+        p2pInfo.nodeIPEndpoint.address() + ":" + std::to_string(p2pInfo.nodeIPEndpoint.port());
+    // set the groupNodeIDInfo
+    auto groupNodeIDInfo = _gatewayInfo->nodeIDInfo();
+    Json::Value groupInfo(Json::arrayValue);
+    for (auto const& it : groupNodeIDInfo)
+    {
+        Json::Value item;
+        item["group"] = it.first;
+        auto const& nodeIDList = it.second;
+        Json::Value nodeIDInfo(Json::arrayValue);
+        for (auto const& nodeID : nodeIDList)
+        {
+            nodeIDInfo.append(Json::Value(nodeID));
+        }
+        item["nodeIDList"] = nodeIDInfo;
+        groupInfo.append(item);
+    }
+    _response["groupNodeIDInfo"] = groupInfo;
+}
+
+void JsonRpcImpl_2_0::gatewayInfoToJson(Json::Value& _response,
+    bcos::gateway::GatewayInfo::Ptr _localP2pInfo, bcos::gateway::GatewayInfosPtr _peersInfo)
+{
+    if (_localP2pInfo)
+    {
+        gatewayInfoToJson(_response, _localP2pInfo);
+    }
+    if (!_peersInfo)
+    {
+        return;
+    }
+    Json::Value peersInfo(Json::arrayValue);
+    for (auto const& it : *_peersInfo)
+    {
+        Json::Value peerInfo;
+        gatewayInfoToJson(peerInfo, it);
+        peersInfo.append(peerInfo);
+    }
+    _response["peers"] = peersInfo;
+}
+
+void JsonRpcImpl_2_0::getGroupPeers(Json::Value& _response, std::string const& _groupID,
+    bcos::gateway::GatewayInfo::Ptr _localP2pInfo, bcos::gateway::GatewayInfosPtr _peersInfo)
+{
+    _peersInfo->emplace_back(_localP2pInfo);
+    std::set<std::string> nodeIDList;
+    for (auto const& info : *_peersInfo)
+    {
+        auto groupNodeIDInfo = info->nodeIDInfo();
+        if (groupNodeIDInfo.count(_groupID))
+        {
+            auto const& nodeList = groupNodeIDInfo.at(_groupID);
+            for (auto const& node : nodeList)
+            {
+                nodeIDList.insert(node);
+            }
+        }
+    }
+    if (nodeIDList.size() == 0)
+    {
+        return;
+    }
+    for (auto const& nodeID : nodeIDList)
+    {
+        _response.append((Json::Value)(nodeID));
+    }
+}
+
+void JsonRpcImpl_2_0::getGroupPeers(std::string const& _groupID, RespFunc _respFunc)
+{
+    m_gatewayInterface->asyncGetPeers([_respFunc, _groupID, this](Error::Ptr _error,
+                                          bcos::gateway::GatewayInfo::Ptr _localP2pInfo,
+                                          bcos::gateway::GatewayInfosPtr _peersInfo) {
+        Json::Value jResp;
+        if (_error)
+        {
+            RPC_IMPL_LOG(ERROR) << LOG_BADGE("getGroupPeers") << LOG_KV("code", _error->errorCode())
+                                << LOG_KV("message", _error->errorMessage());
+            _respFunc(_error, jResp);
+            return;
+        }
+        getGroupPeers(jResp, _groupID, _localP2pInfo, _peersInfo);
+        _respFunc(_error, jResp);
+    });
 }

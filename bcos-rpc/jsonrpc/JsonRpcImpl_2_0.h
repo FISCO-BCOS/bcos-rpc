@@ -239,6 +239,12 @@ public:
         boost::ignore_unused(req);
         getPeers(_respFunc);
     }
+
+    void getGroupPeersI(const Json::Value& req, RespFunc _respFunc)
+    {
+        getGroupPeers(req[0u].asString(), _respFunc);
+    }
+
     // get all the groupID list
     void getGroupListI(const Json::Value& _req, RespFunc _respFunc)
     {
@@ -295,6 +301,13 @@ private:
                 "The service " + _serviceName + " has not been inited completed yet!"));
         }
     }
+
+    void gatewayInfoToJson(Json::Value& _response, bcos::gateway::GatewayInfo::Ptr _gatewayInfo);
+    void gatewayInfoToJson(Json::Value& _response, bcos::gateway::GatewayInfo::Ptr _localP2pInfo,
+        bcos::gateway::GatewayInfosPtr _peersInfo);
+    void getGroupPeers(Json::Value& _response, std::string const& _groupID,
+        bcos::gateway::GatewayInfo::Ptr _localP2pInfo, bcos::gateway::GatewayInfosPtr _peersInfo);
+    void getGroupPeers(std::string const& _groupID, RespFunc _respFunc) override;
 
 private:
     std::unordered_map<std::string, std::function<void(Json::Value, RespFunc _respFunc)>>
