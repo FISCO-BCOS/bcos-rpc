@@ -212,25 +212,31 @@ void AMOPClient::sendMessageToClient(std::string const& _topic,
     std::function<void(Error::Ptr&&, bytesPointer)> _callback)
 {
     _selectSession->asyncSendMessage(_msg, Options(30000),
-        [_topic, _callback](bcos::Error::Ptr _error, std::shared_ptr<WsMessage> _responseMsg,
+        [_msg, _topic, _callback](bcos::Error::Ptr _error, std::shared_ptr<WsMessage> _responseMsg,
             std::shared_ptr<WsSession> _session) {
+            auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
             if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
             {
                 AMOP_CLIENT_LOG(WARNING)
                     << LOG_BADGE("asyncNotifyAMOPMessage")
                     << LOG_DESC("asyncSendMessage callback error")
                     << LOG_KV("endpoint", (_session ? _session->endPoint() : std::string("")))
-                    << LOG_KV("topic", _topic)
+                    << LOG_KV("topic", _topic) << LOG_KV("seq", seq)
                     << LOG_KV("errorCode", _error ? _error->errorCode() : -1)
                     << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
-            auto seq = std::string(_responseMsg->seq()->begin(), _responseMsg->seq()->end());
+
             AMOP_CLIENT_LOG(INFO) << LOG_BADGE("asyncNotifyAMOPMessage")
                                   << LOG_DESC("asyncSendMessage callback response")
                                   << LOG_KV("seq", seq)
-                                  << LOG_KV("data size", _responseMsg->data()->size());
+                                  << LOG_KV("data size",
+                                         _responseMsg ? _responseMsg->data()->size() : 0);
             auto buffer = std::make_shared<bcos::bytes>();
-            _responseMsg->encode(*buffer);
+            if (_responseMsg)
+            {
+                _responseMsg->encode(*buffer);
+            }
+
             _callback(std::move(_error), buffer);
         });
 }
