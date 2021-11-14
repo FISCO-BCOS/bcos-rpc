@@ -130,7 +130,7 @@ inline void groupInfoToJson(Json::Value& _response, bcos::group::GroupInfo::Ptr 
 {
     _response["chainID"] = _groupInfo->chainID();
     _response["groupID"] = _groupInfo->groupID();
-    _response["gensisConfig"] = _groupInfo->genesisConfig();
+    _response["genesisConfig"] = _groupInfo->genesisConfig();
     _response["iniConfig"] = _groupInfo->iniConfig();
     _response["nodeList"] = Json::Value(Json::arrayValue);
     auto nodeInfos = _groupInfo->nodeInfos();
