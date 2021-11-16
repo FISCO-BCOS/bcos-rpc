@@ -285,9 +285,6 @@ public:
     NodeInfo nodeInfo() const { return m_nodeInfo; }
     GroupManager::Ptr groupManager() { return m_groupManager; }
 
-    void notifyTransactionResult(
-        bcos::crypto::HashType txHash, bcos::protocol::TransactionSubmitResult::Ptr result);
-
 private:
     // TODO: check perf influence
     NodeService::Ptr getNodeService(
@@ -331,9 +328,6 @@ private:
 
         std::hash<bcos::crypto::HashType> hasher;
     };
-
-    tbb::concurrent_hash_map<bcos::crypto::HashType, bcos::protocol::TxSubmitCallback, TxHasher>
-        m_txHash2Callback;
 };
 
 }  // namespace rpc

@@ -536,8 +536,8 @@ void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string c
     auto txHash = tx->hash();  // FIXME: try pass tx to backend?
 
     auto submitCallback =
-        [_groupID, _requireProof, transactionDataPtr, respFunc = std::move(_respFunc), txHash,
-            self](Error::Ptr _error,
+        [_groupID, _requireProof, transactionDataPtr, respFunc = std::move(_respFunc), self](
+            Error::Ptr _error,
             bcos::protocol::TransactionSubmitResult::Ptr _transactionSubmitResult) {
             auto rpc = self.lock();
             if (!rpc)
@@ -547,14 +547,6 @@ void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string c
 
             if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
             {
-                // Remove this callback from hash map
-                decltype(m_txHash2Callback)::const_accessor it;
-                rpc->m_txHash2Callback.find(it, txHash);
-                if (!it.empty())
-                {
-                    rpc->m_txHash2Callback.erase(it);
-                }
-
                 RPC_IMPL_LOG(ERROR)
                     << LOG_BADGE("sendTransaction")
                     << LOG_KV("data", base64Encode(ref(*transactionDataPtr)))
@@ -594,8 +586,6 @@ void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string c
         };
 
     RPC_IMPL_LOG(TRACE) << "Writing tx: " << txHash.hex() << " into hash map";
-
-    m_txHash2Callback.emplace(txHash, submitCallback);
     txpool->asyncSubmit(transactionDataPtr, submitCallback);
 }
 
@@ -1242,24 +1232,6 @@ void JsonRpcImpl_2_0::getGroupNodeInfo(
     }
     _respFunc(nullptr, response);
 }
-void JsonRpcImpl_2_0::notifyTransactionResult(
-    bcos::crypto::HashType txHash, bcos::protocol::TransactionSubmitResult::Ptr result)
-{
-    decltype(m_txHash2Callback)::const_accessor it;
-    auto found = m_txHash2Callback.find(it, txHash);
-
-    if (!found)
-    {
-        RPC_IMPL_LOG(ERROR) << "Notify transaction: " << txHash.hex() << " not found!";
-        return;
-    }
-    auto& callback = it->second;
-    callback(nullptr, std::move(result));
-
-    m_txHash2Callback.erase(it);
-}
-
-
 void JsonRpcImpl_2_0::gatewayInfoToJson(
     Json::Value& _response, bcos::gateway::GatewayInfo::Ptr _gatewayInfo)
 {

@@ -67,10 +67,6 @@ public:
         bcos::protocol::BlockNumber _blockNumber,
         std::function<void(Error::Ptr)> _callback) override;
 
-    void asyncNotifyTransactionResult(std::string const& _source, const std::string_view& groupID,
-        bcos::crypto::HashType txHash,
-        bcos::protocol::TransactionSubmitResult::Ptr result) override;
-
     void asyncNotifyGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo,
         std::function<void(Error::Ptr&&)> _callback) override;
 
