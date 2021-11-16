@@ -473,7 +473,9 @@ void JsonRpcImpl_2_0::toJsonResp(
         Json::Value jTx;
         if (_onlyTxHash)
         {
-            jTx = toHexStringWithPrefix(_blockPtr->transactionHash(index));
+            // Note: should not call transactionHash for in the common cases transactionHash maybe
+            // empty
+            jTx = toHexStringWithPrefix(_blockPtr->transaction(index)->hash());
         }
         else
         {
