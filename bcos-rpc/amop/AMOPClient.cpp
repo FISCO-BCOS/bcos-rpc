@@ -92,8 +92,8 @@ void AMOPClient::onRecvAMOPRequest(
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
     auto amopReq =
         m_requestFactory->buildRequest(bytesConstRef(_msg->data()->data(), _msg->data()->size()));
-    AMOP_CLIENT_LOG(INFO) << LOG_DESC("onRecvAMOPRequest") << LOG_KV("seq", seq)
-                          << LOG_KV("topic", amopReq->topic());
+    AMOP_CLIENT_LOG(DEBUG) << LOG_DESC("onRecvAMOPRequest") << LOG_KV("seq", seq)
+                           << LOG_KV("topic", amopReq->topic());
 
     auto topic = amopReq->topic();
     auto self = std::weak_ptr<AMOPClient>(shared_from_this());
@@ -226,11 +226,10 @@ void AMOPClient::sendMessageToClient(std::string const& _topic,
                     << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
             }
 
-            AMOP_CLIENT_LOG(INFO) << LOG_BADGE("asyncNotifyAMOPMessage")
-                                  << LOG_DESC("asyncSendMessage callback response")
-                                  << LOG_KV("seq", seq)
-                                  << LOG_KV("data size",
-                                         _responseMsg ? _responseMsg->data()->size() : 0);
+            AMOP_CLIENT_LOG(DEBUG)
+                << LOG_BADGE("asyncNotifyAMOPMessage")
+                << LOG_DESC("asyncSendMessage callback response") << LOG_KV("seq", seq)
+                << LOG_KV("data size", _responseMsg ? _responseMsg->data()->size() : 0);
             auto buffer = std::make_shared<bcos::bytes>();
             if (_responseMsg)
             {
@@ -272,7 +271,8 @@ void AMOPClient::asyncNotifyAMOPMessage(std::string const& _topic, bytesConstRef
 void AMOPClient::asyncNotifyAMOPBroadcastMessage(std::string const& _topic, bytesConstRef _data,
     std::function<void(Error::Ptr&&, bytesPointer)> _callback)
 {
-    AMOP_CLIENT_LOG(INFO) << LOG_DESC("asyncNotifyAMOPBroadcastMessage") << LOG_KV("topic", _topic);
+    AMOP_CLIENT_LOG(DEBUG) << LOG_DESC("asyncNotifyAMOPBroadcastMessage")
+                           << LOG_KV("topic", _topic);
     auto requestMsg = m_wsMessageFactory->buildMessage();
     requestMsg->setType(AMOPClientMessageType::AMOP_BROADCAST);
     requestMsg->setData(std::make_shared<bytes>(_data.begin(), _data.end()));
@@ -285,7 +285,7 @@ void AMOPClient::asyncNotifyAMOPBroadcastMessage(std::string const& _topic, byte
 
 void AMOPClient::broadcastAMOPMessage(std::string const& _topic, std::shared_ptr<WsMessage> _msg)
 {
-    AMOP_CLIENT_LOG(INFO) << LOG_DESC("broadcastAMOPMessage") << LOG_KV("topic", _topic);
+    AMOP_CLIENT_LOG(DEBUG) << LOG_DESC("broadcastAMOPMessage") << LOG_KV("topic", _topic);
     auto sessions = querySessionsByTopic(_topic);
     for (auto const& session : sessions)
     {
@@ -294,9 +294,9 @@ void AMOPClient::broadcastAMOPMessage(std::string const& _topic, std::shared_ptr
 }
 std::shared_ptr<WsSession> AMOPClient::randomChooseSession(std::string const& _topic)
 {
-    AMOP_CLIENT_LOG(INFO) << LOG_DESC("randomChooseSession:")
-                          << LOG_KV("sessionSize", m_topicToSessions.size())
-                          << LOG_KV("topic", _topic);
+    AMOP_CLIENT_LOG(DEBUG) << LOG_DESC("randomChooseSession:")
+                           << LOG_KV("sessionSize", m_topicToSessions.size())
+                           << LOG_KV("topic", _topic);
     ReadGuard l(x_topicToSessions);
     if (!m_topicToSessions.count(_topic))
     {

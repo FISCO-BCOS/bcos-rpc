@@ -235,7 +235,7 @@ void JsonRpcImpl_2_0::parseRpcResponseJson(
                 _jsonResponse.result = root["result"];
             }
 
-            RPC_IMPL_LOG(DEBUG) << LOG_BADGE("parseRpcResponseJson")
+            RPC_IMPL_LOG(TRACE) << LOG_BADGE("parseRpcResponseJson")
                                 << LOG_KV("jsonrpc", _jsonResponse.jsonrpc)
                                 << LOG_KV("id", _jsonResponse.id)
                                 << LOG_KV("error", _jsonResponse.error.toString())
@@ -523,9 +523,6 @@ void JsonRpcImpl_2_0::call(std::string const& _groupID, std::string const& _node
 void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string const& _nodeName,
     const std::string& _data, bool _requireProof, RespFunc _respFunc)
 {
-    RPC_IMPL_LOG(TRACE) << LOG_DESC("sendTransaction") << LOG_KV("group", _groupID)
-                        << LOG_KV("node", _nodeName);
-
     auto self = std::weak_ptr<JsonRpcImpl_2_0>(shared_from_this());
     auto transactionDataPtr = decodeData(_data);
     auto nodeService = getNodeService(_groupID, _nodeName, "sendTransaction");
@@ -534,10 +531,11 @@ void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string c
     auto tx =
         nodeService->blockFactory()->transactionFactory()->createTransaction(*transactionDataPtr);
     auto txHash = tx->hash();  // FIXME: try pass tx to backend?
-
+    RPC_IMPL_LOG(TRACE) << LOG_DESC("sendTransaction") << LOG_KV("group", _groupID)
+                        << LOG_KV("node", _nodeName) << LOG_KV("hash", txHash.abridged());
     auto submitCallback =
-        [_groupID, _requireProof, transactionDataPtr, respFunc = std::move(_respFunc), self](
-            Error::Ptr _error,
+        [_groupID, _requireProof, transactionDataPtr, respFunc = std::move(_respFunc), txHash,
+            self](Error::Ptr _error,
             bcos::protocol::TransactionSubmitResult::Ptr _transactionSubmitResult) {
             auto rpc = self.lock();
             if (!rpc)
@@ -548,11 +546,9 @@ void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string c
             if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
             {
                 RPC_IMPL_LOG(ERROR)
-                    << LOG_BADGE("sendTransaction")
-                    << LOG_KV("data", base64Encode(ref(*transactionDataPtr)))
-                    << LOG_KV("requireProof", _requireProof)
-                    << LOG_KV("errorCode", _error ? _error->errorCode() : 0)
-                    << LOG_KV("errorMessage", _error ? _error->errorMessage() : "success");
+                    << LOG_BADGE("sendTransaction") << LOG_KV("requireProof", _requireProof)
+                    << LOG_KV("hash", txHash.abridged()) << LOG_KV("code", _error->errorCode())
+                    << LOG_KV("message", _error->errorMessage());
                 Json::Value jResp;
                 respFunc(_error, jResp);
 
@@ -584,8 +580,6 @@ void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string c
                 respFunc(nullptr, jResp);
             }
         };
-
-    RPC_IMPL_LOG(TRACE) << "Writing tx: " << txHash.hex() << " into hash map";
     txpool->asyncSubmit(transactionDataPtr, submitCallback);
 }
 
