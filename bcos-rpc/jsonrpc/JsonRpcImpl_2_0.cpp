@@ -380,7 +380,7 @@ void JsonRpcImpl_2_0::toJsonResp(Json::Value& jResp, const std::string& _txHash,
     bcos::protocol::TransactionReceipt::ConstPtr _transactionReceiptPtr)
 {
     jResp["version"] = _transactionReceiptPtr->version();
-    jResp["contractAddress"] = string(_transactionReceiptPtr->contractAddress());
+    jResp["contractAddress"] = "0x" + string(_transactionReceiptPtr->contractAddress());
     jResp["gasUsed"] = _transactionReceiptPtr->gasUsed().str(16);
     jResp["status"] = _transactionReceiptPtr->status();
     jResp["blockNumber"] = _transactionReceiptPtr->blockNumber();
@@ -571,8 +571,8 @@ void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string c
                     (int32_t)bcos::protocol::TransactionStatus::None)
                 {
                     std::stringstream errorMsg;
-                    errorMsg << (bcos::protocol::TransactionStatus)(
-                        _transactionSubmitResult->status());
+                    errorMsg
+                        << (bcos::protocol::TransactionStatus)(_transactionSubmitResult->status());
                     jResp["errorMessage"] = errorMsg.str();
                 }
                 toJsonResp(jResp, hexPreTxHash, _transactionSubmitResult->transactionReceipt());
