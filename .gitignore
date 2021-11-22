@@ -34,3 +34,4 @@
 build**
 .idea**
 bcos-cmake-scripts**
+.DS_Store
