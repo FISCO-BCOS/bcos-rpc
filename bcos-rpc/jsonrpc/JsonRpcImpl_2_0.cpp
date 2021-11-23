@@ -870,7 +870,7 @@ void JsonRpcImpl_2_0::getCode(std::string const& _groupID, std::string const& _n
     auto scheduler = nodeService->scheduler();
     scheduler->getCode(
         std::string_view(_contractAddress), [_contractAddress, callback = std::move(_callback)](
-                                                const Error::Ptr& _error, bcos::bytes _codeData) {
+                                                Error::Ptr _error, bcos::bytes _codeData) {
             std::string code;
             if (!_error || (_error->errorCode() == bcos::protocol::CommonError::SUCCESS))
             {
