@@ -93,7 +93,6 @@ void EventSub::onRecvSubscribeEvent(std::shared_ptr<bcos::boostssl::ws::WsMessag
     auto state = std::make_shared<EventSubTaskState>();
 
     // TODO: check request parameters
-
     auto task = std::make_shared<EventSubTask>();
     task->setGroup(eventSubRequest->group());
     task->setId(eventSubRequest->id());
@@ -219,7 +218,7 @@ bool EventSub::sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _sessio
     msg->setData(data);
     _session->asyncSendMessage(msg);
 
-    EVENT_SUB(DEBUG) << LOG_BADGE("sendEvents") << LOG_DESC("send events to client")
+    EVENT_SUB(TRACE) << LOG_BADGE("sendEvents") << LOG_DESC("send events to client")
                      << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("id", _id)
                      << LOG_KV("events", strEventInfo);
 
@@ -343,12 +342,14 @@ int64_t EventSub::executeEventSubTask(EventSubTask::Ptr _task, int64_t _blockNum
         return 0;
     }
 
-    EVENT_SUB(INFO) << LOG_BADGE("executeEventSubTask") << LOG_DESC("running")
-                    << LOG_KV("id", _task->id())
-                    << LOG_KV("fromBlock", _task->params()->fromBlock())
-                    << LOG_KV("toBlock", _task->params()->toBlock())
-                    << LOG_KV("blockNumber", _blockNumber)
-                    << LOG_KV("currentBlock", _task->state()->currentBlockNumber());
+    /*
+    EVENT_SUB(TRACE) << LOG_BADGE("executeEventSubTask") << LOG_DESC("running")
+                     << LOG_KV("id", _task->id())
+                     << LOG_KV("fromBlock", _task->params()->fromBlock())
+                     << LOG_KV("toBlock", _task->params()->toBlock())
+                     << LOG_KV("blockNumber", _blockNumber)
+                     << LOG_KV("currentBlockNumber", _task->state()->currentBlockNumber());
+     */
 
     int64_t blockCanProcess = _blockNumber - currentBlockNumber + 1;
     int64_t maxBlockProcessPerLoop = m_maxBlockProcessPerLoop;
@@ -367,11 +368,11 @@ int64_t EventSub::executeEventSubTask(EventSubTask::Ptr _task, int64_t _blockNum
                 return;
             }
 
-            EVENT_SUB(INFO) << LOG_BADGE("executeEventSubTask:process")
-                            << LOG_KV("id", m_task->id())
-                            << LOG_KV("fromBlock", m_task->params()->fromBlock())
-                            << LOG_KV("toBlock", m_task->params()->toBlock())
-                            << LOG_KV("blockNumber", _blockNumber);
+            EVENT_SUB(TRACE) << LOG_BADGE("executeEventSubTask:process")
+                             << LOG_KV("id", m_task->id())
+                             << LOG_KV("fromBlock", m_task->params()->fromBlock())
+                             << LOG_KV("toBlock", m_task->params()->toBlock())
+                             << LOG_KV("blockNumber", _blockNumber);
 
             auto eventSub = m_eventSub;
             auto task = m_task;
@@ -439,10 +440,7 @@ int64_t EventSub::executeEventSubTask(EventSubTask::Ptr _task)
         return -1;
     }
 
-    // TODO: optimize
-    // bcos::protocol::BlockNumber blockNumber =
-    // m_groupManager->getBlockNumberByGroup(_task->group());
-
+    // TODO: optimize getBlockNumberByGroup instead of asyncGetBlockNumber
     auto self = std::weak_ptr<EventSub>(shared_from_this());
     auto ledger = nodeService->ledger();
     ledger->asyncGetBlockNumber(
@@ -510,7 +508,7 @@ void EventSub::processNextBlock(
             auto count = matcher->matches(_task->params(), _block, jResp);
             if (count)
             {
-                EVENT_SUB(DEBUG) << LOG_BADGE("processNextBlock")
+                EVENT_SUB(TRACE) << LOG_BADGE("processNextBlock")
                                  << LOG_DESC("asyncGetBlockDataByNumber")
                                  << LOG_KV("blockNumber", _blockNumber) << LOG_KV("id", _task->id())
                                  << LOG_KV("count", count);

@@ -79,8 +79,14 @@ bool EventSubMatcher::matches(
     const auto& addresses = _params->addresses();
     const auto& topics = _params->topics();
 
-    EVENT_MATCH(TRACE) << LOG_BADGE("matches") << LOG_KV("address", _logEntry.address())
-                       << LOG_KV("topics size", _logEntry.topics().size());
+    EVENT_MATCH(INFO) << LOG_BADGE("matches") << LOG_KV("address", _logEntry.address())
+                      << LOG_KV("topics size", _logEntry.topics().size());
+
+    for (const auto& topic : _logEntry.topics())
+    {
+        EVENT_MATCH(INFO) << LOG_BADGE("matches") << LOG_KV("address", _logEntry.address())
+                          << LOG_KV("topics", topic);
+    }
 
     // An empty address array matches all values otherwise log.address must be in addresses
     if (!addresses.empty() && !addresses.count(std::string(_logEntry.address())))
