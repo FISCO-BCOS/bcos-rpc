@@ -88,26 +88,18 @@ public:
     bool sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _session, bool _complete,
         const std::string& _id, const Json::Value& _result);
 
-    /**
-     * @brief: send completed message to client
-     * @param _session: the peer
-     * @param _id: the event sub id
-     * @return bool:
-     */
-    bool sendCompletedMsg(
-        std::shared_ptr<bcos::boostssl::ws::WsSession> _session, const std::string& _id);
-
 public:
     void executeAddTasks();
     void executeCancelTasks();
     void executeEventSubTasks();
 
 public:
+    int64_t executeEventSubTask(EventSubTask::Ptr _task);
     void subscribeEventSub(EventSubTask::Ptr _task);
     void unsubscribeEventSub(const std::string& _id);
-    int64_t executeEventSubTask(EventSubTask::Ptr _task);
 
 public:
+    int64_t executeEventSubTask(EventSubTask::Ptr _task, int64_t _currentBlockNumber);
     void onTaskComplete(bcos::event::EventSubTask::Ptr _task);
     bool checkConnAvailable(bcos::event::EventSubTask::Ptr _task);
     void processNextBlock(int64_t _blockNumber, bcos::event::EventSubTask::Ptr _task,

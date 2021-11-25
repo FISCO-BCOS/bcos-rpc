@@ -29,6 +29,7 @@
 #include <boost/core/ignore_unused.hpp>
 #include <chrono>
 #include <cstddef>
+#include <memory>
 #include <thread>
 
 using namespace bcos;
@@ -80,8 +81,8 @@ void EventSub::onRecvSubscribeEvent(std::shared_ptr<bcos::boostssl::ws::WsMessag
         return;
     }
 
-    auto blockNumber = m_groupManager->getBlockNumberByGroup(eventSubRequest->group());
-    if (blockNumber < 0)
+    auto nodeService = m_groupManager->getNodeService(eventSubRequest->group(), "");
+    if (!nodeService)
     {
         sendResponse(_session, _msg, eventSubRequest->id(), EP_STATUS_CODE::GROUP_NOT_EXIST);
         EVENT_SUB(ERROR) << LOG_BADGE("onRecvSubscribeEvent") << LOG_DESC("group not exist")
@@ -90,18 +91,14 @@ void EventSub::onRecvSubscribeEvent(std::shared_ptr<bcos::boostssl::ws::WsMessag
     }
 
     auto state = std::make_shared<EventSubTaskState>();
-    state->setCurrentBlockNumber(eventSubRequest->params()->fromBlock() > 0 ?
-                                     eventSubRequest->params()->fromBlock() :
-                                     blockNumber);
-    eventSubRequest->setState(state);
 
     // TODO: check request parameters
-    // TODO: update from/to block number
 
     auto task = std::make_shared<EventSubTask>();
     task->setGroup(eventSubRequest->group());
     task->setId(eventSubRequest->id());
     task->setParams(eventSubRequest->params());
+    task->setState(state);
 
     auto eventSubWeakPtr = std::weak_ptr<EventSub>(shared_from_this());
     task->setCallback([eventSubWeakPtr, _session](const std::string& _id, bool _complete,
@@ -229,30 +226,6 @@ bool EventSub::sendEvents(std::shared_ptr<bcos::boostssl::ws::WsSession> _sessio
     return true;
 }
 
-/**
- * @brief: send completed message to client
- * @param _session: the peer
- * @param _id: the event sub id
- * @return bool:
- */
-bool EventSub::sendCompletedMsg(
-    std::shared_ptr<bcos::boostssl::ws::WsSession> _session, const std::string& _id)
-{
-    // session disconnected
-    if (!_session->isConnected())
-    {
-        EVENT_SUB(WARNING) << LOG_BADGE("sendCompletedMsg") << LOG_DESC("session has been inactive")
-                           << LOG_KV("id", _id) << LOG_KV("endpoint", _session->endPoint());
-        return false;
-    }
-
-    auto msg = m_messageFactory->buildMessage();
-    msg->setType(bcos::event::MessageType::EVENT_LOG_PUSH);
-    sendResponse(_session, msg, _id, EP_STATUS_CODE::PUSH_COMPLETED);
-
-    return true;
-}
-
 void EventSub::subscribeEventSub(EventSubTask::Ptr _task)
 {
     EVENT_SUB(INFO) << LOG_BADGE("subscribeEventSub") << LOG_KV("id", _task->id())
@@ -355,6 +328,82 @@ void EventSub::onTaskComplete(EventSubTask::Ptr _task)
                     << LOG_KV("currentBlock", _task->state()->currentBlockNumber());
 }
 
+int64_t EventSub::executeEventSubTask(EventSubTask::Ptr _task, int64_t _blockNumber)
+{
+    bcos::protocol::BlockNumber currentBlockNumber = _task->state()->currentBlockNumber();
+    if (currentBlockNumber < 0)
+    {
+        currentBlockNumber =
+            _task->params()->fromBlock() > 0 ? _task->params()->fromBlock() : _blockNumber;
+    }
+
+    if (_blockNumber < currentBlockNumber)
+    {
+        // waiting for block to be sealed
+        return 0;
+    }
+
+    EVENT_SUB(INFO) << LOG_BADGE("executeEventSubTask") << LOG_DESC("running")
+                    << LOG_KV("id", _task->id())
+                    << LOG_KV("fromBlock", _task->params()->fromBlock())
+                    << LOG_KV("toBlock", _task->params()->toBlock())
+                    << LOG_KV("blockNumber", _blockNumber)
+                    << LOG_KV("currentBlock", _task->state()->currentBlockNumber());
+
+    int64_t blockCanProcess = _blockNumber - currentBlockNumber + 1;
+    int64_t maxBlockProcessPerLoop = m_maxBlockProcessPerLoop;
+    blockCanProcess =
+        (blockCanProcess > maxBlockProcessPerLoop ? maxBlockProcessPerLoop : blockCanProcess);
+
+    _task->setWork(true);
+    class RecursiveProcess : public std::enable_shared_from_this<RecursiveProcess>
+    {
+    public:
+        void process(int64_t _blockNumber)
+        {
+            if (_blockNumber > m_endBlockNumber)
+            {  // all block has been proccessed
+                m_task->setWork(false);
+                return;
+            }
+
+            EVENT_SUB(INFO) << LOG_BADGE("executeEventSubTask:process")
+                            << LOG_KV("id", m_task->id())
+                            << LOG_KV("fromBlock", m_task->params()->fromBlock())
+                            << LOG_KV("toBlock", m_task->params()->toBlock())
+                            << LOG_KV("blockNumber", _blockNumber);
+
+            auto eventSub = m_eventSub;
+            auto task = m_task;
+            auto p = shared_from_this();
+            eventSub->processNextBlock(
+                _blockNumber, task, [task, _blockNumber, p](Error::Ptr _error) {
+                    if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
+                    {
+                        task->setWork(false);
+                        return;
+                    }
+                    // next block
+                    task->state()->setCurrentBlockNumber(_blockNumber + 1);
+                    p->process(_blockNumber + 1);
+                });
+        }
+
+    public:
+        bcos::protocol::BlockNumber m_endBlockNumber;
+        std::shared_ptr<EventSub> m_eventSub;
+        EventSubTask::Ptr m_task;
+    };
+
+    auto p = std::make_shared<RecursiveProcess>();
+    p->m_endBlockNumber = currentBlockNumber + blockCanProcess - 1;
+    p->m_eventSub = shared_from_this();
+    p->m_task = _task;
+    p->process(currentBlockNumber);
+
+    return blockCanProcess;
+}
+
 int64_t EventSub::executeEventSubTask(EventSubTask::Ptr _task)
 {
     // tests whether the connection of the session is available first
@@ -378,71 +427,47 @@ int64_t EventSub::executeEventSubTask(EventSubTask::Ptr _task)
         return 0;
     }
 
-    bcos::protocol::BlockNumber blockNumber = m_groupManager->getBlockNumberByGroup(_task->group());
-    if (blockNumber < 0)
+    std::string group = _task->group();
+    auto nodeService = m_groupManager->getNodeService(group, "");
+    if (!nodeService)
     {
-        // group not exist, group has been removed??? remove this task
+        // group not exist???
+        EVENT_SUB(ERROR) << LOG_BADGE("executeEventSubTask")
+                         << LOG_DESC("cannot get node service maybe the group has been removed")
+                         << LOG_KV("id", _task->id()) << LOG_KV("group", _task->group());
         unsubscribeEventSub(_task->id());
-        EVENT_SUB(ERROR)
-            << LOG_BADGE("executeEventSubTask")
-            << LOG_DESC("unable get block number of the group maybe the group has been removed")
-            << LOG_KV("id", _task->id()) << LOG_KV("group", _task->group());
         return -1;
     }
 
-    bcos::protocol::BlockNumber currentBlockNumber = _task->state()->currentBlockNumber();
-    if (blockNumber < currentBlockNumber)
-    {
-        // waiting for block to be sealed
-        return 0;
-    }
+    // TODO: optimize
+    // bcos::protocol::BlockNumber blockNumber =
+    // m_groupManager->getBlockNumberByGroup(_task->group());
 
-    _task->setWork(true);
+    auto self = std::weak_ptr<EventSub>(shared_from_this());
+    auto ledger = nodeService->ledger();
+    ledger->asyncGetBlockNumber(
+        [group, self, _task](Error::Ptr _error, protocol::BlockNumber _blockNumber) {
+            if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
+            {
+                EVENT_SUB(ERROR) << LOG_BADGE("executeEventSubTask")
+                                 << LOG_DESC("asyncGetBlockNumber error") << LOG_KV("group", group)
+                                 << LOG_KV("errorCode", _error->errorCode())
+                                 << LOG_KV("errorMessage", _error->errorMessage());
 
-    int64_t blockCanProcess = blockNumber - currentBlockNumber + 1;
-    int64_t maxBlockProcessPerLoop = m_maxBlockProcessPerLoop;
-    blockCanProcess =
-        (blockCanProcess > maxBlockProcessPerLoop ? maxBlockProcessPerLoop : blockCanProcess);
-
-    class RecursiveProcess : public std::enable_shared_from_this<RecursiveProcess>
-    {
-    public:
-        void process(int64_t _blockNumber)
-        {
-            if (_blockNumber > m_endBlockNumber)
-            {  // all block has been proccessed
-                m_task->setWork(false);
+                // wait for next???
                 return;
             }
 
-            auto eventSub = m_eventSub;
-            auto task = m_task;
-            auto p = shared_from_this();
-            eventSub->processNextBlock(
-                _blockNumber, task, [task, _blockNumber, p](Error::Ptr _error) {
-                    if (_error && _error->errorCode() != bcos::protocol::CommonError::SUCCESS)
-                    {
-                        return;
-                    }
-                    // next block
-                    task->state()->setCurrentBlockNumber(_blockNumber + 1);
-                    p->process(_blockNumber + 1);
-                });
-        }
+            EVENT_SUB(DEBUG) << LOG_BADGE("executeEventSubTask") << LOG_DESC("asyncGetBlockNumber")
+                             << LOG_KV("group", group) << LOG_KV("_blockNumber", _blockNumber);
+            auto eventSub = self.lock();
+            if (eventSub)
+            {
+                eventSub->executeEventSubTask(_task, _blockNumber);
+            }
+        });
 
-    public:
-        bcos::protocol::BlockNumber m_endBlockNumber;
-        std::shared_ptr<EventSub> m_eventSub;
-        EventSubTask::Ptr m_task;
-    };
-
-    auto p = std::make_shared<RecursiveProcess>();
-    p->m_endBlockNumber = currentBlockNumber + blockCanProcess - 1;
-    p->m_eventSub = shared_from_this();
-    p->m_task = _task;
-    p->process(currentBlockNumber);
-
-    return blockCanProcess;
+    return 0;
 }
 
 void EventSub::processNextBlock(

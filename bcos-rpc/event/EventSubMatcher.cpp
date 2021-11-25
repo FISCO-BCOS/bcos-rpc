@@ -18,6 +18,8 @@
  * @date 2021-09-10
  */
 
+#include "libutilities/BoostLog.h"
+#include <bcos-rpc/event/Common.h>
 #include <bcos-rpc/event/EventSubMatcher.h>
 
 using namespace bcos;
@@ -77,9 +79,11 @@ bool EventSubMatcher::matches(
     const auto& addresses = _params->addresses();
     const auto& topics = _params->topics();
 
+    EVENT_MATCH(TRACE) << LOG_BADGE("matches") << LOG_KV("address", _logEntry.address())
+                       << LOG_KV("topics size", _logEntry.topics().size());
+
     // An empty address array matches all values otherwise log.address must be in addresses
-    if (!addresses.empty() && !addresses.count(std::string(_logEntry.address())) &&
-        !addresses.count("0x" + std::string(_logEntry.address())))
+    if (!addresses.empty() && !addresses.count(std::string(_logEntry.address())))
     {
         return false;
     }
