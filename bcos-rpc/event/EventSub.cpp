@@ -26,7 +26,6 @@
 #include <bcos-rpc/event/EventSubRequest.h>
 #include <bcos-rpc/event/EventSubResponse.h>
 #include <bcos-rpc/event/EventSubTask.h>
-#include <boost/core/ignore_unused.hpp>
 #include <chrono>
 #include <cstddef>
 #include <memory>
@@ -452,12 +451,10 @@ int64_t EventSub::executeEventSubTask(EventSubTask::Ptr _task)
                                  << LOG_KV("errorCode", _error->errorCode())
                                  << LOG_KV("errorMessage", _error->errorMessage());
 
-                // wait for next???
+                // error should be occur
                 return;
             }
 
-            EVENT_SUB(DEBUG) << LOG_BADGE("executeEventSubTask") << LOG_DESC("asyncGetBlockNumber")
-                             << LOG_KV("group", group) << LOG_KV("_blockNumber", _blockNumber);
             auto eventSub = self.lock();
             if (eventSub)
             {
@@ -481,7 +478,7 @@ void EventSub::processNextBlock(
         // group not exist???
         EVENT_SUB(ERROR)
             << LOG_BADGE("processNextBlock")
-            << LOG_DESC("unable get node service of the group maybe the group has been removed")
+            << LOG_DESC("cannot get node service of the group maybe the group has been removed")
             << LOG_KV("id", _task->id()) << LOG_KV("group", _task->group());
         unsubscribeEventSub(_task->id());
         return;
