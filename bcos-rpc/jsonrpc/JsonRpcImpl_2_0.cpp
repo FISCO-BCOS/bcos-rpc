@@ -391,7 +391,7 @@ void JsonRpcImpl_2_0::toJsonResp(Json::Value& jResp, const std::string& _txHash,
     for (const auto& logEntry : _transactionReceiptPtr->logEntries())
     {
         Json::Value jLog;
-        jLog["address"] = toHexStringWithPrefix(logEntry.address());
+        jLog["address"] = std::string(logEntry.address()));
         jLog["topic"] = Json::Value(Json::arrayValue);
         for (const auto& topic : logEntry.topics())
         {
@@ -571,8 +571,8 @@ void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string c
                     (int32_t)bcos::protocol::TransactionStatus::None)
                 {
                     std::stringstream errorMsg;
-                    errorMsg << (bcos::protocol::TransactionStatus)(
-                        _transactionSubmitResult->status());
+                    errorMsg
+                        << (bcos::protocol::TransactionStatus)(_transactionSubmitResult->status());
                     jResp["errorMessage"] = errorMsg.str();
                 }
                 toJsonResp(jResp, hexPreTxHash, _transactionSubmitResult->transactionReceipt());
