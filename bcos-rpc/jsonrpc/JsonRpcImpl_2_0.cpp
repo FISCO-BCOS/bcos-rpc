@@ -391,7 +391,7 @@ void JsonRpcImpl_2_0::toJsonResp(Json::Value& jResp, const std::string& _txHash,
     for (const auto& logEntry : _transactionReceiptPtr->logEntries())
     {
         Json::Value jLog;
-        jLog["address"] = std::string(logEntry.address()));
+        jLog["address"] = std::string(logEntry.address());
         jLog["topic"] = Json::Value(Json::arrayValue);
         for (const auto& topic : logEntry.topics())
         {

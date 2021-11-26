@@ -231,8 +231,8 @@ bool EventSubRequest::fromJson(const std::string& _request)
                     if (address.compare(0, 2, "0x") == 0)
                     {
                         address = address.substr(2);
-                        std::transform(address.begin(), address.end(), address.begin(), ::tolower);
                     }
+                    std::transform(address.begin(), address.end(), address.begin(), ::tolower);
                     params->addAddress(address);
                 }
             }
@@ -254,7 +254,13 @@ bool EventSubRequest::fromJson(const std::string& _request)
                         for (Json::Value::ArrayIndex innerIndex = 0; innerIndex < jIndex.size();
                              ++innerIndex)
                         {
-                            params->addTopic(index, jIndex[innerIndex].asString());
+                            std::string topic = jIndex[innerIndex].asString();
+                            if (topic.compare(0, 2, "0x") == 0)
+                            {
+                                topic = topic.substr(2);
+                            }
+                            std::transform(topic.begin(), topic.end(), topic.begin(), ::tolower);
+                            params->addTopic(index, topic);
                         }
                     }
                     else
