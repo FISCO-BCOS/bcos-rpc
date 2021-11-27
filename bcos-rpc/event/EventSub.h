@@ -165,7 +165,7 @@ private:
     std::unordered_map<std::string, EventSubTask::Ptr> m_tasks;
 
     //
-    int64_t m_maxBlockProcessPerLoop = 5;
+    int64_t m_maxBlockProcessPerLoop = 10;
 };
 
 class EventSubFactory : public std::enable_shared_from_this<EventSubFactory>
