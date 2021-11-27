@@ -92,6 +92,7 @@ public:
     void executeAddTasks();
     void executeCancelTasks();
     void executeEventSubTasks();
+    void reportEventSubTasks();
 
 public:
     int64_t executeEventSubTask(EventSubTask::Ptr _task);

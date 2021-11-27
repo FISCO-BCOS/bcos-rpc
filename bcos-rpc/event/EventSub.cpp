@@ -246,6 +246,22 @@ void EventSub::executeWorker()
     executeCancelTasks();
     executeAddTasks();
     executeEventSubTasks();
+    reportEventSubTasks();
+}
+
+void EventSub::reportEventSubTasks()
+{
+    static auto start = std::chrono::high_resolution_clock::now();
+    auto now = std::chrono::high_resolution_clock::now();
+    long elapsedMs = std::chrono::duration<long, std::milli>(now - start).count();
+    //
+    if (elapsedMs > 10 * 000)
+    {
+        EVENT_SUB(INFO) << LOG_BADGE("reportEventSubTasks")
+                        << LOG_DESC("all event sub tasks subscribed by client")
+                        << LOG_KV("count", m_tasks.size());
+        start = std::chrono::high_resolution_clock::now();
+    }
 }
 
 void EventSub::executeAddTasks()
