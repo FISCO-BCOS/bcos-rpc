@@ -253,7 +253,7 @@ void EventSub::reportEventSubTasks()
 {
     static auto start = std::chrono::high_resolution_clock::now();
     auto now = std::chrono::high_resolution_clock::now();
-    long elapsedMs = std::chrono::duration<long, std::milli>(now - start).count();
+    auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
     //
     if (elapsedMs > 10 * 000)
     {
