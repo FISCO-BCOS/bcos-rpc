@@ -99,7 +99,10 @@ std::string GroupManager::selectNodeByBlockNumber(std::string const& _groupID) c
     auto const& nodesList = m_nodesWithLatestBlockNumber.at(_groupID);
     auto selectNodeIndex = rand() % nodesList.size();
     auto it = nodesList.begin();
-    std::advance(it, selectNodeIndex);
+    if (selectNodeIndex > 0)
+    {
+        std::advance(it, selectNodeIndex);
+    }
     return *it;
 }
 

@@ -35,7 +35,7 @@ void Rpc::start()
     m_eventSub->start();
     // start websocket service
     m_wsService->start();
-
+    m_amopClient->start();
     BCOS_LOG(INFO) << LOG_DESC("[RPC][RPC][start]") << LOG_DESC("start rpc successfully");
 }
 
@@ -51,6 +51,10 @@ void Rpc::stop()
     if (m_eventSub)
     {
         m_eventSub->stop();
+    }
+    if (m_amopClient)
+    {
+        m_amopClient->stop();
     }
 
     BCOS_LOG(INFO) << LOG_DESC("[RPC][RPC][stop]") << LOG_DESC("stop rpc successfully");

@@ -56,10 +56,20 @@ bool AMOPClient::updateTopicInfos(
     {
         return false;
     }
-    WriteGuard l(x_topicToSessions);
-    for (auto const& item : topicItems)
     {
-        m_topicToSessions[item.topicName()][_session->endPoint()] = _session;
+        WriteGuard l(x_topicToSessions);
+        for (auto const& item : topicItems)
+        {
+            m_topicToSessions[item.topicName()][_session->endPoint()] = _session;
+        }
+    }
+    {
+        if (topicItems.size() > 0)
+        {
+            // record the topicInfo for re-subscribe to the gateway upon it become activate again
+            auto item = *(topicItems.begin());
+            m_topicInfos[item.topicName()] = _topicInfo;
+        }
     }
     return true;
 }
@@ -315,7 +325,10 @@ std::shared_ptr<WsSession> AMOPClient::randomChooseSession(std::string const& _t
         srand(utcTime());
         auto selectedClient = rand() % m_topicToSessions.size();
         auto it = sessions.begin();
-        std::advance(it, selectedClient);
+        if (selectedClient > 0)
+        {
+            std::advance(it, selectedClient);
+        }
         selectedSession = it->second;
         retryTime++;
     } while (
@@ -338,6 +351,8 @@ void AMOPClient::onClientDisconnect(std::shared_ptr<WsSession> _session)
             if (sessions.size() == 0)
             {
                 topicsToRemove.emplace_back(it->first);
+                // remove the topicInfo
+                removeTopicInfo(it->first);
                 it = m_topicToSessions.erase(it);
                 continue;
             }
@@ -399,4 +414,34 @@ void AMOPClient::removeTopicFromAllNodes(std::vector<std::string> const& topicsT
                     << LOG_KV("msg", _error ? _error->errorMessage() : "");
             });
     }
+}
+
+void AMOPClient::pingGatewayAndNotifyTopics()
+{
+    m_gatewayStatusDetector->restart();
+    auto activeEndPoints = getActiveGatewayEndPoints();
+    // the gateway become inactived from active status
+    if (activeEndPoints.size() == 0 && m_gatewayActivated.load() == true)
+    {
+        AMOP_CLIENT_LOG(INFO) << LOG_DESC(
+            "pingGatewayAndNotifyTopics: gateway inactived, reset the status");
+        m_gatewayActivated.store(false);
+        return;
+    }
+    // the gateway in active status, return directly
+    if (m_gatewayActivated.load() == true)
+    {
+        return;
+    }
+    ReadGuard l(x_topicInfos);
+    for (auto const& it : m_topicInfos)
+    {
+        subscribeTopicToAllNodes(it.second);
+    }
+    AMOP_CLIENT_LOG(INFO) << LOG_DESC(
+                                 "pingGatewayAndNotifyTopics: the gateway become activated from "
+                                 "in-active status, re-subscribe the topics")
+                          << LOG_KV("gatewayNodesSize", activeEndPoints.size())
+                          << LOG_KV("topicsSize", m_topicToSessions.size());
+    m_gatewayActivated.store(true);
 }

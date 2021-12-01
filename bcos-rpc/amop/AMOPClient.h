@@ -23,7 +23,9 @@
 #include <bcos-framework/interfaces/gateway/GatewayInterface.h>
 #include <bcos-framework/interfaces/rpc/RPCInterface.h>
 #include <bcos-framework/libprotocol/amop/AMOPRequest.h>
+#include <bcos-framework/libutilities/Timer.h>
 #include <tarscpp/servant/Application.h>
+
 #define AMOP_CLIENT_LOG(level) BCOS_LOG(level) << LOG_BADGE("AMOPClient")
 namespace bcos
 {
@@ -44,6 +46,9 @@ public:
         m_gatewayServiceName(_gatewayServiceName)
     {
         initMsgHandler();
+        // create gatewayStatusDetector to detect status of gateway periodically
+        m_gatewayStatusDetector = std::make_shared<Timer>(5000, "gatewayDetector");
+        m_gatewayStatusDetector->registerTimeoutHandler([this]() { pingGatewayAndNotifyTopics(); });
     }
 
     virtual ~AMOPClient() {}
@@ -77,6 +82,23 @@ public:
     }
 
     void setClientID(std::string const& _clientID) { m_clientID = _clientID; }
+
+    // start m_gatewayStatusDetector
+    virtual void start()
+    {
+        if (m_gatewayStatusDetector)
+        {
+            m_gatewayStatusDetector->start();
+        }
+    }
+
+    virtual void stop()
+    {
+        if (m_gatewayStatusDetector)
+        {
+            m_gatewayStatusDetector->stop();
+        }
+    }
 
 protected:
     /// for AMOP requests from SDK
@@ -138,6 +160,18 @@ protected:
     void broadcastAMOPMessage(
         std::string const& _topic, std::shared_ptr<boostssl::ws::WsMessage> _msg);
 
+    virtual void pingGatewayAndNotifyTopics();
+
+    virtual void removeTopicInfo(std::string const& _topicName)
+    {
+        UpgradableGuard l(x_topicInfos);
+        if (m_topicInfos.count(_topicName))
+        {
+            UpgradeGuard ul(l);
+            m_topicInfos.erase(_topicName);
+        }
+    }
+
 protected:
     std::shared_ptr<boostssl::ws::WsService> m_wsService;
     std::shared_ptr<bcos::boostssl::ws::WsMessageFactory> m_wsMessageFactory;
@@ -147,10 +181,18 @@ protected:
     std::string m_clientID = "localAMOP";
     std::string m_gatewayServiceName;
 
-    // for AMOP
+    // for AMOP: [topic->[endpoint->session]]
     std::map<std::string, std::map<std::string, std::shared_ptr<boostssl::ws::WsSession>>>
         m_topicToSessions;
     mutable SharedMutex x_topicToSessions;
+
+    // for re-subscribe topics
+    // [topicName, topicInfos]
+    std::map<std::string, std::string> m_topicInfos;
+    mutable SharedMutex x_topicInfos;
+
+    std::shared_ptr<Timer> m_gatewayStatusDetector;
+    std::atomic_bool m_gatewayActivated = {true};
 };
 }  // namespace rpc
 }  // namespace bcos
