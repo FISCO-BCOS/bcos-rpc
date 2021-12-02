@@ -88,6 +88,11 @@ public:
     {
         if (m_gatewayStatusDetector)
         {
+            auto activeEndPoints = getActiveGatewayEndPoints();
+            if (activeEndPoints.size() == 0)
+            {
+                m_gatewayActivated.store(false);
+            }
             m_gatewayStatusDetector->start();
         }
     }
@@ -171,6 +176,9 @@ protected:
             m_topicInfos.erase(_topicName);
         }
     }
+
+    virtual bool onGatewayInactivated(std::shared_ptr<boostssl::ws::WsMessage> _msg,
+        std::shared_ptr<boostssl::ws::WsSession> _session);
 
 protected:
     std::shared_ptr<boostssl::ws::WsService> m_wsService;

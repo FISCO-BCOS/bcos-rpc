@@ -80,17 +80,25 @@ void AMOPClient::onRecvSubTopics(
     std::shared_ptr<WsMessage> _msg, std::shared_ptr<WsSession> _session)
 {
     auto topicInfo = std::string(_msg->data()->begin(), _msg->data()->end());
+    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+    if (onGatewayInactivated(_msg, _session))
+    {
+        AMOP_CLIENT_LOG(WARNING) << LOG_BADGE("onRecvSubTopics: the gateway in-activated")
+                                 << LOG_KV("topicInfo", topicInfo)
+                                 << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("seq", seq);
+        return;
+    }
     auto ret = updateTopicInfos(topicInfo, _session);
     if (!ret)
     {
         AMOP_CLIENT_LOG(WARNING) << LOG_BADGE("onRecvSubTopics: invalid topic info")
                                  << LOG_KV("topicInfo", topicInfo)
-                                 << LOG_KV("endpoint", _session->endPoint());
+                                 << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("seq", seq);
         return;
     }
     subscribeTopicToAllNodes(topicInfo);
     AMOP_CLIENT_LOG(INFO) << LOG_BADGE("onRecvSubTopics") << LOG_KV("topicInfo", topicInfo)
-                          << LOG_KV("endpoint", _session->endPoint());
+                          << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("seq", seq);
 }
 
 /**
@@ -106,6 +114,20 @@ void AMOPClient::onRecvAMOPRequest(
                            << LOG_KV("topic", amopReq->topic());
 
     auto topic = amopReq->topic();
+    // gateway inactivated
+    if (onGatewayInactivated(_msg, _session))
+    {
+        // try to send to local node
+        if (trySendAMOPRequestToLocalNode(_session, topic, _msg))
+        {
+            return;
+        }
+        AMOP_CLIENT_LOG(WARNING) << LOG_BADGE(
+                                        "onRecvAMOPRequest: the gateway in-activated and try to "
+                                        "request to local nodes failed")
+                                 << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("seq", seq);
+        return;
+    }
     auto self = std::weak_ptr<AMOPClient>(shared_from_this());
     m_gateway->asyncSendMessageByTopic(amopReq->topic(),
         bytesConstRef(_msg->data()->data(), _msg->data()->size()),
@@ -128,10 +150,16 @@ void AMOPClient::onRecvAMOPRequest(
                     {
                         return;
                     }
-                    responseMsg->setStatus(_error->errorCode());
+                    // tars timeout
+                    auto errorCode = _error->errorCode();
+                    auto errorMsg = _error->errorMessage();
+                    if (_error->errorCode() == -7)
+                    {
+                        errorMsg = "Access to gateway timed out, please check gateway alive";
+                    }
+                    responseMsg->setStatus(errorCode);
                     // constructor the response
-                    responseMsg->setData(std::make_shared<bytes>(
-                        _error->errorMessage().begin(), _error->errorMessage().end()));
+                    responseMsg->setData(std::make_shared<bytes>(errorMsg.begin(), errorMsg.end()));
                     // recover the seq
                     responseMsg->setSeq(orgSeq);
                     AMOP_CLIENT_LOG(ERROR)
@@ -421,11 +449,14 @@ void AMOPClient::pingGatewayAndNotifyTopics()
     m_gatewayStatusDetector->restart();
     auto activeEndPoints = getActiveGatewayEndPoints();
     // the gateway become inactived from active status
-    if (activeEndPoints.size() == 0 && m_gatewayActivated.load() == true)
+    if (activeEndPoints.size() == 0)
     {
-        AMOP_CLIENT_LOG(INFO) << LOG_DESC(
-            "pingGatewayAndNotifyTopics: gateway inactived, reset the status");
-        m_gatewayActivated.store(false);
+        if (m_gatewayActivated.load() == true)
+        {
+            AMOP_CLIENT_LOG(INFO) << LOG_DESC(
+                "pingGatewayAndNotifyTopics: gateway inactived, reset the status");
+            m_gatewayActivated.store(false);
+        }
         return;
     }
     // the gateway in active status, return directly
@@ -444,4 +475,31 @@ void AMOPClient::pingGatewayAndNotifyTopics()
                           << LOG_KV("gatewayNodesSize", activeEndPoints.size())
                           << LOG_KV("topicsSize", m_topicToSessions.size());
     m_gatewayActivated.store(true);
+}
+
+bool AMOPClient::onGatewayInactivated(std::shared_ptr<boostssl::ws::WsMessage> _msg,
+    std::shared_ptr<boostssl::ws::WsSession> _session)
+{
+    auto activeEndPoints = getActiveGatewayEndPoints();
+    // the gateway is in-activated
+    if (activeEndPoints.size() > 0)
+    {
+        return false;
+    }
+    auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
+    auto responseMsg = m_wsMessageFactory->buildMessage();
+    // set error status
+    responseMsg->setStatus(-1);
+    std::string errorMsg = "error for the gateway is in-activated";
+    // set errorMesg
+    responseMsg->setData(std::make_shared<bytes>(errorMsg.begin(), errorMsg.end()));
+    // set seq
+    responseMsg->setSeq(std::make_shared<bcos::bytes>(seq.begin(), seq.end()));
+    _session->asyncSendMessage(responseMsg);
+
+    AMOP_CLIENT_LOG(INFO) << LOG_DESC(
+                                 "Gateway inactivated, notify error message to the client directly")
+                          << LOG_KV("endPoint", _session->endPoint()) << LOG_KV("seq", seq);
+
+    return true;
 }

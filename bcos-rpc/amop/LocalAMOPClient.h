@@ -37,7 +37,7 @@ public:
     {}
 
     // Note: must with empty implementation to in case of start the m_gatewayStatusDetector
-    void start() override {}
+    void start() override { m_gatewayActivated.store(true); }
 
 protected:
     void subscribeTopicToAllNodes(std::string const& _topicInfo) override
