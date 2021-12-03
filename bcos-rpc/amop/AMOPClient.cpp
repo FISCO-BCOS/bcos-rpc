@@ -81,12 +81,12 @@ void AMOPClient::onRecvSubTopics(
 {
     auto topicInfo = std::string(_msg->data()->begin(), _msg->data()->end());
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
-    if (onGatewayInactivated(_msg, _session))
+    auto activeEndPoints = getActiveGatewayEndPoints();
+    if (activeEndPoints.size() == 0)
     {
         AMOP_CLIENT_LOG(WARNING) << LOG_BADGE("onRecvSubTopics: the gateway in-activated")
                                  << LOG_KV("topicInfo", topicInfo)
                                  << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("seq", seq);
-        return;
     }
     auto ret = updateTopicInfos(topicInfo, _session);
     if (!ret)
