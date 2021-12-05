@@ -366,6 +366,12 @@ int64_t EventSub::executeEventSubTask(EventSubTask::Ptr _task, int64_t _blockNum
                      << LOG_KV("currentBlockNumber", _task->state()->currentBlockNumber());
      */
 
+    int64_t toBlockNumber = _task->params()->toBlock();
+    if (toBlockNumber > 0 && toBlockNumber < _blockNumber)
+    {
+        _blockNumber = toBlockNumber;
+    }
+
     int64_t blockCanProcess = _blockNumber - currentBlockNumber + 1;
     int64_t maxBlockProcessPerLoop = m_maxBlockProcessPerLoop;
     blockCanProcess =

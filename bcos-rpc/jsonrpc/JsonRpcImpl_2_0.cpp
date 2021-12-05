@@ -579,7 +579,7 @@ void JsonRpcImpl_2_0::sendTransaction(std::string const& _groupID, std::string c
                 jResp["input"] = toHexStringWithPrefix(tx->input());
                 jResp["to"] = string(tx->to());
                 jResp["from"] = toHexStringWithPrefix(tx->sender());
-                // TODO: notify transactionProof
+                // : notify transactionProof
                 respFunc(nullptr, jResp);
             }
         };

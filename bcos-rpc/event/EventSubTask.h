@@ -90,7 +90,7 @@ public:
             return false;
         }
 
-        return m_state->currentBlockNumber() > m_params->toBlock();
+        return m_state->currentBlockNumber() >= m_params->toBlock();
     }
 
 private:
