@@ -92,7 +92,7 @@ bool EventSubMatcher::matches(
     {
         const auto& logTopics = _logEntry.topics();
         if (topics.size() > i && !topics[i].empty() &&
-            (logTopics.size() < i || !topics[i].count(logTopics[i].hex())))
+            (logTopics.size() <= i || !topics[i].count(logTopics[i].hex())))
         {
             isMatch = false;
             break;
