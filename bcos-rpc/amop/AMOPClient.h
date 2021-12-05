@@ -143,6 +143,7 @@ protected:
     bool updateTopicInfos(
         std::string const& _topicInfo, std::shared_ptr<boostssl::ws::WsSession> _session);
     std::vector<tars::EndpointInfo> getActiveGatewayEndPoints();
+    virtual bool gatewayInactivated();
 
     virtual void subscribeTopicToAllNodes(std::string const& _topicInfo);
     virtual void removeTopicFromAllNodes(std::vector<std::string> const& _topicName);

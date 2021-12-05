@@ -81,8 +81,7 @@ void AMOPClient::onRecvSubTopics(
 {
     auto topicInfo = std::string(_msg->data()->begin(), _msg->data()->end());
     auto seq = std::string(_msg->seq()->begin(), _msg->seq()->end());
-    auto activeEndPoints = getActiveGatewayEndPoints();
-    if (activeEndPoints.size() == 0)
+    if (gatewayInactivated())
     {
         AMOP_CLIENT_LOG(WARNING) << LOG_BADGE("onRecvSubTopics: the gateway in-activated")
                                  << LOG_KV("topicInfo", topicInfo)
@@ -502,4 +501,10 @@ bool AMOPClient::onGatewayInactivated(std::shared_ptr<boostssl::ws::WsMessage> _
                           << LOG_KV("endPoint", _session->endPoint()) << LOG_KV("seq", seq);
 
     return true;
+}
+
+bool AMOPClient::gatewayInactivated()
+{
+    auto activeEndPoints = getActiveGatewayEndPoints();
+    return (activeEndPoints.size() == 0);
 }
