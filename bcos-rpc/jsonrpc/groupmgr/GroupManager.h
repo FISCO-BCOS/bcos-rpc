@@ -75,6 +75,10 @@ public:
         ReadGuard l(x_nodeServiceList);
         for (auto const& it : m_groupInfos)
         {
+            if (it.second->nodesNum() == 0)
+            {
+                continue;
+            }
             groupList.insert(it.first);
         }
         return groupList;
