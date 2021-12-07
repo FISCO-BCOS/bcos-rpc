@@ -145,7 +145,7 @@ protected:
     std::vector<tars::EndpointInfo> getActiveGatewayEndPoints();
     virtual bool gatewayInactivated();
 
-    virtual void subscribeTopicToAllNodes(std::string const& _topicInfo);
+    virtual void subscribeTopicToAllNodes();
     virtual void removeTopicFromAllNodes(std::vector<std::string> const& _topicName);
     std::string endPointToString(std::string const& _serviceName, TC_Endpoint const& _endPoint)
     {
@@ -180,6 +180,7 @@ protected:
 
     virtual bool onGatewayInactivated(std::shared_ptr<boostssl::ws::WsMessage> _msg,
         std::shared_ptr<boostssl::ws::WsSession> _session);
+    std::string generateTopicInfo();
 
 protected:
     std::shared_ptr<boostssl::ws::WsService> m_wsService;

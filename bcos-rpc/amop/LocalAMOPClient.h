@@ -48,9 +48,12 @@ public:
     bool gatewayInactivated() override { return false; }
 
 protected:
-    void subscribeTopicToAllNodes(std::string const& _topicInfo) override
+    void subscribeTopicToAllNodes() override
     {
-        m_gateway->asyncSubscribeTopic(m_clientID, _topicInfo, [](Error::Ptr&& _error) {
+        auto topicInfo = generateTopicInfo();
+        AMOP_CLIENT_LOG(INFO) << LOG_DESC("subscribeTopicToAllNodes")
+                              << LOG_KV("topicInfo", topicInfo);
+        m_gateway->asyncSubscribeTopic(m_clientID, topicInfo, [](Error::Ptr&& _error) {
             if (_error)
             {
                 BCOS_LOG(WARNING) << LOG_DESC("asyncSubScribeTopic error")

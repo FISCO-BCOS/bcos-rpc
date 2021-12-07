@@ -95,7 +95,7 @@ void AMOPClient::onRecvSubTopics(
                                  << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("seq", seq);
         return;
     }
-    subscribeTopicToAllNodes(topicInfo);
+    subscribeTopicToAllNodes();
     AMOP_CLIENT_LOG(INFO) << LOG_BADGE("onRecvSubTopics") << LOG_KV("topicInfo", topicInfo)
                           << LOG_KV("endpoint", _session->endPoint()) << LOG_KV("seq", seq);
 }
@@ -350,7 +350,7 @@ std::shared_ptr<WsSession> AMOPClient::randomChooseSession(std::string const& _t
     do
     {
         srand(utcTime());
-        auto selectedClient = rand() % m_topicToSessions.size();
+        auto selectedClient = rand() % sessions.size();
         auto it = sessions.begin();
         if (selectedClient > 0)
         {
@@ -402,9 +402,11 @@ std::vector<tars::EndpointInfo> AMOPClient::getActiveGatewayEndPoints()
     return activeEndPoints;
 }
 
-void AMOPClient::subscribeTopicToAllNodes(std::string const& _topicInfo)
+void AMOPClient::subscribeTopicToAllNodes()
 {
     auto activeEndPoints = getActiveGatewayEndPoints();
+    auto topicInfo = generateTopicInfo();
+    AMOP_CLIENT_LOG(INFO) << LOG_DESC("subscribeTopicToAllNodes") << LOG_KV("topicInfo", topicInfo);
     for (auto const& endPoint : activeEndPoints)
     {
         auto endPointStr = endPointToString(m_gatewayServiceName, endPoint.getEndpoint());
@@ -412,7 +414,7 @@ void AMOPClient::subscribeTopicToAllNodes(std::string const& _topicInfo)
             Application::getCommunicator()->stringToProxy<GatewayServicePrx>(endPointStr);
         auto serviceClient = std::make_shared<GatewayServiceClient>(servicePrx);
         serviceClient->asyncSubscribeTopic(
-            m_clientID, _topicInfo, [endPointStr](Error::Ptr&& _error) {
+            m_clientID, topicInfo, [endPointStr](Error::Ptr&& _error) {
                 if (_error)
                 {
                     AMOP_CLIENT_LOG(WARNING)
@@ -463,11 +465,8 @@ void AMOPClient::pingGatewayAndNotifyTopics()
     {
         return;
     }
-    ReadGuard l(x_topicInfos);
-    for (auto const& it : m_topicInfos)
-    {
-        subscribeTopicToAllNodes(it.second);
-    }
+    subscribeTopicToAllNodes();
+
     AMOP_CLIENT_LOG(INFO) << LOG_DESC(
                                  "pingGatewayAndNotifyTopics: the gateway become activated from "
                                  "in-active status, re-subscribe the topics")
@@ -507,4 +506,17 @@ bool AMOPClient::gatewayInactivated()
 {
     auto activeEndPoints = getActiveGatewayEndPoints();
     return (activeEndPoints.size() == 0);
+}
+
+std::string AMOPClient::generateTopicInfo()
+{
+    Json::Value topicInfo;
+    Json::Value topicItems(Json::arrayValue);
+    ReadGuard l(x_topicInfos);
+    for (auto const& it : m_topicInfos)
+    {
+        topicItems.append(it.first);
+    }
+    topicInfo["topics"] = topicItems;
+    return topicInfo.toStyledString();
 }
