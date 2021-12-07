@@ -105,6 +105,9 @@ public:
         }
     }
 
+    // the gateway notify the RPC client to subscribe topic if receive publish
+    virtual void asyncNotifySubscribeTopic();
+
 protected:
     /// for AMOP requests from SDK
     virtual void onRecvSubTopics(std::shared_ptr<boostssl::ws::WsMessage> _msg,

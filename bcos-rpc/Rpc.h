@@ -86,6 +86,14 @@ public:
         m_jsonRpcImpl->setClientID(_clientID);
         m_amopClient->setClientID(_clientID);
     }
+    void asyncNotifySubscribeTopic(std::function<void(Error::Ptr&& _error)> _callback) override
+    {
+        m_amopClient->asyncNotifySubscribeTopic();
+        if (_callback)
+        {
+            _callback(nullptr);
+        }
+    }
 
 protected:
     virtual void notifyGroupInfo(bcos::group::GroupInfo::Ptr _groupInfo);

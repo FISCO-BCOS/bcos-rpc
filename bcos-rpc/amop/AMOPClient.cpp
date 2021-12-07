@@ -152,7 +152,7 @@ void AMOPClient::onRecvAMOPRequest(
                     // tars timeout
                     auto errorCode = _error->errorCode();
                     auto errorMsg = _error->errorMessage();
-                    if (_error->errorCode() == -7)
+                    if ((_error->errorCode() == -7) || (_error->errorCode() == -8))
                     {
                         errorMsg = "Access to gateway timed out, please check gateway alive";
                     }
@@ -519,4 +519,11 @@ std::string AMOPClient::generateTopicInfo()
     }
     topicInfo["topics"] = topicItems;
     return topicInfo.toStyledString();
+}
+
+void AMOPClient::asyncNotifySubscribeTopic()
+{
+    AMOP_CLIENT_LOG(INFO) << LOG_DESC(
+        "Receive asyncNotifySubscribeTopic request from the gateway, re-subscribe topics now");
+    subscribeTopicToAllNodes();
 }
