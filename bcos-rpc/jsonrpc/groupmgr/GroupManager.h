@@ -143,6 +143,12 @@ public:
         m_groupInfoNotifier = _callback;
     }
 
+    void registerBlockNumberNotifier(
+        std::function<void(std::string const&, std::string const&, bcos::protocol::BlockNumber)>
+            _blockNumberNotifier)
+    {
+        m_blockNumberNotifier = _blockNumberNotifier;
+    }
     virtual bcos::protocol::BlockNumber getBlockNumberByGroup(const std::string& _groupID);
 
 protected:
@@ -185,6 +191,8 @@ protected:
     std::shared_ptr<Timer> m_groupStatusUpdater;
     std::function<void(bcos::group::GroupInfo::Ptr)> m_groupInfoNotifier;
 
+    std::function<void(std::string const&, std::string const&, bcos::protocol::BlockNumber)>
+        m_blockNumberNotifier;
     uint64_t c_tarsAdminRefreshInitTime = 120 * 1000;
     uint64_t m_startTime = 0;
 };

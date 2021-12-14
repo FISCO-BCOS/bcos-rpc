@@ -282,6 +282,10 @@ void GroupManager::initNodeInfo(
                     return;
                 }
                 groupMgr->updateGroupBlockInfo(_groupID, _nodeName, _blockNumber);
+                if (groupMgr->m_blockNumberNotifier)
+                {
+                    groupMgr->m_blockNumberNotifier(_groupID, _nodeName, _blockNumber);
+                }
                 GROUP_LOG(INFO) << LOG_DESC("initNodeInfo success") << LOG_KV("group", _groupID)
                                 << LOG_KV("nodeName", _nodeName) << LOG_KV("number", _blockNumber);
             }
