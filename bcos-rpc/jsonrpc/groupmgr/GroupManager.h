@@ -25,7 +25,7 @@ namespace bcos
 {
 namespace rpc
 {
-class GroupManager
+class GroupManager : public std::enable_shared_from_this<GroupManager>
 {
 public:
     using Ptr = std::shared_ptr<GroupManager>;
@@ -163,6 +163,9 @@ protected:
     virtual void removeUnreachableNodeService(
         std::map<std::string, std::set<std::string>> const& _unreachableNodes);
     virtual std::map<std::string, std::set<std::string>> checkNodeStatus();
+
+    virtual void initNodeInfo(
+        std::string const& _groupID, std::string const& _nodeName, NodeService::Ptr _nodeService);
 
 protected:
     std::string m_chainID;
