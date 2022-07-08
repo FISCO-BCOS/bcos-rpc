@@ -27,4 +27,6 @@ target_include_directories(${TEST_BINARY_NAME} PRIVATE .)
 find_package(Boost CONFIG REQUIRED unit_test_framework)
 find_package(bcos-framework)
 find_package(bcos-boostssl)
-target_link_libraries(${TEST_BINARY_NAME} ${RPC_TARGET} Boost::unit_test_framework)
+
+# TODO remove bcos-framework::protocol-pb bcos-tars-protocol::protocol-tars
+target_link_libraries(${TEST_BINARY_NAME} ${RPC_TARGET} Boost::unit_test_framework  bcos-tars-protocol::protocol-tars)
